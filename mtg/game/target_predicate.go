@@ -184,13 +184,17 @@ type TargetPredicate struct {
 	// with mana value 3 or less"). It applies only to spell stack objects.
 	ManaValue opt.V[compare.Int]
 
-	// SpellTargets restricts a matched spell stack object to one whose chosen
-	// targets include at least one target satisfying any of these requirements
-	// ("counter target spell that targets a permanent you control"). Each
-	// requirement matches either a permanent (by card types and controller
-	// relation) or a player (by relation), relative to the player choosing the
-	// counter target. It applies only to spell stack objects; abilities never
-	// match. An empty slice imposes no restriction (CR 115.4, CR 608.2b).
+	// SpellTargets restricts a matched spell or ability stack object to one
+	// whose chosen targets, including any spliced text's targets, include at
+	// least one target satisfying any of these requirements ("counter target
+	// spell that targets a permanent you control", "counter target spell or
+	// ability that targets a permanent you control"). Each requirement matches
+	// either a permanent (by card types, controller relation and power) or a
+	// player (by relation), relative to the player choosing the counter target.
+	// It checks the current state of those targets, whether or not they are
+	// still legal for the matched object; a targeted object that has left its
+	// zone is ignored (CR 115.9b). It applies to every stack-object kind the
+	// target allows. An empty slice imposes no restriction.
 	SpellTargets []SpellTargetRequirement
 
 	// SingleTarget restricts a matched spell or ability to one "with a single
@@ -218,17 +222,21 @@ func (k SpellTargetRequirementKind) Valid() bool {
 	return k == SpellTargetRequirementPermanent || k == SpellTargetRequirementPlayer
 }
 
-// SpellTargetRequirement is one acceptable target of a matched spell's chosen
-// targets, for "Counter target spell that targets <X>". A permanent requirement
-// matches a targeted permanent that has every type in RequiredTypes (an empty
-// list matches any permanent) and whose controller satisfies Controller. A
-// player requirement matches a targeted player satisfying Player. Controller and
-// Player are relative to the player choosing the counter target.
+// SpellTargetRequirement is one acceptable target of a matched spell or
+// ability's chosen targets, for "Counter target spell that targets <X>". A
+// permanent requirement matches a targeted permanent that has every type in
+// RequiredTypes (an empty list matches any permanent), whose controller
+// satisfies Controller and, when Power is set, that is a creature whose current
+// power satisfies it ("a creature you control with power 7 or greater"; a
+// noncreature permanent has no power, CR 208.3). A player requirement matches a
+// targeted player satisfying Player. Controller and Player are relative to the
+// player choosing the counter target.
 type SpellTargetRequirement struct {
 	Kind          SpellTargetRequirementKind
 	RequiredTypes []types.Card
 	Controller    ControllerRelation
 	Player        PlayerRelation
+	Power         opt.V[compare.Int]
 }
 
 // Empty reports whether the predicate carries no stack-object or spell qualifier

@@ -1414,16 +1414,17 @@ func (v *cardDefValidator) validateStackObjectTargetPredicate(faceName, path str
 	v.validateSpellTargetRequirements(faceName, path, target.Predicate.SpellTargets, allowsSpells, allowsAbilities)
 }
 
-// validateSpellTargetRequirements checks a "Counter target spell that targets
-// <X>" restriction. The restriction filters the matched spell by its own chosen
-// targets, so it requires a spell-only stack-object target, and each requirement
-// must name a recognized kind and well-formed relations (CR 115.4, CR 608.2b).
+// validateSpellTargetRequirements checks a "Counter target spell [or ability]
+// that targets <X>" restriction. The restriction filters the matched stack
+// object by its own chosen targets, so it requires a stack-object target, and
+// each requirement must name a recognized kind and well-formed relations
+// (CR 115.9b).
 func (v *cardDefValidator) validateSpellTargetRequirements(faceName, path string, requirements []SpellTargetRequirement, allowsSpells, allowsAbilities bool) {
 	if len(requirements) == 0 {
 		return
 	}
-	if !allowsSpells || allowsAbilities {
-		v.add(faceName, appendPath(path, "Predicate.SpellTargets"), CardDefIssueInvalidTargetSpec, "spell-target restriction requires spell-only stack-object targets")
+	if !allowsSpells && !allowsAbilities {
+		v.add(faceName, appendPath(path, "Predicate.SpellTargets"), CardDefIssueInvalidTargetSpec, "spell-target restriction requires stack-object targets")
 	}
 	for i := range requirements {
 		requirement := requirements[i]
@@ -1441,7 +1442,7 @@ func (v *cardDefValidator) validateSpellTargetRequirements(faceName, path string
 				seenTypes[cardType] = true
 			}
 		case SpellTargetRequirementPlayer:
-			if len(requirement.RequiredTypes) > 0 || requirement.Controller != ControllerAny {
+			if len(requirement.RequiredTypes) > 0 || requirement.Controller != ControllerAny || requirement.Power.Exists {
 				v.add(faceName, itemPath, CardDefIssueInvalidTargetSpec, "player spell-target requirement cannot set permanent filters")
 			}
 			if !requirement.Player.Valid() {
