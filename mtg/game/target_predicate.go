@@ -126,11 +126,16 @@ const (
 type CombatStateFilter int
 
 // Combat state filter values match current combat involvement.
+// CombatStateUnblocked matches an attacking creature that became unblocked when
+// its defending player declared blockers, or that was put onto the battlefield
+// attacking after blockers were declared (CR 509.1h, 508.4d). It stops matching
+// once the creature is removed from combat (CR 506.4).
 const (
 	CombatStateAny CombatStateFilter = iota
 	CombatStateAttacking
 	CombatStateBlocking
 	CombatStateAttackingOrBlocking
+	CombatStateUnblocked
 )
 
 // TargetPredicate carries the stack-object and spell-only qualifiers a target
