@@ -187,7 +187,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 	mode := castCostMode{
 		overloaded: cast.Overloaded,
 		bestowed:   cast.Bestowed,
-		sneak:      sneakCastFor(g, playerID, sourceZone, spellDef, castSelectionFace(g, playerID, card.ID, spellDef, cast.Bestowed)),
+		sneak:      sneakCastFor(g, playerID, card.ID, sourceZone, spellDef, castSelectionFace(g, playerID, card.ID, spellDef, cast.Bestowed)),
 	}
 	castRoutes := permanentTypePlayCastRoutes(spellCastRoutes(g, playerID, card.ID, sourceZone, cast.Face, mode), cast.Permission)
 	// CR 601.2b-c: a cost that includes Phyrexian symbols is proposed, with
@@ -368,7 +368,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 	obj.Evoked = !cast.Overloaded && evokeAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
 	obj.Converted = !cast.Overloaded && convertedAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
 	obj.Dashed = !cast.Overloaded && dashAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
-	obj.Sneaked = mode.sneak != payment.SneakUnavailable && sneakAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
+	obj.Sneaked = mode.sneak != payment.SneakUnavailable && paymentResult.Sneaked
 	if obj.Sneaked {
 		obj.SneakAttackTarget = sneakAttackTarget(attacksBeforePayment, paymentResult.ReturnedAttackerIDs)
 	}
@@ -1206,7 +1206,7 @@ func (e *Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game
 		return false
 	}
 	castFace := castSelectionFace(g, playerID, cardID, spellDef, bestowed)
-	sneak := sneakCastFor(g, playerID, sourceZone, spellDef, castFace)
+	sneak := sneakCastFor(g, playerID, card.ID, sourceZone, spellDef, castFace)
 	if sneak != payment.SneakRequired && !canCastAtCurrentTiming(g, playerID, castFace) {
 		return false
 	}
@@ -1364,10 +1364,12 @@ func (route castRoute) castPermissionEntryCounters(castPermission payment.SpellC
 
 // isGraveyardKeywordPermission reports whether permission is one a card's own
 // graveyard-cast keyword supplies: flashback (and jump-start), escape or
-// aftermath (CR 702.34a, 702.138a, 702.127a).
+// aftermath (CR 702.34a, 702.138a, 702.127a), or a graveyard cast limited to
+// the card's sneak costs (CR 702.190a).
 func isGraveyardKeywordPermission(permission payment.SpellCastPermission) bool {
 	switch permission {
-	case payment.SpellCastPermissionFlashback, payment.SpellCastPermissionEscape, payment.SpellCastPermissionAftermath:
+	case payment.SpellCastPermissionFlashback, payment.SpellCastPermissionEscape, payment.SpellCastPermissionAftermath,
+		payment.SpellCastPermissionSneak:
 		return true
 	default:
 		return false
@@ -1411,7 +1413,7 @@ func zoneCastXValues(g *game.Game, playerID game.PlayerID, card *game.CardInstan
 	}
 	mode := castCostMode{
 		overloaded: overloaded,
-		sneak:      sneakCastFor(g, playerID, sourceZone, spellDef, castSelectionFace(g, playerID, card.ID, spellDef, false)),
+		sneak:      sneakCastFor(g, playerID, card.ID, sourceZone, spellDef, castSelectionFace(g, playerID, card.ID, spellDef, false)),
 	}
 	base := payment.SpellRequest{
 		PlayerID:        playerID,
@@ -2040,7 +2042,6 @@ func (e *Engine) chooseCastRouteOption(g *game.Game, routes []castRoute, request
 		option payment.SpellOptionSummary
 	}
 	var options []routeOption
-	labels := map[string]int{}
 	proposable := false
 	for i, request := range requests {
 		if !castRouteAllowsX(request.Card, request.XValue, request) {
@@ -2050,7 +2051,6 @@ func (e *Engine) chooseCastRouteOption(g *game.Game, routes []castRoute, request
 		proposable = proposable || len(routeOptions) > 0
 		for _, option := range openOptions(i, routeOptions) {
 			options = append(options, routeOption{route: i, option: option})
-			labels[option.Label]++
 		}
 	}
 	if len(options) == 0 {
@@ -2066,13 +2066,24 @@ func (e *Engine) chooseCastRouteOption(g *game.Game, routes []castRoute, request
 			permissions[i] = castRoutePermission(route)
 		}
 		sources := permissionSources(g, permissions)
+		summaries := make([]payment.SpellOptionSummary, len(options))
+		for i, option := range options {
+			summaries[i] = option.option
+		}
+		labels := distinctSpellCostLabels(summaries)
+		counts := map[string]int{}
+		for _, label := range labels {
+			counts[label]++
+		}
 		choiceOptions := make([]game.ChoiceOption, 0, len(options))
 		for i, option := range options {
-			label := option.option.Label
-			if labels[label] > 1 {
+			label := labels[i]
+			if counts[label] > 1 {
 				label += " (" + sources[option.route].label + ")"
 			}
-			choiceOptions = append(choiceOptions, game.ChoiceOption{Index: i, Label: label, SourcePermanent: sources[option.route].permanent})
+			choice := spellCostChoiceOption(i, label, option.option)
+			choice.SourcePermanent = sources[option.route].permanent
+			choiceOptions = append(choiceOptions, choice)
 		}
 		chosen := e.chooseChoice(g, agents, game.ChoiceRequest{
 			Kind:             game.ChoicePayment,

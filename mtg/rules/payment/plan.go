@@ -113,6 +113,7 @@ func paySpellCosts(s State, req SpellRequest) (SpellPaymentResult, bool) {
 		ReturnedAttackerIDs: returnedAttackerIDs(plan.additional),
 		PoolSpend:           clonePoolSpend(plan.mana.poolSpend),
 		CastPermission:      plan.option.castPermission,
+		Sneaked:             plan.option.sneak,
 	}, true
 }
 

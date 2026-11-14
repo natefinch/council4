@@ -30,6 +30,12 @@ const (
 	// and escape it is not an alternative cost: the half's normal cost is
 	// paid.
 	SpellCastPermissionAftermath
+	// SpellCastPermissionSneak is a permission to cast a spell from its
+	// owner's graveyard only by paying one of its sneak costs ("You may cast
+	// creature spells from your graveyard using their sneak abilities.", Ninja
+	// Teen). Like flashback and escape it authorizes only that alternative
+	// cost; sneak's timing and returned attacker still apply (CR 702.190a).
+	SpellCastPermissionSneak
 )
 
 // SpellRequest bundles all parameters needed to check or pay spell costs.
@@ -82,7 +88,8 @@ type SpellRequest struct {
 }
 
 // SneakCast is whether a cast may be made for its Sneak alternative cost
-// (CR 702.190a): from hand, any time its caster could cast an instant during
+// (CR 702.190a): from hand, the command zone or, under a graveyard sneak-cast
+// permission, its owner's graveyard, any time its caster could cast an instant during
 // their declare blockers step while controlling an unblocked attacker.
 type SneakCast uint8
 
@@ -244,6 +251,9 @@ type SpellPaymentResult struct {
 	ReturnedAttackerIDs []id.ID
 	PoolSpend           map[mana.Unit]int
 	CastPermission      SpellCastPermission
+	// Sneaked reports that the paid option was a Sneak alternative cost,
+	// printed or granted (CR 702.190a).
+	Sneaked bool
 }
 
 // NextPhyrexianChoice returns the next Phyrexian payment preference, advancing

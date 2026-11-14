@@ -9,6 +9,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/rules/payment"
@@ -1644,8 +1645,13 @@ func independentCastPermissions(g *game.Game, playerID game.PlayerID, cardID id.
 	}
 	if face == game.FaceFront && cardOK &&
 		!slices.Contains(permissions, payment.SpellCastPermissionEscape) &&
-		len(grantedGraveyardCastAlternatives(g, playerID, cardFaceOrDefault(card, game.FaceFront))) > 0 {
+		slices.ContainsFunc(grantedGraveyardCastAlternatives(g, playerID, cardFaceOrDefault(card, game.FaceFront)), func(alternative cost.Alternative) bool {
+			return !isSneakAlternative(alternative)
+		}) {
 		permissions = append(permissions, payment.SpellCastPermissionEscape)
+	}
+	if cardOK && graveyardSneakCastPermitted(g, playerID, card, cardFaceOrDefault(card, face)) {
+		permissions = append(permissions, payment.SpellCastPermissionSneak)
 	}
 	// Aftermath lets its half be cast from its owner's graveyard by paying
 	// its normal cost (CR 702.127a).

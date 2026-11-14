@@ -762,6 +762,13 @@ const (
 	// AffectedSelection, evaluated live at each damage event. Damage to other
 	// recipients is unaffected.
 	RuleEffectDamageToCantBePreventedOrRedirected
+	// RuleEffectCastSpellsFromGraveyardWithSneak lets the affected player cast
+	// spells from their own graveyard, but only by paying one of the card's
+	// sneak costs, printed or granted ("You may cast creature spells from your
+	// graveyard using their sneak abilities.", Ninja Teen). SpellTypes filters
+	// the castable spells by card type (any one of the listed types). Sneak's
+	// timing and return-an-unblocked-attacker cost are unchanged (CR 702.190a).
+	RuleEffectCastSpellsFromGraveyardWithSneak
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -839,7 +846,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectPlayFromGraveyardPerPermanentType,
 		RuleEffectCascadeLandOption,
 		RuleEffectDamageCantBePrevented,
-		RuleEffectDamageToCantBePreventedOrRedirected:
+		RuleEffectDamageToCantBePreventedOrRedirected,
+		RuleEffectCastSpellsFromGraveyardWithSneak:
 		return true
 	default:
 		return false
@@ -1308,10 +1316,14 @@ type CharacteristicFilter struct {
 // the granted keyword's intrinsic cost. The base mana cost is the granted card's
 // own mana cost when UseCardManaCost is set; AdditionalCosts are the extra
 // non-mana costs the grant adds (Underworld Breach's "exile three other cards
-// from your graveyard"). A zero value (UseCardManaCost false, no AdditionalCosts)
-// means the grant carries no computed cost and the runtime derives the cost from
-// the granted keyword instead.
+// from your graveyard"). ManaCost is a fixed mana cost written in the grant
+// ("have sneak {3}{B}", Ninja Teen). A zero value (UseCardManaCost false, no
+// ManaCost, no AdditionalCosts) means the grant carries no computed cost and the
+// runtime derives the cost from the granted keyword instead.
 type GraveyardCastGrantCost struct {
+	// ManaCost is the fixed mana cost the grant's text specifies for the granted
+	// keyword. A granted Sneak requires it.
+	ManaCost opt.V[cost.Mana]
 	// UseCardManaCost makes the synthesized alternative's base mana cost the
 	// granted card's own mana cost, so escaping an X spell or a card-specific
 	// mana cost pays that card's printed cost.
@@ -1325,5 +1337,5 @@ type GraveyardCastGrantCost struct {
 // the runtime should derive the cast cost from the granted keyword's intrinsic
 // rules instead.
 func (c GraveyardCastGrantCost) IsZero() bool {
-	return !c.UseCardManaCost && len(c.AdditionalCosts) == 0
+	return !c.UseCardManaCost && !c.ManaCost.Exists && len(c.AdditionalCosts) == 0
 }
