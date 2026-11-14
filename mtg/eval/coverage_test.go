@@ -121,6 +121,9 @@ import (
 // The extra-phase/step primitives (AddExtraPhases, AddExtraUpkeepStep) are also
 // value-neutral: they insert additional turn structure whose value depends
 // entirely on what the controller does during it, so they have no stable atom.
+// TakeExtraTurn is value-neutral for the same reason: the extra turn and its
+// turn-scoped rule effects and end-step triggers have value only through what
+// happens during that turn.
 //
 // KeepOnePerType is value-neutral (no atom), matching the sibling per-player
 // removals EachPlayerChooseDestroy, DestroyForEachPlayer, and ExileForEachPlayer:
@@ -145,7 +148,7 @@ import (
 // TurnFaceDown is value-neutral (no atom): its value depends on the target's
 // hidden identity and any alternative face-down characteristics, so it has no
 // stable standalone value.
-const knownPrimitiveCount = 149
+const knownPrimitiveCount = 150
 
 // TestPrimitiveCountIsReconciled keeps a newly added resolution primitive from
 // silently falling through the translator: adding one trips this guard so its
