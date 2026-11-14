@@ -802,6 +802,8 @@ func (r referenceResolver) groupMembers(ref game.GroupReference) []id.ID {
 		return r.attackedThisTurnGroupMembers(ref)
 	case game.GroupDomainSaddleContributors:
 		return r.saddleContributorGroupMembers(ref)
+	case game.GroupDomainAttachments:
+		return r.attachmentsGroupMembers(ref)
 	default:
 		return []id.ID{}
 	}
@@ -920,6 +922,34 @@ func (r referenceResolver) attachedObjectGroupMembers(ref game.GroupReference) [
 		return []id.ID{}
 	}
 	return []id.ID{attachedID}
+}
+
+// attachmentsGroupMembers enumerates the battlefield permanents currently
+// attached to the anchor permanent and matching the group's Selection, in
+// battlefield order. An anchor that resolves to no live permanent has nothing
+// attached to it.
+func (r referenceResolver) attachmentsGroupMembers(ref game.GroupReference) []id.ID {
+	anchor, ok := ref.Anchor()
+	if !ok {
+		return []id.ID{}
+	}
+	resolved, ok := r.object(anchor)
+	if !ok || resolved.permanent == nil {
+		return []id.ID{}
+	}
+	anchorID := resolved.permanent.ObjectID
+	sel := ref.Selection()
+	source, _ := r.sourcePermanent()
+	members := []id.ID{}
+	for _, permanent := range r.g.Battlefield {
+		if !permanent.AttachedTo.Exists || permanent.AttachedTo.Val != anchorID ||
+			!activeBattlefieldPermanent(permanent) ||
+			!r.permanentMatchesGroupSelection(&sel, source, permanent) {
+			continue
+		}
+		members = append(members, permanent.ObjectID)
+	}
+	return members
 }
 
 func (r referenceResolver) battlefieldGroupMembers(ref game.GroupReference) []id.ID {

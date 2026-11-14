@@ -89,6 +89,13 @@ const (
 	// recorded on the anchor Mount by Saddle abilities that resolved this turn.
 	// Only contributors still on the battlefield and matching Selection remain.
 	GroupDomainSaddleContributors
+
+	// GroupDomainAttachments draws from the battlefield permanents currently
+	// attached to the anchor object, narrowed by the Selection ("destroy all
+	// Equipment attached to that creature", Awaken the Sleeper; CR 301.5a,
+	// 303.4b). It is the inverse of GroupDomainAttachedObject. An anchor that is
+	// not on the battlefield has nothing attached, so the group is empty.
+	GroupDomainAttachments
 )
 
 // GroupReference is pure rules data describing WHERE a mass effect finds a group
@@ -137,6 +144,12 @@ func GroupRef(group GroupReference) *GroupReference {
 // AttachedObjectGroup matches the single permanent that anchor is attached to.
 func AttachedObjectGroup(anchor ObjectReference) GroupReference {
 	return GroupReference{domain: GroupDomainAttachedObject, anchor: opt.Val(anchor)}
+}
+
+// AttachmentsGroup matches every battlefield permanent attached to anchor and
+// satisfying selection, such as all Equipment attached to a targeted creature.
+func AttachmentsGroup(anchor ObjectReference, selection Selection) GroupReference {
+	return GroupReference{domain: GroupDomainAttachments, selection: selection, anchor: opt.Val(anchor)}
 }
 
 // ObjectControlledGroup matches every battlefield permanent controlled by the
@@ -311,6 +324,13 @@ func (r GroupReference) Validate() []string {
 		}
 		if r.exclude.Exists {
 			problems = append(problems, "attached-object group must not set an exclusion")
+		}
+	case GroupDomainAttachments:
+		if !r.anchor.Exists {
+			problems = append(problems, "attachments group requires an anchor object")
+		}
+		if r.exclude.Exists {
+			problems = append(problems, "attachments group must not set an exclusion")
 		}
 	case GroupDomainObjectControlled:
 		if !r.anchor.Exists {

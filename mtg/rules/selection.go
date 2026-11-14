@@ -323,6 +323,9 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.MatchEquipped && !s.equipped() {
 		return false
 	}
+	if sel.MatchAttachedToPermanent && !s.attachedToPermanent() {
+		return false
+	}
 	if sel.ExcludeSource && s.isSource() {
 		return false
 	}
@@ -988,6 +991,18 @@ func (s *selectionSubject) equipped() bool {
 		return permanentIsEquipped(s.g, permanent)
 	}
 	return false
+}
+
+// attachedToPermanent reports whether the subject permanent is itself attached
+// to a permanent on the battlefield. An Aura attached to a player records only
+// AttachedToPlayer, so it never matches.
+func (s *selectionSubject) attachedToPermanent() bool {
+	permanent, ok := s.attachmentSubjectPermanent()
+	if !ok || permanent == nil || !permanent.AttachedTo.Exists {
+		return false
+	}
+	host, ok := permanentByObjectID(s.g, permanent.AttachedTo.Val)
+	return ok && activeBattlefieldPermanent(host)
 }
 
 // goaded reports whether the subject permanent is goaded right now, by either a
