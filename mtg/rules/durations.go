@@ -69,12 +69,26 @@ func expireCleanupDurations(g *game.Game) {
 	settleControlChanges(g)
 }
 
+// expireEndOfUpkeepDurations ends "until the end of your next upkeep" effects
+// as the active player's upkeep step ends (CR 500.5). An effect created during
+// this same upkeep step (same turn and upkeep-step ordinal) waits for that
+// player's following upkeep step; any earlier creation point expires now.
+func expireEndOfUpkeepDurations(g *game.Game) {
+	g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, func(effect *game.ContinuousEffect) bool {
+		return effect.Duration == game.DurationUntilEndOfYourNextUpkeep &&
+			effect.ExpiresFor == g.Turn.ActivePlayer &&
+			(effect.CreatedTurn < g.Turn.TurnNumber || effect.CreatedUpkeepStep < g.Turn.UpkeepStepsThisTurn)
+	})
+	settleControlChanges(g)
+}
+
 // CR 800.4m ends even an end-of-next-turn duration when a departed player's
 // next turn would have begun, without creating that turn or its priority windows.
 func expireDepartedNextTurnDurations(g *game.Game, player game.PlayerID) {
 	expires := func(duration game.EffectDuration) bool {
 		return duration == game.DurationUntilYourNextTurn ||
-			duration == game.DurationUntilEndOfYourNextTurn || duration == game.DurationUntilYourNextEndStep
+			duration == game.DurationUntilEndOfYourNextTurn || duration == game.DurationUntilYourNextEndStep ||
+			duration == game.DurationUntilEndOfYourNextUpkeep
 	}
 	g.ContinuousEffects = filterContinuousEffects(g.ContinuousEffects, func(effect *game.ContinuousEffect) bool {
 		return effect.ExpiresFor == player && expires(effect.Duration)
