@@ -1484,6 +1484,27 @@
     "oracle_text_sha256": "db645dd80b24a7748835278348fa7fa3e09286cefc1abffaa96c9c988dad59ba",
     "revision": "f61eae36-9c4a-4d72-9431-6cac34dbb527",
     "rulings_uri": "https://api.scryfall.com/cards/f61eae36-9c4a-4d72-9431-6cac34dbb527/rulings"
+   },
+   {
+    "name": "Murderous Rider // Swift End",
+    "oracle_id": "1080c5b5-6651-4c6a-93e6-099fbe389e26",
+    "oracle_text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "revision": "80fffad3-2486-4350-8dff-54a215ebfc28",
+    "rulings_uri": "https://api.scryfall.com/cards/80fffad3-2486-4350-8dff-54a215ebfc28/rulings"
+   },
+   {
+    "name": "Gumdrop Poisoner // Tempt with Treats",
+    "oracle_id": "4f5ebbb8-f49b-488f-bb85-888aaa918bdd",
+    "oracle_text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "revision": "5cb01d4d-91c2-41c6-981e-b4135a1e1e36",
+    "rulings_uri": "https://api.scryfall.com/cards/5cb01d4d-91c2-41c6-981e-b4135a1e1e36/rulings"
+   },
+   {
+    "name": "Questing Druid // Seek the Beast",
+    "oracle_id": "555df32f-f8e9-49af-bc4a-1194ea325a97",
+    "oracle_text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "revision": "72c130e2-1e17-4996-a5ae-231155d68261",
+    "rulings_uri": "https://api.scryfall.com/cards/72c130e2-1e17-4996-a5ae-231155d68261/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8380,6 +8401,27 @@
     "spell-cost branch expansion and payment planning"
    ],
    "review": "Checked main at 122b523: mtg/game/cost/additional.go (AdditionalChoiceOption.Mana/Costs and AdditionalReveal); mtg/rules/payment/additional.go (AdditionalReveal payment path); mtg/rules/payment/additional_cost_choice_test.go (choice branch expansion and payability prior art). The pinned-corpus cardqueue families output confirms these five members share this new paragraph."
+  },
+  {
+   "id": "adventure-followup-20261114",
+   "family": "adventure",
+   "oracle_ids": [
+    "1080c5b5-6651-4c6a-93e6-099fbe389e26",
+    "4f5ebbb8-f49b-488f-bb85-888aaa918bdd",
+    "555df32f-f8e9-49af-bc4a-1194ea325a97"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Adventure face casting, resolution exile, and exile cast permission",
+    "game.Destroy",
+    "game.LoseLife",
+    "game.MoveCard (library bottom)",
+    "game.DynamicAmountLifeGainedThisTurn",
+    "game.CreateToken (Food)",
+    "game.ImpulseExile",
+    "color-filtered spell-cast trigger and +1/+1 counter"
+   ],
+   "review": "Capability-fit only on origin/main 7051b030949eef2809116f62b6a8127231d04488. Checked docs/card-authoring.md Reviewed continuation commands, mtg/rules/adventure_test.go, mtg/cards/n/nightmare_s_thirst.go, mtg/cards/w/wiccan_young_avenger.go, and the color-filtered spell-cast trigger support. No Oracle rulings or Comprehensive Rules review claimed."
   }
  ],
  "records": [
@@ -49593,10 +49635,20 @@
    "oracle_id": "1080c5b5-6651-4c6a-93e6-099fbe389e26",
    "revision": "80fffad3-2486-4350-8dff-54a215ebfc28",
    "name": "Murderous Rider // Swift End",
-   "status": "blocked",
-   "family": "unreviewed/adventure",
+   "status": "implemented-verified",
+   "family": "adventure",
+   "batch": "adventure-followup-20261114",
    "blocker": 3353,
-   "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))"
+   "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))",
+   "evidence": "mtg/rules/adventure_cards_test.go: TestMurderousRiderSwiftEndScenario",
+   "reassessments": [
+    {
+     "issue": 3353,
+     "runtime_revision": "b76c1de2c173f90049812996b0197ffafc286621",
+     "evidence": "Engine unit gap-3353 landed in https://github.com/natefinch/council4/pull/3377",
+     "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))"
+    }
+   ]
   },
   {
    "oracle_id": "10c0f814-e302-49ff-aded-1b8d8424fd60",
@@ -49902,10 +49954,20 @@
    "oracle_id": "4f5ebbb8-f49b-488f-bb85-888aaa918bdd",
    "revision": "5cb01d4d-91c2-41c6-981e-b4135a1e1e36",
    "name": "Gumdrop Poisoner // Tempt with Treats",
-   "status": "blocked",
-   "family": "unreviewed/adventure",
+   "status": "implemented-verified",
+   "family": "adventure",
+   "batch": "adventure-followup-20261114",
    "blocker": 3353,
-   "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))"
+   "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))",
+   "evidence": "mtg/rules/adventure_cards_test.go: TestGumdropPoisonerTemptWithTreatsScenario",
+   "reassessments": [
+    {
+     "issue": 3353,
+     "runtime_revision": "b76c1de2c173f90049812996b0197ffafc286621",
+     "evidence": "Engine unit gap-3353 landed in https://github.com/natefinch/council4/pull/3377",
+     "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))"
+    }
+   ]
   },
   {
    "oracle_id": "4fad3816-41af-4fa4-85b4-ba37614ec848",
@@ -49967,10 +50029,20 @@
    "oracle_id": "555df32f-f8e9-49af-bc4a-1194ea325a97",
    "revision": "72c130e2-1e17-4996-a5ae-231155d68261",
    "name": "Questing Druid // Seek the Beast",
-   "status": "blocked",
-   "family": "unreviewed/adventure",
+   "status": "implemented-verified",
+   "family": "adventure",
+   "batch": "adventure-followup-20261114",
    "blocker": 3353,
-   "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))"
+   "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))",
+   "evidence": "mtg/rules/adventure_cards_test.go: TestQuestingDruidSeekTheBeastScenario",
+   "reassessments": [
+    {
+     "issue": 3353,
+     "runtime_revision": "b76c1de2c173f90049812996b0197ffafc286621",
+     "evidence": "Engine unit gap-3353 landed in https://github.com/natefinch/council4/pull/3377",
+     "reason": "Backlog triage: needs #3353 (Engine: scope Adventure exile permission to the resolving controller (CR 715.3d))"
+    }
+   ]
   },
   {
    "oracle_id": "56b0cb64-b886-413e-bb20-392bf12d3926",
