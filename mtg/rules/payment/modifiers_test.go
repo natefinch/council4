@@ -5,6 +5,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/mana"
 )
 
 func TestAppendLifeCostModifiers(t *testing.T) {
@@ -61,6 +62,48 @@ func TestAppendLifeCostModifiers(t *testing.T) {
 			}
 			if added.Amount != test.wantLife {
 				t.Fatalf("appended pay-life amount = %d, want %d", added.Amount, test.wantLife)
+			}
+		})
+	}
+}
+
+// TestApplyManaCostModifiersColoredReduction pins how a colored reduction
+// lowers a total cost (CR 601.2f, 118.7b, 118.7c): it removes a symbol of its
+// color, including one a colored increase added, and otherwise lowers generic.
+func TestApplyManaCostModifiersColoredReduction(t *testing.T) {
+	blue := func(generic int, colors ...mana.Color) game.CostModifier {
+		return game.CostModifier{Kind: game.CostModifierSpell, GenericReduction: generic, ColoredReduction: colors}
+	}
+	tests := []struct {
+		name      string
+		manaCost  cost.Mana
+		modifiers []game.CostModifier
+		want      string
+	}{
+		{name: "removes a matching colored symbol and generic", manaCost: cost.Mana{cost.O(2), cost.U, cost.U}, modifiers: []game.CostModifier{blue(1, mana.U)}, want: "{1}{U}"},
+		{name: "absent color reduces generic (118.7b)", manaCost: cost.Mana{cost.O(2), cost.R}, modifiers: []game.CostModifier{blue(0, mana.U)}, want: "{1}{R}"},
+		{name: "excess colored reduces generic (118.7c)", manaCost: cost.Mana{cost.O(1), cost.U}, modifiers: []game.CostModifier{blue(0, mana.U, mana.U)}, want: ""},
+		{name: "never below zero", manaCost: cost.Mana{cost.U}, modifiers: []game.CostModifier{blue(1, mana.U, mana.U)}, want: ""},
+		{name: "hybrid is not a blue requirement", manaCost: cost.Mana{cost.O(1), cost.HybridMana(mana.U, mana.R)}, modifiers: []game.CostModifier{blue(0, mana.U)}, want: "{U/R}"},
+		{
+			name:     "reduction applies after colored and generic increases",
+			manaCost: cost.Mana{cost.O(2), cost.U, cost.U},
+			modifiers: []game.CostModifier{
+				{Kind: game.CostModifierSpell, GenericIncrease: 1, ColoredIncrease: []mana.Color{mana.U}},
+				blue(1, mana.U),
+			},
+			want: "{2}{U}{U}",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			manaCost := append(cost.Mana(nil), test.manaCost...)
+			got := applyManaCostModifiers(&manaCost, test.modifiers)
+			if got.String() != test.want {
+				t.Fatalf("total cost = %q, want %q", got.String(), test.want)
+			}
+			if manaCost.String() != test.manaCost.String() {
+				t.Fatalf("printed cost mutated to %q", manaCost.String())
 			}
 		})
 	}

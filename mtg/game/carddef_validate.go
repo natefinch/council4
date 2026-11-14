@@ -1690,6 +1690,9 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		if len(effect.CostModifier.PerTargetBeyondFirstIncrease) > 0 && !effect.AffectedSource {
 			v.add(faceName, appendPath(path, "AffectedSource"), CardDefIssueInvalidRuleEffect, "per-target-beyond-first cost increases must affect their source spell")
 		}
+		if len(effect.CostModifier.ColoredReduction) > 0 && !effect.AffectedSource {
+			v.add(faceName, appendPath(path, "AffectedSource"), CardDefIssueInvalidRuleEffect, "colored cost reductions must affect their source spell")
+		}
 	case RuleEffectGrantHandCardAbility:
 		if effect.AffectedPlayer == PlayerAny {
 			v.add(faceName, appendPath(path, "AffectedPlayer"), CardDefIssueInvalidRuleEffect, "hand-card ability grants must set affected player")
@@ -2190,6 +2193,17 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 			v.add(faceName, appendPath(path, "ColoredIncrease"), CardDefIssueInvalidRuleEffect, "colored cost increase must be a basic colored mana symbol")
 		}
 	}
+	if len(modifier.ColoredReduction) > 0 {
+		reductionPath := appendPath(path, "ColoredReduction")
+		if modifier.Kind != CostModifierSpell || (modifier.ReductionTarget == nil && !modifier.ReductionCondition.Exists) {
+			v.add(faceName, reductionPath, CardDefIssueInvalidRuleEffect, "colored cost reductions require a spell modifier gated by ReductionTarget or ReductionCondition")
+		}
+		for _, c := range modifier.ColoredReduction {
+			if !manaColorValid(c) {
+				v.add(faceName, reductionPath, CardDefIssueInvalidRuleEffect, "colored cost reduction must be a basic colored mana symbol")
+			}
+		}
+	}
 	if modifier.SetGeneric.Exists && modifier.SetGeneric.Val < 0 {
 		v.add(faceName, appendPath(path, "SetGeneric"), CardDefIssueInvalidRuleEffect, "generic cost replacement cannot be negative")
 	}
@@ -2285,8 +2299,8 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 		if modifier.Kind != CostModifierSpell && modifier.Kind != CostModifierAbility {
 			v.add(faceName, appendPath(path, "ReductionCondition"), CardDefIssueInvalidRuleEffect, "conditional cost reduction requires a spell or ability modifier")
 		}
-		if modifier.GenericReduction <= 0 {
-			v.add(faceName, appendPath(path, "ReductionCondition"), CardDefIssueInvalidRuleEffect, "conditional cost reduction requires a positive generic reduction")
+		if modifier.GenericReduction <= 0 && len(modifier.ColoredReduction) == 0 {
+			v.add(faceName, appendPath(path, "ReductionCondition"), CardDefIssueInvalidRuleEffect, "conditional cost reduction requires a positive generic or colored reduction")
 		}
 		if modifier.PerObjectReduction > 0 || modifier.DynamicReduction != nil {
 			v.add(faceName, appendPath(path, "ReductionCondition"), CardDefIssueInvalidRuleEffect, "conditional cost reduction cannot combine with a per-object or dynamic reduction")
@@ -2297,8 +2311,8 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 		if modifier.Kind != CostModifierSpell {
 			v.add(faceName, targetPath, CardDefIssueInvalidRuleEffect, "target-gated cost reduction requires a spell modifier")
 		}
-		if modifier.GenericReduction <= 0 {
-			v.add(faceName, targetPath, CardDefIssueInvalidRuleEffect, "target-gated cost reduction requires a positive generic reduction")
+		if modifier.GenericReduction <= 0 && len(modifier.ColoredReduction) == 0 {
+			v.add(faceName, targetPath, CardDefIssueInvalidRuleEffect, "target-gated cost reduction requires a positive generic or colored reduction")
 		}
 		if modifier.ReductionCondition.Exists || modifier.PerObjectReduction > 0 || modifier.DynamicReduction != nil {
 			v.add(faceName, targetPath, CardDefIssueInvalidRuleEffect, "target-gated cost reduction cannot combine with another conditional or dynamic reduction")

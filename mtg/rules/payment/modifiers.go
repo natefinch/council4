@@ -4,6 +4,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
@@ -77,6 +78,13 @@ func appendLifeCostModifiers(additionalCosts []cost.Additional, modifiers []game
 	return append(additionalCosts, cost.Additional{Kind: cost.AdditionalPayLife, Amount: life})
 }
 
+// applyManaCostModifiers determines the mana component of a spell's total cost
+// (CR 601.2f): the chosen mana or alternative cost plus every increase, minus
+// every reduction. A generic reduction lowers only the generic component (CR
+// 118.7a). A colored reduction removes a symbol of its color from the cost
+// including any colored increase, or, when no such symbol remains, lowers the
+// generic component instead (CR 118.7b, 118.7c). The generic component never
+// falls below zero.
 func applyManaCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifier) *cost.Mana {
 	if len(modifiers) == 0 {
 		return manaCost
@@ -85,6 +93,7 @@ func applyManaCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifier) 
 	minimum := 0
 	taxInstances := 0
 	var manaIncrease cost.Mana
+	var coloredReduction []mana.Color
 	set := (*int)(nil)
 	for _, modifier := range modifiers {
 		if modifier.SetGeneric.Exists {
@@ -93,6 +102,7 @@ func applyManaCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifier) 
 		generic += modifier.GenericIncrease
 		generic += genericManaAmount(modifier.ManaIncrease)
 		generic -= modifier.GenericReduction
+		coloredReduction = append(coloredReduction, modifier.ColoredReduction...)
 		taxInstances += modifier.LifePayableTaxInstances
 		for _, c := range modifier.ColoredIncrease {
 			manaIncrease = append(manaIncrease, cost.Symbol{Kind: cost.ColoredSymbol, Color: c})
@@ -106,6 +116,16 @@ func applyManaCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifier) 
 			minimum = modifier.MinimumGeneric
 		}
 	}
+	var printed cost.Mana
+	if manaCost != nil {
+		for _, symbol := range *manaCost {
+			if symbol.Kind != cost.GenericSymbol {
+				printed = append(printed, symbol)
+			}
+		}
+	}
+	nonGeneric, excess := append(manaIncrease, printed...).ReduceColored(coloredReduction)
+	generic -= excess
 	if set != nil {
 		generic = *set
 	}
@@ -115,7 +135,7 @@ func applyManaCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifier) 
 	if generic < 0 {
 		generic = 0
 	}
-	return costWithGenericAmount(manaCost, generic, taxInstances, manaIncrease)
+	return costWithGenericAmount(generic, taxInstances, nonGeneric)
 }
 
 func genericCostAmount(manaCost *cost.Mana) int {
@@ -135,7 +155,9 @@ func genericManaAmount(manaCost cost.Mana) int {
 	return total
 }
 
-func costWithGenericAmount(manaCost *cost.Mana, generic, taxInstances int, manaIncrease []cost.Symbol) *cost.Mana {
+// costWithGenericAmount builds a total mana cost from its generic amount, its
+// life-payable commander tax instances and its remaining non-generic symbols.
+func costWithGenericAmount(generic, taxInstances int, nonGeneric cost.Mana) *cost.Mana {
 	var modified cost.Mana
 	if generic > 0 {
 		modified = append(modified, cost.O(generic))
@@ -143,13 +165,6 @@ func costWithGenericAmount(manaCost *cost.Mana, generic, taxInstances int, manaI
 	for range taxInstances {
 		modified = append(modified, cost.PhyrexianGeneric(2))
 	}
-	modified = append(modified, manaIncrease...)
-	if manaCost != nil {
-		for _, symbol := range *manaCost {
-			if symbol.Kind != cost.GenericSymbol {
-				modified = append(modified, symbol)
-			}
-		}
-	}
+	modified = append(modified, nonGeneric...)
 	return &modified
 }

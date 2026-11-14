@@ -119,21 +119,21 @@ type CostModifier struct {
 	// reduction; it is a pointer so CostModifier stays cheap to copy.
 	DynamicReduction *DynamicAmount
 
-	// ReductionCondition gates a flat GenericReduction scoped to the spell that
-	// carries it ("This spell costs {N} less to cast if <condition>.", Wizard's
-	// Lightning, Squash, Draconic Lore): the spell costs GenericReduction generic
-	// mana less only while the condition holds. It is set only on an
-	// AffectedSource CostModifierSpell; the rules layer evaluates the board- and
-	// player-state condition against the caster as the spell is cast and applies
-	// the reduction, which never touches colored requirements and never drops a
+	// ReductionCondition gates a flat GenericReduction scoped to the spell or
+	// ability that carries it ("This spell costs {N} less to cast if
+	// <condition>.", Wizard's Lightning, Squash, Draconic Lore): the spell costs
+	// GenericReduction generic mana (and any ColoredReduction) less only while
+	// the condition holds. It is set only on an AffectedSource modifier; the
+	// rules layer evaluates the board- and player-state condition against the
+	// caster as the spell is cast and applies the reduction, which never drops a
 	// cost below zero, only when it is satisfied. It is mutually exclusive with
 	// PerObjectReduction and DynamicReduction. An absent option leaves the
 	// reduction ungated.
 	ReductionCondition opt.V[Condition]
-	// ReductionTarget gates a source spell's flat GenericReduction on its own
-	// targets ("This spell costs {N} less to cast if it targets <object>.",
-	// Banish from Edoras, Mystical Dispute, No One Left Behind): the spell costs
-	// GenericReduction generic mana less only when at least one target chosen
+	// ReductionTarget gates a source spell's flat GenericReduction and
+	// ColoredReduction on its own targets ("This spell costs {N} less to cast
+	// if it targets <object>.", Banish from Edoras, Mystical Dispute, Brush
+	// Off): the spell costs that much less only when at least one target chosen
 	// for it (CR 601.2c) matches this spec's Allow categories, Selection
 	// (permanent and card characteristics, with TargetZone for cards) and
 	// Predicate (stack-object qualifiers), as the total cost is determined (CR
@@ -144,6 +144,19 @@ type CostModifier struct {
 	// and dynamic reductions. A nil pointer leaves the reduction ungated by
 	// targets; it is a pointer so CostModifier stays cheap to copy.
 	ReductionTarget *TargetSpec
+	// ColoredReduction lists colored mana symbols a source spell's gated flat
+	// reduction also removes, alongside any GenericReduction ("This spell costs
+	// {1}{U} less to cast if it targets an instant or sorcery spell.", Brush
+	// Off; "This spell costs {U} less to cast if <condition>.", Ertai's Scorn).
+	// Each entry is one basic colored mana symbol (W, U, B, R, or G). When the
+	// gate is met, the rules layer removes one ordinary symbol of that color
+	// from the total cost after all increases (CR 601.2f, 118.7); a color the
+	// cost no longer requires reduces its generic component by one instead
+	// (CR 118.7b, 118.7c), never below zero. It is set only on an
+	// AffectedSource CostModifierSpell gated by ReductionTarget or
+	// ReductionCondition. It is a slice so CostModifier stays a plain value;
+	// nil and empty are equivalent.
+	ColoredReduction []mana.Color
 
 	// SourceZone constrains a spell cost modifier to spells being cast from a
 	// single zone ("Spells you cast from your graveyard cost {N} less to cast.",

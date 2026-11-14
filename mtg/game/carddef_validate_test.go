@@ -198,6 +198,61 @@ func TestValidateCardDefValidatesTargetGatedSpellCostReduction(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefValidatesColoredSpellCostReduction(t *testing.T) {
+	t.Parallel()
+
+	makeCard := func(affectedSource bool, modifier CostModifier) *CardDef {
+		return &CardDef{CardFace: CardFace{
+			Name:  "Colored Reducer",
+			Types: []types.Card{types.Instant},
+			StaticAbilities: []StaticAbility{{
+				RuleEffects: []RuleEffect{{
+					Kind:           RuleEffectCostModifier,
+					AffectedSource: affectedSource,
+					CostModifier:   modifier,
+				}},
+			}},
+		}}
+	}
+	valid := func() CostModifier {
+		return CostModifier{
+			Kind:             CostModifierSpell,
+			ColoredReduction: []mana.Color{mana.U},
+			ReductionTarget: &TargetSpec{
+				Allow:     TargetAllowStackObject,
+				Predicate: TargetPredicate{StackObjectKinds: []StackObjectKind{StackSpell}},
+			},
+		}
+	}
+	if issues := ValidateCardDef(makeCard(true, valid())); len(issues) != 0 {
+		t.Fatalf("valid colored target-gated reduction issues = %+v, want none", issues)
+	}
+	conditional := valid()
+	conditional.ReductionTarget = nil
+	conditional.ReductionCondition = opt.Val(Condition{ControlsMatching: opt.Val(SelectionCount{Selection: Selection{SubtypesAny: []types.Sub{types.Wizard}}})})
+	if issues := ValidateCardDef(makeCard(true, conditional)); len(issues) != 0 {
+		t.Fatalf("valid colored conditional reduction issues = %+v, want none", issues)
+	}
+
+	invalid := map[string]struct {
+		affectedSource bool
+		mutate         func(*CostModifier)
+	}{
+		"ungated":           {true, func(m *CostModifier) { m.ReductionTarget = nil }},
+		"global":            {false, func(*CostModifier) {}},
+		"colorless":         {true, func(m *CostModifier) { m.ColoredReduction = []mana.Color{mana.C} }},
+		"ability modifier":  {true, func(m *CostModifier) { m.Kind = CostModifierAbility }},
+		"empty and generic": {true, func(m *CostModifier) { m.ColoredReduction = nil }},
+	}
+	for name, tc := range invalid {
+		modifier := valid()
+		tc.mutate(&modifier)
+		if issues := ValidateCardDef(makeCard(tc.affectedSource, modifier)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+			t.Errorf("%s issues = %+v, want an invalid rule effect issue", name, issues)
+		}
+	}
+}
+
 func TestValidateCardDefColorDisjunctionCostModifier(t *testing.T) {
 	t.Parallel()
 
