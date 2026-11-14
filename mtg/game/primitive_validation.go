@@ -1363,6 +1363,10 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 			if err := validateDamageCantBePreventedRuleEffect(effect, p.Object.Exists); err != nil {
 				return err
 			}
+		case RuleEffectDamageToCantBePreventedOrRedirected:
+			if err := validateDamageToCantBePreventedOrRedirectedRuleEffect(effect, p.Object.Exists); err != nil {
+				return err
+			}
 		default:
 		}
 	}

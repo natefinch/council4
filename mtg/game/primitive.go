@@ -462,6 +462,16 @@ type Damage struct {
 	// effects that don't use the word "prevent" apply normally, and redirected
 	// damage stays unpreventable.
 	CantBePrevented bool
+
+	// CreatureDamageCantBePreventedOrRedirected makes each damage event this
+	// instruction deals to a creature unpreventable and not subject to
+	// redirection effects ("If Lava Burst would deal damage to a creature, that
+	// damage can't be prevented or dealt instead to another permanent or
+	// player."). It is checked against the event's recipient as each
+	// prevention or redirection effect would apply (CR 615.12, 614.9): damage
+	// to a player is prevented and redirected normally, and damage redirected
+	// from a player to a creature is locked there.
+	CreatureDamageCantBePreventedOrRedirected bool
 }
 
 // GroupSourceDamage has each permanent in a battlefield group deal an amount of

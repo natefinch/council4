@@ -753,6 +753,15 @@ const (
 	// dealt by matching battlefield permanents, evaluated live ("Damage that
 	// would be dealt by this creature can't be prevented.", Excruciator).
 	RuleEffectDamageCantBePrevented
+	// RuleEffectDamageToCantBePreventedOrRedirected makes damage that would be
+	// dealt to matching battlefield permanents unpreventable (CR 615.12) and
+	// makes redirection effects (CR 614.9) not apply to it ("Damage that would
+	// be dealt to that creature this turn can't be prevented or dealt instead
+	// to another permanent or player.", Whippoorwill). It requires exactly one
+	// recipient scope: an instruction Object, AffectedSource or
+	// AffectedSelection, evaluated live at each damage event. Damage to other
+	// recipients is unaffected.
+	RuleEffectDamageToCantBePreventedOrRedirected
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -829,7 +838,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectLegendRuleDoesNotApply,
 		RuleEffectPlayFromGraveyardPerPermanentType,
 		RuleEffectCascadeLandOption,
-		RuleEffectDamageCantBePrevented:
+		RuleEffectDamageCantBePrevented,
+		RuleEffectDamageToCantBePreventedOrRedirected:
 		return true
 	default:
 		return false
