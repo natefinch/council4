@@ -482,6 +482,15 @@ type Selection struct {
 	// (CR 601.2f). Only an on-battlefield permanent has a controller to read; a
 	// card, spell, event or player subject never matches.
 	ControllerGraveyardCount opt.V[compare.Int]
+
+	// MatchAttachedToPermanent requires the matched permanent itself to be
+	// attached to a permanent on the battlefield ("target Aura that's attached to
+	// a permanent", Aura Graft; CR 301.5, 303.4b). It describes the attachment,
+	// unlike MatchEnchanted and MatchEquipped, which describe the permanent things
+	// are attached to. An Aura enchanting a player (CR 303.4h), an unattached
+	// Equipment and every non-battlefield subject never match. It is read live, so
+	// a target that becomes unattached before resolution is illegal (CR 608.2b).
+	MatchAttachedToPermanent bool
 }
 
 // ManaValueDynamicBound bounds a card's mana value by a controller-relative
@@ -567,7 +576,8 @@ func (s Selection) Empty() bool {
 		!s.BandedWithSource &&
 		s.PutIntoGraveyardThisTurn == GraveyardArrivalNone &&
 		!s.ToughnessLessThanSource &&
-		!s.ControllerGraveyardCount.Exists
+		!s.ControllerGraveyardCount.Exists &&
+		!s.MatchAttachedToPermanent
 }
 
 // Validate reports structural contradictions in the Selection that represent
