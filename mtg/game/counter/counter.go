@@ -115,11 +115,29 @@ const (
 	Slime      // Slime counter (Sludge Monster)
 	Bounty     // Bounty counter (Termination Facilitator)
 	Valor      // Valor counter (Intrepid Adversary)
+	Fate       // Fate counter (Oblivion Stone)
+	Flood      // Flood counter (Bounty of the Luxa)
+	Fungus     // Fungus counter (Sporogenesis)
+	Rust       // Rust counter (Corrosion)
+	Mine       // Mine counter (Mine Layer)
+	Hourglass  // Hourglass counter (Temporal Distortion)
+	Rope       // Rope counter (Fraying Line)
+	Vortex     // Vortex counter (Energy Vortex)
+	Delay      // Delay counter (Delaying Shield)
+	Wage       // Wage counter (Rogue Skycaptain)
+	Fuse       // Fuse counter (Bomb Squad)
+	Tide       // Tide counter (Homarid, Tidal Influence)
+	Pain       // Pain counter (Torture Chamber)
+	Eyeball    // Eyeball counter (Jar of Eyeballs)
+	Elixir     // Elixir counter (Essence Bottle)
+	Aim        // Aim counter (Hankyu)
+	Mire       // Mire counter (Cyclopean Tomb)
+	Wind       // Wind counter (Freyalise's Winds)
 )
 
 // Valid reports whether k is a recognized counter kind.
 func (k Kind) Valid() bool {
-	return k >= PlusOnePlusOne && k <= Valor
+	return k >= PlusOnePlusOne && k <= Wind
 }
 
 // PlayerOnly reports whether k may be placed only on players.
@@ -311,6 +329,42 @@ func (k Kind) String() string {
 		return "bounty"
 	case Valor:
 		return "valor"
+	case Fate:
+		return "fate"
+	case Flood:
+		return "flood"
+	case Fungus:
+		return "fungus"
+	case Rust:
+		return "rust"
+	case Mine:
+		return "mine"
+	case Hourglass:
+		return "hourglass"
+	case Rope:
+		return "rope"
+	case Vortex:
+		return "vortex"
+	case Delay:
+		return "delay"
+	case Wage:
+		return "wage"
+	case Fuse:
+		return "fuse"
+	case Tide:
+		return "tide"
+	case Pain:
+		return "pain"
+	case Eyeball:
+		return "eyeball"
+	case Elixir:
+		return "elixir"
+	case Aim:
+		return "aim"
+	case Mire:
+		return "mire"
+	case Wind:
+		return "wind"
 	default:
 		return "unknown"
 	}

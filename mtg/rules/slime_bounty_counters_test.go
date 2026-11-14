@@ -700,14 +700,14 @@ func TestSlimeBountyLiveAndDepartedSelection(t *testing.T) {
 // nested alternative, rather than silently matching nothing.
 func TestSlimeBountyInvalidCounterKindRejected(t *testing.T) {
 	direct := terminationFacilitatorFixture()
-	direct.TriggeredAbilities[0].Trigger.Pattern.SubjectSelection.RequiredCounter = counter.Valor + 1
+	direct.TriggeredAbilities[0].Trigger.Pattern.SubjectSelection.RequiredCounter = counter.Wind + 1
 	if issues := game.ValidateCardDef(direct); len(issues) == 0 {
 		t.Fatal("invalid counter kind accepted in damage-trigger subject filter")
 	}
 	nested := terminationFacilitatorFixture()
 	nested.TriggeredAbilities[0].Trigger.Pattern.SubjectSelection = game.Selection{AnyOf: []game.Selection{
 		{RequiredTypes: []types.Card{types.Creature}, MatchCounter: true, RequiredCounter: counter.Bounty},
-		{RequiredTypes: []types.Card{types.Planeswalker}, MatchCounter: true, RequiredCounter: counter.Valor + 1},
+		{RequiredTypes: []types.Card{types.Planeswalker}, MatchCounter: true, RequiredCounter: counter.Wind + 1},
 	}}
 	if issues := game.ValidateCardDef(nested); len(issues) == 0 {
 		t.Fatal("invalid counter kind accepted in nested damage-trigger subject alternative")

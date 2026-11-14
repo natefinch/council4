@@ -2658,6 +2658,15 @@ type RemoveCounter struct {
 	// kind-agnostic mass form "remove all counters from <permanent>" (Vampire
 	// Hexmage). When set, Amount, CounterKind, and ChooseKind are ignored.
 	AllKinds bool
+	// AllOfKind removes every counter of the named CounterKind from the object,
+	// or from each permanent in the group, modeling "remove all <kind> counters
+	// from <permanent>" (Coalition Relic) and the mass "remove all fate counters
+	// from all permanents" (Oblivion Stone). Other kinds are untouched. The
+	// published result amount is the total number removed, so a follow-on "for
+	// each counter removed this way" reads it, and a removal of none fails ("If
+	// no counters were removed this way", Bounty of the Luxa). Amount must be
+	// unset.
+	AllOfKind bool
 }
 
 // Transform transforms the referenced permanent.

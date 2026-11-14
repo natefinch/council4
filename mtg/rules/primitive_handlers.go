@@ -1560,7 +1560,7 @@ func (r *effectResolver) targetedExiledCard(object game.ObjectReference) (id.ID,
 }
 
 func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResolved {
-	if prim.AllKinds {
+	if prim.AllKinds || prim.AllOfKind {
 		return handleRemoveAllCounters(r, prim)
 	}
 	res := effectResolved{accepted: true}
@@ -1607,24 +1607,41 @@ func handleRemoveCounter(r *effectResolver, prim game.RemoveCounter) effectResol
 	return res
 }
 
-// handleRemoveAllCounters resolves the kind-agnostic mass form "remove all
-// counters from <permanent>" (Vampire Hexmage), clearing every counter of every
-// kind from the referenced permanent or group regardless of count.
+// handleRemoveAllCounters resolves the mass forms "remove all counters from
+// <permanent>" (AllKinds, Vampire Hexmage) and "remove all <kind> counters from
+// <permanent or permanents>" (AllOfKind, Oblivion Stone), clearing every
+// matching counter from the referenced permanent, targeted exiled card, or
+// each group member regardless of count. The removals are one simultaneous
+// action and the result amount is the total removed.
 func handleRemoveAllCounters(r *effectResolver, prim game.RemoveCounter) effectResolved {
 	res := effectResolved{accepted: true}
 	removal := newCounterRemoval(r.game, stackObjectController(r.obj))
 	defer removal.publish()
+	removeFrom := func(permanent *game.Permanent) int {
+		if prim.AllOfKind {
+			return removal.remove(permanent, prim.CounterKind, permanent.Counters.Get(prim.CounterKind))
+		}
+		return removal.removeAll(permanent)
+	}
 	if prim.Group.Valid() {
 		res.amountKnown = true
 		for _, permanent := range r.groupPermanents(prim.Group) {
-			res.amount += removal.removeAll(permanent)
+			res.amount += removeFrom(permanent)
 		}
 		res.succeeded = res.amount > 0
 		return res
 	}
+	if cardID, ok := r.targetedExiledCard(prim.Object); ok && prim.AllOfKind {
+		res.amountKnown = true
+		change := newExileCardCounterChange(r.game, stackObjectController(r.obj))
+		res.amount = change.remove(cardID, prim.CounterKind, r.game.ExileCounterCount(cardID, prim.CounterKind))
+		res.succeeded = res.amount > 0
+		change.publish()
+		return res
+	}
 	if permanent, ok := r.resolveObject(prim.Object); ok {
 		res.amountKnown = true
-		res.amount = removal.removeAll(permanent)
+		res.amount = removeFrom(permanent)
 		res.succeeded = res.amount > 0
 	}
 	return res
