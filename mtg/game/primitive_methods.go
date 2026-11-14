@@ -432,6 +432,9 @@ func (PlayHideawayCard) Kind() PrimitiveKind { return PrimitivePlayHideawayCard 
 // Kind implements Primitive for Attach.
 func (Attach) Kind() PrimitiveKind { return PrimitiveAttach }
 
+// Kind implements Primitive for Unattach.
+func (Unattach) Kind() PrimitiveKind { return PrimitiveUnattach }
+
 // Kind implements Primitive for MassReturnFromGraveyard.
 func (MassReturnFromGraveyard) Kind() PrimitiveKind { return PrimitiveMassReturnFromGraveyard }
 
@@ -581,6 +584,7 @@ func (ChooseNewTargets) isPrimitive()                     {}
 func (ChangeStackObjectController) isPrimitive()          {}
 func (PutLinkedExiledCardsInLibrary) isPrimitive()        {}
 func (Attach) isPrimitive()                               {}
+func (Unattach) isPrimitive()                             {}
 func (MassReturnFromGraveyard) isPrimitive()              {}
 
 func (ExchangeLifeTotalWithSourceCharacteristic) isPrimitive() {}
@@ -994,6 +998,10 @@ func (p Attach) instructionRefs() primitiveRefs {
 	refs := mergePrimitiveRefs(objectReferenceRefs(p.Attachment), objectReferenceRefs(p.Target))
 	refs.publishesLinked = p.PublishLinked
 	return refs
+}
+
+func (p Unattach) instructionRefs() primitiveRefs {
+	return objectReferenceRefs(p.Attachment)
 }
 
 func cardReferenceRefs(reference CardReference) primitiveRefs {

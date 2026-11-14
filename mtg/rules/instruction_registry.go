@@ -182,6 +182,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleExilePermanentForPlay)
 	registerPrimitiveHandler(reg, handlePlayChosenExiledCard)
 	registerPrimitiveHandler(reg, handleAttach)
+	registerPrimitiveHandler(reg, handleUnattach)
 	registerPrimitiveHandler(reg, handleReorderLibraryTop)
 	registerPrimitiveHandler(reg, handleShuffleLibrary)
 	registerPrimitiveHandler(reg, handleShuffleGraveyardIntoLibrary)
