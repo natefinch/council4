@@ -216,3 +216,52 @@ func TestEvaluateLossWhenEliminated(t *testing.T) {
 		t.Fatalf("eliminated player scored %v, want evalLoss %v", got, evalLoss)
 	}
 }
+
+func TestEvaluateRewardsHeldUpInteraction(t *testing.T) {
+	// Ending a turn able to answer a threat — an instant in hand with untapped
+	// mana to cast it — is worth more than tapping out, so the searcher plays
+	// around interaction instead of dumping its hand. The value is realized on an
+	// opponent's turn, which one-ply search never simulates, so the eval rewards
+	// the held-up option directly.
+	instant := &game.CardDef{CardFace: game.CardFace{
+		Name:  "Removal",
+		Types: []types.Card{types.Instant},
+	}}
+
+	tappedOut := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedHandCard(tappedOut, game.Player1, instant)
+	spent := addObservedPermanent(tappedOut, game.Player1, manaRockDef("Signet", 2))
+	spent.Tapped = true
+
+	heldUp := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedHandCard(heldUp, game.Player1, instant)
+	addObservedPermanent(heldUp, game.Player1, manaRockDef("Signet", 2)) // untapped
+
+	if evalOf(heldUp, game.Player1) <= evalOf(tappedOut, game.Player1) {
+		t.Fatalf("holding up an instant with untapped mana (%v) should beat being tapped out (%v)",
+			evalOf(heldUp, game.Player1), evalOf(tappedOut, game.Player1))
+	}
+}
+
+func TestEvaluateHoldUpNeedsAnAnswerInHand(t *testing.T) {
+	// Untapped mana alone is not reactive potential: without an instant to cast,
+	// keeping mana up answers nothing, so it earns no hold-up bonus (that would
+	// just make the agent decline to develop for no reason).
+	withInstant := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedHandCard(withInstant, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Removal", Types: []types.Card{types.Instant},
+	}})
+	addObservedPermanent(withInstant, game.Player1, manaRockDef("Signet", 2))
+
+	withSorcery := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addObservedHandCard(withSorcery, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Ritual", Types: []types.Card{types.Sorcery},
+	}})
+	addObservedPermanent(withSorcery, game.Player1, manaRockDef("Signet", 2))
+
+	// Same board and hand size; only the instant grants reactive potential.
+	if evalOf(withInstant, game.Player1) <= evalOf(withSorcery, game.Player1) {
+		t.Fatalf("an instant (%v) should give reactive potential a sorcery (%v) does not",
+			evalOf(withInstant, game.Player1), evalOf(withSorcery, game.Player1))
+	}
+}
