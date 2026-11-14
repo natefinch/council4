@@ -388,10 +388,14 @@ const (
 	// the controller puts Amount loyalty counters on a Jace planeswalker token
 	// they control, first creating one if they control none (game.EmpowerJace).
 	PrimitiveEmpowerJace
+	// PrimitiveTakeExtraTurn has a player take an extra turn after this one
+	// (CR 500.7), with optional effects and end-step delayed triggers scoped to
+	// that specific turn (game.TakeExtraTurn).
+	PrimitiveTakeExtraTurn
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveEmpowerJace) + 1
+const primitiveKindCount = int(PrimitiveTakeExtraTurn) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -2766,6 +2770,29 @@ type SkipStep struct {
 // CreateEmblem creates an emblem owned by the controller with the given abilities.
 type CreateEmblem struct {
 	EmblemAbilities []Ability
+}
+
+// TakeExtraTurn gives Player an extra turn directly after the current turn
+// (CR 500.7: the most recently created extra turn is taken first). The grant
+// has a game-owned identity, so the scoped parts bind to that turn and no other
+// extra turn queued for the same player:
+//
+//   - RuleEffects apply only during that turn ("During that turn, damage can't
+//     be prevented."). Their Duration must be unset; the grant supplies
+//     DurationDuringExtraTurn.
+//   - EndStepTriggers trigger only at the beginning of that turn's end step
+//     ("At the beginning of that turn's end step, you lose the game."). Their
+//     Timing must be unset. Set Text, since it cannot be singled out of the
+//     creating text reliably.
+//
+// If that turn is skipped or never taken, or its end step is skipped, the
+// scoped effects never apply and the triggers never trigger; both are removed
+// when the turn ends or is dropped. Nothing is granted when Player has left
+// the game.
+type TakeExtraTurn struct {
+	Player          PlayerReference
+	RuleEffects     []RuleEffect
+	EndStepTriggers []DelayedTriggerDef
 }
 
 // CreateDelayedTrigger schedules a delayed triggered ability.

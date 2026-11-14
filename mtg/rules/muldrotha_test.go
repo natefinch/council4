@@ -304,7 +304,7 @@ func TestMuldrothaSourcesControlBlinkTurnsAndClone(t *testing.T) {
 	obj, _ = g.Stack.Peek()
 	counterStackObject(g, obj.ID)
 	oldTurn := g.Turn.TurnNumber
-	g.Turn.ExtraTurns = append(g.Turn.ExtraTurns, game.Player1)
+	g.Turn.ExtraTurns = append(g.Turn.ExtraTurns, game.ExtraTurn{Player: game.Player1})
 	e.advanceToNextTurn(g)
 	g.Turn.Phase, g.Turn.Step, g.Turn.PriorityPlayer = game.PhasePrecombatMain, game.StepNone, game.Player1
 	if g.Turn.ActivePlayer != game.Player1 || g.Turn.TurnNumber != oldTurn+1 ||

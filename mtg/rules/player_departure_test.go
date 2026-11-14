@@ -254,7 +254,7 @@ func TestPlayerDepartureNextTurnDurationsEndAtSkippedSeat(t *testing.T) {
 		}
 		engine := NewEngine(nil)
 		if extra {
-			g.Turn.ExtraTurns = []game.PlayerID{game.Player2}
+			g.Turn.ExtraTurns = []game.ExtraTurn{{Player: game.Player2}}
 		} else {
 			engine.advanceToNextTurn(g)
 			if effectivePower(g, creature) != 3 {

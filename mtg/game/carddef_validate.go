@@ -1183,6 +1183,18 @@ func (v *cardDefValidator) validateInstructionSequence(
 				targets,
 			)
 		}
+		if extraTurn, ok := seq[i].Primitive.(TakeExtraTurn); ok {
+			for j := range extraTurn.EndStepTriggers {
+				v.validateAbilityContentWithLinked(
+					faceName,
+					appendPath(instructionPath, fmt.Sprintf("Primitive.EndStepTriggers[%d].Content", j)),
+					extraTurn.EndStepTriggers[j].Content,
+					nil,
+					publishedLinked,
+					targets,
+				)
+			}
+		}
 		if reflexive, ok := seq[i].Primitive.(CreateReflexiveTrigger); ok {
 			v.validateAbilityContentWithLinked(
 				faceName,

@@ -178,7 +178,7 @@ func TestMindslaverWholeTurnActionsModesTargetsAndResolvingChoices(t *testing.T)
 	}})
 	scry := addCardToLibraryNamed(g, game.Player2, "Scry witness")
 	addCardToLibraryNamed(g, game.Player2, "Drawn first")
-	g.Turn.ExtraTurns = []game.PlayerID{game.Player2}
+	g.Turn.ExtraTurns = []game.ExtraTurn{{Player: game.Player2}}
 	e.advanceToNextTurn(g)
 	controller := &controlScript{}
 	controller.action = func(obs PlayerObservation, legal []action.Action) action.Action {
@@ -451,7 +451,7 @@ func TestMindslaverNextActualTurnLifetimeCompetitionCloneAndLeaving(t *testing.T
 			}
 			g.SkippedTurns = map[game.PlayerID]int{game.Player2: 1}
 			if extra {
-				g.Turn.ExtraTurns = []game.PlayerID{game.Player2}
+				g.Turn.ExtraTurns = []game.ExtraTurn{{Player: game.Player2}}
 			}
 			branch := g.Clone()
 			branch.PlayerControlEffects[0].Controller = game.Player4
@@ -483,7 +483,7 @@ func TestMindslaverNextActualTurnLifetimeCompetitionCloneAndLeaving(t *testing.T
 	}
 	g, e, def := mindslaverGame(t)
 	activateMindslaver(t, g, e, def, game.Player1, game.Player2)
-	g.Turn.ExtraTurns = []game.PlayerID{game.Player2, game.Player2}
+	g.Turn.ExtraTurns = []game.ExtraTurn{{Player: game.Player2}, {Player: game.Player2}}
 	e.advanceToNextTurn(g)
 	if g.DecisionMaker(game.Player2, game.DecisionRules) != game.Player1 {
 		t.Fatal("first extra turn was not the next turn")

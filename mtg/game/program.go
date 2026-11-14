@@ -59,6 +59,15 @@ func (p CreateDelayedTrigger) ProgramReferences() []ProgramReference {
 	return p.Trigger.Content.ProgramReferences()
 }
 
+// ProgramReferences reports the extra turn's end-step trigger dependencies.
+func (p TakeExtraTurn) ProgramReferences() []ProgramReference {
+	var refs []ProgramReference
+	for i := range p.EndStepTriggers {
+		refs = append(refs, p.EndStepTriggers[i].Content.ProgramReferences()...)
+	}
+	return refs
+}
+
 // ProgramReferences reports a reflexive body's dependencies.
 func (p CreateReflexiveTrigger) ProgramReferences() []ProgramReference {
 	return p.Trigger.Content.ProgramReferences()

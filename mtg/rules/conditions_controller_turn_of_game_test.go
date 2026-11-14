@@ -149,7 +149,7 @@ func TestTurnsTakenCountsExtraTurns(t *testing.T) {
 		t.Fatal("game ended before extra turn setup")
 	}
 	// Queue an extra turn for Player1 to run after Player2's turn ends.
-	g.Turn.ExtraTurns = append(g.Turn.ExtraTurns, game.Player1)
+	g.Turn.ExtraTurns = append(g.Turn.ExtraTurns, game.ExtraTurn{Player: game.Player1})
 	engine.runTurn(g, agents) // Player2's first turn; advances to Player1's extra turn.
 	engine.runTurn(g, agents) // Player1's extra (second) turn.
 

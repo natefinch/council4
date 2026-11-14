@@ -709,6 +709,11 @@ func firedDelayedTrigger(trigger *game.DelayedTrigger, ability *game.TriggeredAb
 // activating during your own end step correctly waits for your following
 // turn's end step.
 func delayedTriggerReadyAtBoundary(g *game.Game, trigger *game.DelayedTrigger, boundaryTiming game.DelayedTriggerTiming) bool {
+	// A trigger bound to one extra turn ("that turn's end step") waits through
+	// every other turn.
+	if trigger.ExtraTurnID != 0 && trigger.ExtraTurnID != g.Turn.ExtraTurnID {
+		return false
+	}
 	switch trigger.Timing {
 	case game.DelayedAtBeginningOfNextUpkeep:
 		return boundaryTiming == game.DelayedAtBeginningOfNextUpkeep && trigger.CreatedTurn < g.Turn.TurnNumber

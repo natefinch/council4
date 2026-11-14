@@ -330,6 +330,9 @@ func ruleEffectSourceIsActive(g *game.Game, effect *game.RuleEffect) bool {
 	if !ruleEffectSourceStillApplies(g, effect) {
 		return false
 	}
+	if effect.Duration == game.DurationDuringExtraTurn {
+		return effect.ExtraTurnID == g.Turn.ExtraTurnID
+	}
 	if persistsWhileCardExiled(g, effect) {
 		return true
 	}

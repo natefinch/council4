@@ -347,6 +347,9 @@ func (Amass) Kind() PrimitiveKind { return PrimitiveAmass }
 // Kind implements Primitive for Incubate.
 func (Incubate) Kind() PrimitiveKind { return PrimitiveIncubate }
 
+// Kind implements Primitive for TakeExtraTurn.
+func (TakeExtraTurn) Kind() PrimitiveKind { return PrimitiveTakeExtraTurn }
+
 // Kind implements Primitive for EmpowerJace.
 func (EmpowerJace) Kind() PrimitiveKind { return PrimitiveEmpowerJace }
 
@@ -555,6 +558,7 @@ func (Regenerate) isPrimitive()                           {}
 func (BecomeCopy) isPrimitive()                           {}
 func (Amass) isPrimitive()                                {}
 func (Incubate) isPrimitive()                             {}
+func (TakeExtraTurn) isPrimitive()                        {}
 func (EmpowerJace) isPrimitive()                          {}
 func (Renown) isPrimitive()                               {}
 func (Adapt) isPrimitive()                                {}
@@ -910,6 +914,7 @@ func (p Connive) instructionRefs() primitiveRefs            { return quantityRef
 func (BecomeSaddled) instructionRefs() primitiveRefs        { return primitiveRefs{} }
 func (RecordEchoObligation) instructionRefs() primitiveRefs { return primitiveRefs{} }
 func (SkipStep) instructionRefs() primitiveRefs             { return primitiveRefs{} }
+func (TakeExtraTurn) instructionRefs() primitiveRefs        { return primitiveRefs{} }
 func (CreateEmblem) instructionRefs() primitiveRefs         { return primitiveRefs{} }
 func (p Bolster) instructionRefs() primitiveRefs {
 	refs := quantityRefs(p.Amount)

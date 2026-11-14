@@ -17,9 +17,9 @@ func TestSkipExtraTurnsRuleAffectsOnlyOpponents(t *testing.T) {
 			AffectedPlayer: game.PlayerOpponent,
 		}}}},
 	}})
-	g.Turn.ExtraTurns = []game.PlayerID{game.Player1, game.Player2}
+	g.Turn.ExtraTurns = []game.ExtraTurn{{Player: game.Player1}, {Player: game.Player2}}
 	next, ok := popExtraTurn(g)
-	if !ok || next != game.Player1 {
+	if !ok || next.Player != game.Player1 {
 		t.Fatalf("popExtraTurn = (%v, %v), want Player1 extra turn after opponent turn skipped", next, ok)
 	}
 

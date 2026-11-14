@@ -512,13 +512,17 @@ func (e *Engine) discardToMaximumHandSizeWithChoices(g *game.Game, playerID game
 }
 
 func (*Engine) advanceToNextTurn(g *game.Game) {
-	next := nextActualTurn(g)
+	// Effects "during that turn" end with that extra turn, before the next turn
+	// is chosen, and its end-step trigger can no longer trigger.
+	expireExtraTurnScope(g, g.Turn.ExtraTurnID)
+	next, extraTurnID := nextActualTurn(g)
 	// The turn ends after its last cleanup step (CR 514.3a), ending "this turn"
 	// delayed triggers before the next turn's events can occur.
 	expireEventDelayedTriggers(g)
 
 	g.Turn.TurnNumber++
 	g.Turn.ActivePlayer = next
+	g.Turn.ExtraTurnID = extraTurnID
 	g.Turn.PriorityPlayer = next
 	g.Turn.Phase = game.PhaseBeginning
 	g.Turn.Step = game.StepUntap
@@ -547,35 +551,43 @@ func (*Engine) advanceToNextTurn(g *game.Game) {
 	markCurrentTurnEventStart(g)
 }
 
-func nextActualTurn(g *game.Game) game.PlayerID {
+// nextActualTurn removes and returns the next turn to be taken: its player and,
+// for an extra turn, that turn's identity (zero for a regular turn).
+func nextActualTurn(g *game.Game) (game.PlayerID, id.ID) {
 	regular := g.Turn.ActivePlayer
 	for {
-		next, extra := popExtraTurn(g)
+		extraTurn, extra := popExtraTurn(g)
+		next := extraTurn.Player
 		if !extra {
 			next = nextRegularTurn(g, regular)
 			regular = next
 		}
 		if g.SkippedTurns[next] > 0 {
 			g.SkippedTurns[next]--
+			expireExtraTurnScope(g, extraTurn.ID)
 			continue
 		}
-		return next
+		return next, extraTurn.ID
 	}
 }
 
-func popExtraTurn(g *game.Game) (game.PlayerID, bool) {
+// popExtraTurn removes the most recently created extra turn that will be taken
+// (CR 500.7). Extra turns of players who left the game or who skip extra turns
+// are dropped along with any effects scoped to them.
+func popExtraTurn(g *game.Game) (game.ExtraTurn, bool) {
 	for len(g.Turn.ExtraTurns) > 0 {
 		last := len(g.Turn.ExtraTurns) - 1
 		next := g.Turn.ExtraTurns[last]
 		g.Turn.ExtraTurns = g.Turn.ExtraTurns[:last]
-		if departedPlayer(g, next) {
-			expireDepartedNextTurnDurations(g, next)
+		if departedPlayer(g, next.Player) {
+			expireDepartedNextTurnDurations(g, next.Player)
 		}
-		if !g.TurnOrder.IsEliminated(next) && !playerSkipsExtraTurns(g, next) {
+		if !g.TurnOrder.IsEliminated(next.Player) && !playerSkipsExtraTurns(g, next.Player) {
 			return next, true
 		}
+		expireExtraTurnScope(g, next.ID)
 	}
-	return 0, false
+	return game.ExtraTurn{}, false
 }
 
 func nextRegularTurn(g *game.Game, current game.PlayerID) game.PlayerID {

@@ -3,6 +3,7 @@ package game
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -1317,6 +1318,9 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 	if p.Duration == DurationUntilEndOfYourNextUpkeep {
 		return errors.New("rule effects do not support an until-the-end-of-your-next-upkeep duration")
 	}
+	if p.Duration == DurationDuringExtraTurn {
+		return errors.New("an extra-turn-scoped rule effect must be granted by TakeExtraTurn")
+	}
 	for i := range p.RuleEffects {
 		effect := &p.RuleEffects[i]
 		if !effect.Kind.Valid() {
@@ -1324,6 +1328,9 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 		}
 		if effect.Duration == DurationUntilEndOfYourNextUpkeep {
 			return errors.New("rule effects do not support an until-the-end-of-your-next-upkeep duration")
+		}
+		if effect.Duration == DurationDuringExtraTurn {
+			return errors.New("an extra-turn-scoped rule effect must be granted by TakeExtraTurn")
 		}
 		switch effect.Kind {
 		case RuleEffectPlayFromGraveyardPerPermanentType:
@@ -3557,6 +3564,44 @@ func (p Attach) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 		return validateGroupReference(p.ChooseTargetFrom, targets, checkTargets)
 	}
 	return validateObjectReference(p.Target, targets, checkTargets)
+}
+
+func (p TakeExtraTurn) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if err := validatePlayerReference(p.Player, targets, checkTargets); err != nil {
+		return err
+	}
+	if p.Player.Kind() == PlayerReferenceNone {
+		return errors.New("take extra turn requires a player")
+	}
+	if len(p.RuleEffects) > 0 {
+		for i := range p.RuleEffects {
+			if p.RuleEffects[i].Duration != DurationPermanent {
+				return errors.New("extra-turn rule effects take their duration from the extra turn")
+			}
+		}
+		if err := (ApplyRule{RuleEffects: p.RuleEffects}).validatePrimitive(targets, checkTargets); err != nil {
+			return err
+		}
+	}
+	for i := range p.EndStepTriggers {
+		trigger := p.EndStepTriggers[i]
+		bare := DelayedTriggerDef{Optional: trigger.Optional, Text: trigger.Text, Content: trigger.Content}
+		if !reflect.DeepEqual(trigger, bare) {
+			return errors.New("extra-turn end-step trigger accepts only optionality, text and content")
+		}
+		trigger.Timing = DelayedAtBeginningOfNextEndStep
+		if err := (CreateDelayedTrigger{Trigger: trigger}).validatePrimitive(targets, checkTargets); err != nil {
+			return err
+		}
+		if contentUsesTriggeredX(&trigger.Content) {
+			return errors.New("extra-turn end-step trigger cannot limit modes or targets by X")
+		}
+	}
+	return nil
+}
+
+func (p TakeExtraTurn) validateCapturedTargetControllerReferences(targets []TargetSpec, checkTargets bool) error {
+	return validateCapturedTargetControllerReference(p.Player, targets, checkTargets)
 }
 
 func (p SkipStep) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
