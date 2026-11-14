@@ -43,6 +43,8 @@ func (KeepPermanents) publishesResultObjects() bool      { return true }
 func (MovePermanent) publishesResultObjects() bool       { return true }
 func (PutOnBattlefield) publishesResultObjects() bool    { return true }
 func (PutOnBattlefield) publishesResultCards() bool      { return false }
+func (Attach) publishesResultObjects() bool              { return true }
+func (Attach) publishesResultCards() bool                { return false }
 func (Reveal) publishesResultObjects() bool              { return true }
 func (Reveal) publishesResultCards() bool                { return true }
 func (MoveTopOfLibrary) publishesResultObjects() bool    { return true }

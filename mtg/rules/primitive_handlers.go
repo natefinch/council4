@@ -1898,22 +1898,102 @@ func activatedAbilityHasBecomeCopy(ability *game.ActivatedAbility) bool {
 
 func handleAttach(r *effectResolver, prim game.Attach) effectResolved {
 	res := effectResolved{accepted: true}
-	attachment, ok := r.resolveObject(prim.Attachment)
+	var linkKey game.LinkedObjectKey
+	if prim.PublishLinked != "" {
+		linkKey = linkedObjectSourceKey(r.game, r.obj, string(prim.PublishLinked))
+		clearLinkedObjects(r.game, linkKey)
+	}
+	attachment, target, ok := r.attachParticipants(prim)
 	if !ok {
 		return res
 	}
-	target, ok := r.resolveObject(prim.Target)
-	if !ok {
-		return res
-	}
-	if attachPermanentWithChoices(r.game, attachment, target, &replacementChoiceContext{
+	if !attachPermanentWithChoices(r.game, attachment, target, &replacementChoiceContext{
 		engine: r.engine,
 		agents: r.agents,
 		log:    r.log,
 	}) {
-		res.succeeded = true
+		return res
 	}
+	res.succeeded = true
+	if prim.PublishLinked != "" {
+		rememberLinkedObject(r.game, linkKey, permanentObjectBindingRef(attachment))
+	}
+	r.rememberEnteredResultPermanents(attachment)
 	return res
+}
+
+// attachParticipants resolves the attachment and the permanent it attaches to.
+// A side named by a choice group is chosen by the resolving controller among
+// the group's permanents that are legal for the other, fixed side; it is not
+// targeted (CR 608.2c). No legal choice, or declining an optional choice,
+// leaves nothing to attach (CR 701.3b).
+func (r *effectResolver) attachParticipants(prim game.Attach) (attachment, target *game.Permanent, ok bool) {
+	switch {
+	case prim.ChooseAttachmentFrom.Valid():
+		if target, ok = r.resolveObject(prim.Target); !ok {
+			return nil, nil, false
+		}
+		var candidates []*game.Permanent
+		for _, permanent := range r.groupPermanents(prim.ChooseAttachmentFrom) {
+			if attachmentLegalForEffect(r.game, permanent, target) {
+				candidates = append(candidates, permanent)
+			}
+		}
+		attachment, ok = r.chooseAttachPermanent(candidates, prim, "Choose a permanent to attach")
+		return attachment, target, ok
+	case prim.ChooseTargetFrom.Valid():
+		if attachment, ok = r.resolveObject(prim.Attachment); !ok {
+			return nil, nil, false
+		}
+		var candidates []*game.Permanent
+		for _, permanent := range r.groupPermanents(prim.ChooseTargetFrom) {
+			if attachmentLegalForEffect(r.game, attachment, permanent) {
+				candidates = append(candidates, permanent)
+			}
+		}
+		target, ok = r.chooseAttachPermanent(candidates, prim, "Choose a permanent to attach to")
+		return attachment, target, ok
+	}
+	if attachment, ok = r.resolveObject(prim.Attachment); !ok {
+		return nil, nil, false
+	}
+	target, ok = r.resolveObject(prim.Target)
+	return attachment, target, ok
+}
+
+func (r *effectResolver) chooseAttachPermanent(candidates []*game.Permanent, prim game.Attach, defaultPrompt string) (*game.Permanent, bool) {
+	if len(candidates) == 0 {
+		return nil, false
+	}
+	options := make([]game.ChoiceOption, len(candidates))
+	for i, permanent := range candidates {
+		options[i] = game.ChoiceOption{
+			Index: i,
+			Label: permanentChoiceLabel(r.game, permanent),
+			Card:  permanentChoiceInfo(r.game, permanent),
+		}
+	}
+	prompt := prim.Prompt
+	if prompt == "" {
+		prompt = defaultPrompt
+	}
+	minChoices := 1
+	if prim.Optional {
+		minChoices = 0
+	}
+	selected := r.engine.chooseChoice(r.game, r.agents, game.ChoiceRequest{
+		Kind:             game.ChoiceResolution,
+		Player:           r.obj.Controller,
+		Prompt:           prompt,
+		Options:          options,
+		MinChoices:       minChoices,
+		MaxChoices:       1,
+		DefaultSelection: []int{0},
+	}, r.log)
+	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(candidates) {
+		return nil, false
+	}
+	return candidates[selected[0]], true
 }
 
 func handleSkipStep(r *effectResolver, prim game.SkipStep) effectResolved {

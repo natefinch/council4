@@ -165,6 +165,14 @@ func canAttachPermanent(g *game.Game, attachment, target *game.Permanent) bool {
 	return false
 }
 
+// attachmentLegalForEffect reports whether an effect could legally attach
+// attachment to target: the attachment's own restrictions allow it and the
+// target has no protection that prevents it (CR 301.5c, 303.4j, 702.16c-d).
+func attachmentLegalForEffect(g *game.Game, attachment, target *game.Permanent) bool {
+	return canAttachPermanent(g, attachment, target) &&
+		!permanentProtectedFromPermanentEffective(g, target, attachment)
+}
+
 func auraCanAttachToPermanent(g *game.Game, aura, target *game.Permanent) bool {
 	if aura.ReanimationLinkedObject != 0 {
 		// A resolved graveyard-reanimation Aura (Animate Dead, Dance of the Dead)
