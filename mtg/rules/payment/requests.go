@@ -25,6 +25,11 @@ const (
 	// alternative cost, but the spell is not exiled afterward so it can be
 	// escaped again.
 	SpellCastPermissionEscape
+	// SpellCastPermissionAftermath is the permission an Aftermath half gives
+	// to cast it from its owner's graveyard (CR 702.127a). Unlike flashback
+	// and escape it is not an alternative cost: the half's normal cost is
+	// paid.
+	SpellCastPermissionAftermath
 )
 
 // SpellRequest bundles all parameters needed to check or pay spell costs.

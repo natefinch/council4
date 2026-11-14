@@ -333,6 +333,38 @@ func (c *CardDef) CanChooseCastFace(index FaceIndex) bool {
 	return index == FaceFront
 }
 
+// FaceHasAftermath reports whether the spell cast as this face has Aftermath
+// (CR 702.127a): an Aftermath half itself, or a fused split spell including
+// one.
+func (c *CardDef) FaceHasAftermath(index FaceIndex) bool {
+	if c.Layout != LayoutSplit {
+		return false
+	}
+	if index == FaceFused {
+		return c.FaceHasAftermath(FaceFront) || c.FaceHasAftermath(FaceAlternate)
+	}
+	face, ok := c.FaceView(index)
+	return ok && face.HasKeyword(Aftermath)
+}
+
+// CanCastFaceFromZone reports whether this face can be chosen while casting
+// the card from sourceZone. An Aftermath half can't be cast from any zone
+// other than a graveyard (CR 702.127a), whatever permission is used.
+func (c *CardDef) CanCastFaceFromZone(index FaceIndex, sourceZone zone.Type) bool {
+	if !c.CanChooseCastFace(index) {
+		return false
+	}
+	return sourceZone == zone.Graveyard || !c.FaceHasAftermath(index)
+}
+
+// LegalCastFacesFromZone is LegalCastFaces for a cast from sourceZone,
+// omitting faces that zone forbids (an Aftermath half outside a graveyard).
+func (c *CardDef) LegalCastFacesFromZone(sourceZone zone.Type) []FaceIndex {
+	return slices.DeleteFunc(c.LegalCastFaces(), func(face FaceIndex) bool {
+		return !c.CanCastFaceFromZone(face, sourceZone)
+	})
+}
+
 // CanChooseLandFace reports whether this face can be played as a land.
 func (c *CardDef) CanChooseLandFace(index FaceIndex) bool {
 	face, ok := c.FaceView(index)

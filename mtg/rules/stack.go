@@ -1109,10 +1109,10 @@ func moveStackCardToZone(g *game.Game, obj *game.StackObject, card *game.CardIns
 // A self-exile instruction or a counterspell's own "exile it instead" (a
 // self-replacement, CR 614.15 and 616.1a) and a counter-and-redirect
 // (Memory Lapse, Remand) change the intended destination before other
-// replacements are considered. Flashback (CR 702.34a) and a cast's "exile it
-// instead" rider are replacement effects of the move itself, so they compete
-// with the caller's local replacements and the game's replacement effects
-// under CR 616.1.
+// replacements are considered. Flashback (CR 702.34a), aftermath (CR
+// 702.127a) and a cast's "exile it instead" rider are replacement effects of
+// the move itself, so they compete with the caller's local replacements and
+// the game's replacement effects under CR 616.1.
 func moveStackCardToZoneResult(g *game.Game, obj *game.StackObject, card *game.CardInstance, intendedDestination zone.Type, forceShuffle bool, local ...game.ReplacementEffect) (zoneChangeReplacementResult, bool) {
 	if _, ok := playerByID(g, card.Owner); !ok {
 		return zoneChangeReplacementResult{}, false
@@ -1175,8 +1175,11 @@ func moveStackCardToZoneResult(g *game.Game, obj *game.StackObject, card *game.C
 
 // stackObjectMoveReplacements returns the replacement effects a spell carries
 // for its own move off the stack: flashback's "exile this card instead of
-// putting it anywhere else" (CR 702.34a) and a cast rider's "if it would be put
-// into your graveyard, exile it instead". Their IDs are only local keys.
+// putting it anywhere else" (CR 702.34a), aftermath's "if this spell was cast
+// from a graveyard, exile it instead of putting it anywhere else" (CR
+// 702.127a), whatever permission cast it from the graveyard, and a cast
+// rider's "if it would be put into your graveyard, exile it instead". Their IDs
+// are only local keys.
 func stackObjectMoveReplacements(obj *game.StackObject, card *game.CardInstance) []game.ReplacementEffect {
 	if obj == nil {
 		return nil
@@ -1186,6 +1189,12 @@ func stackObjectMoveReplacements(obj *game.StackObject, card *game.CardInstance)
 		replacements = append(replacements, game.ReplacementEffect{
 			ID: obj.ID, Controller: obj.Controller, SourceCardID: card.ID,
 			Description: "Flashback (CR 702.34a)", MatchEvent: game.EventZoneChanged,
+			MatchFromZone: true, FromZone: zone.Stack, ReplaceToZone: zone.Exile,
+		})
+	} else if obj.SourceZone == zone.Graveyard && card.Def.FaceHasAftermath(obj.Face) {
+		replacements = append(replacements, game.ReplacementEffect{
+			ID: obj.ID, Controller: obj.Controller, SourceCardID: card.ID,
+			Description: "Aftermath (CR 702.127a)", MatchEvent: game.EventZoneChanged,
 			MatchFromZone: true, FromZone: zone.Stack, ReplaceToZone: zone.Exile,
 		})
 	}

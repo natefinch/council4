@@ -1135,7 +1135,7 @@ func (e *Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game
 		return false
 	}
 	spellDef, ok := cardFaceDef(card, face)
-	if !ok || !card.Def.CanChooseCastFace(face) {
+	if !ok || !card.Def.CanCastFaceFromZone(face, sourceZone) {
 		return false
 	}
 	if face == game.FaceFused && (!canFuseFromZone(playerID, card, sourceZone) || !slices.Equal(chosenModes, game.FusedModes())) {
@@ -1307,8 +1307,9 @@ func foretellAlternativeCost(card *game.CardDef) cost.Alternative {
 // whichever cost the spell cast through the route pays. A graveyard route
 // separates the rule-effect permission from the card's own graveyard cast
 // permissions: ruleEffectOnly offers only the casts its rule-effect permission
-// authorizes, and graveyardKeywordsOnly only the card's flashback and escape
-// casts, so a spell cast by flashback never takes a rider route's counters.
+// authorizes, and graveyardKeywordsOnly only the card's flashback, escape and
+// aftermath casts, so a spell cast by flashback never takes a rider route's
+// counters.
 type castRoute struct {
 	free                  bool
 	foretell              bool
@@ -1328,7 +1329,7 @@ func (route castRoute) castPermissions(base []payment.SpellCastPermission) []pay
 		return []payment.SpellCastPermission{payment.SpellCastPermissionRuleEffect}
 	case route.graveyardKeywordsOnly:
 		return slices.DeleteFunc(slices.Clone(base), func(permission payment.SpellCastPermission) bool {
-			return permission != payment.SpellCastPermissionFlashback && permission != payment.SpellCastPermissionEscape
+			return !isGraveyardKeywordPermission(permission)
 		})
 	default:
 		return base
@@ -1337,13 +1338,25 @@ func (route castRoute) castPermissions(base []payment.SpellCastPermission) []pay
 
 // castPermissionEntryCounters returns the entry-counter rider a spell cast
 // through route under castPermission takes (CR 601.2b): its rule-effect
-// permission's rider, unless the spell was cast with flashback or escape,
-// which no rule-effect permission authorizes.
+// permission's rider, unless the spell was cast with flashback, escape or
+// aftermath, which no rule-effect permission authorizes.
 func (route castRoute) castPermissionEntryCounters(castPermission payment.SpellCastPermission) []game.CounterPlacement {
-	if castPermission == payment.SpellCastPermissionFlashback || castPermission == payment.SpellCastPermissionEscape {
+	if isGraveyardKeywordPermission(castPermission) {
 		return nil
 	}
 	return slices.Clone(route.permission.CastEntryCounters)
+}
+
+// isGraveyardKeywordPermission reports whether permission is one a card's own
+// graveyard-cast keyword supplies: flashback (and jump-start), escape or
+// aftermath (CR 702.34a, 702.138a, 702.127a).
+func isGraveyardKeywordPermission(permission payment.SpellCastPermission) bool {
+	switch permission {
+	case payment.SpellCastPermissionFlashback, payment.SpellCastPermissionEscape, payment.SpellCastPermissionAftermath:
+		return true
+	default:
+		return false
+	}
 }
 
 // permanentTypePlayCastRoutes returns the routes of a cast that uses announced,
@@ -1757,19 +1770,18 @@ func buildSpellCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, so
 
 // graveyardPermissionCastRoutes returns the routes through which playerID may
 // cast the face of cardID from a graveyard in mode. A cast authorized only by
-// the card's own graveyard cast permissions (flashback, escape) or by rule-effect
-// permissions that carry no rider or usage of their own has the single zero
-// route. When a matching rule-effect permission carries an entry-counter rider
+// the card's own graveyard cast permissions (flashback, escape, aftermath) or
+// by rule-effect permissions that carry no rider or usage of their own has the
+// single zero route. When a matching rule-effect permission carries an entry-counter rider
 // ("If you cast a spell this way, it enters with a finality counter on it.")
 // or is a group RuleEffectCastSpellsFromZone permission with its own usage,
 // each rule-effect permission is a separate route the caster may choose
-// (CR 118.14, 601.2b), and the card's flashback and escape casts, which no
-// rule-effect permission authorizes, are one more route without any rider.
+// (CR 118.14, 601.2b), and the card's flashback, escape and aftermath casts,
+// which no rule-effect permission authorizes, are one more route without any
+// rider.
 func graveyardPermissionCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, mode castCostMode) []castRoute {
 	routes, _ := castFromZonePermissionRoutes(g, playerID, cardID, zone.Graveyard, face, mode.bestowed, !mode.otherAlternative())
-	keywordCast := slices.ContainsFunc(independentCastPermissionsForZone(g, playerID, cardID, zone.Graveyard, face), func(permission payment.SpellCastPermission) bool {
-		return permission == payment.SpellCastPermissionFlashback || permission == payment.SpellCastPermissionEscape
-	})
+	keywordCast := slices.ContainsFunc(independentCastPermissionsForZone(g, playerID, cardID, zone.Graveyard, face), isGraveyardKeywordPermission)
 	if len(routes) == 0 && groupGraveyardPermissionOnlyOtherMode(g, playerID, cardID, face) {
 		// A group permission that matches only the card's other cast mode (a
 		// creature-spell permission and a bestowed cast, CR 702.103b)
@@ -2154,7 +2166,7 @@ func overloadSpellDef(card *game.CardDef) *game.CardDef {
 func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.CardInstance, sourceZone zone.Type) []game.FaceIndex {
 	if sourceZone == zone.Exile {
 		var faces []game.FaceIndex
-		for _, face := range card.Def.LegalCastFaces() {
+		for _, face := range card.Def.LegalCastFacesFromZone(sourceZone) {
 			if exileCastAuthorized(g, playerID, card.ID, face) {
 				faces = append(faces, face)
 			}
@@ -2163,7 +2175,7 @@ func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.Card
 	}
 	if sourceZone == zone.Graveyard {
 		var faces []game.FaceIndex
-		for _, face := range card.Def.LegalCastFaces() {
+		for _, face := range card.Def.LegalCastFacesFromZone(sourceZone) {
 			if canCastFromZoneByRuleEffect(g, playerID, card.ID, sourceZone, face) {
 				faces = append(faces, face)
 			}
@@ -2172,14 +2184,14 @@ func legalCastFacesForZone(g *game.Game, playerID game.PlayerID, card *game.Card
 	}
 	if sourceZone == zone.Library {
 		var faces []game.FaceIndex
-		for _, face := range card.Def.LegalCastFaces() {
+		for _, face := range card.Def.LegalCastFacesFromZone(sourceZone) {
 			if castSpellsFromZonePermitsSomeCast(g, playerID, card.ID, sourceZone, face) {
 				faces = append(faces, face)
 			}
 		}
 		return faces
 	}
-	faces := card.Def.LegalCastFaces()
+	faces := card.Def.LegalCastFacesFromZone(sourceZone)
 	if canFuseFromZone(playerID, card, sourceZone) {
 		faces = append(faces, game.FaceFused)
 	}
@@ -2348,7 +2360,7 @@ func foreignExileGroupPermittedCards(g *game.Game, own *game.Player) []id.ID {
 				continue
 			}
 			if canPlayLandFromZoneByRuleEffect(g, own.ID, cardID, zone.Exile) ||
-				slices.ContainsFunc(card.Def.LegalCastFaces(), func(face game.FaceIndex) bool {
+				slices.ContainsFunc(card.Def.LegalCastFacesFromZone(zone.Exile), func(face game.FaceIndex) bool {
 					return castSpellsFromZonePermitsSomeCast(g, own.ID, cardID, zone.Exile, face)
 				}) {
 				cards = append(cards, cardID)

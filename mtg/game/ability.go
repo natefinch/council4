@@ -324,6 +324,14 @@ const (
 	// instance is paid and triggers independently (CR 702.154d). Appended at the
 	// end of the enum so existing keyword ordinals are unchanged.
 	Enlist
+	// Aftermath (CR 702.127a) is printed on one half of some split cards. It
+	// represents three static abilities: that half may be cast from its owner's
+	// graveyard, it can't be cast from any other zone, and if it was cast from
+	// a graveyard it is exiled instead of going anywhere else whenever it would
+	// leave the stack. It is carried on the Aftermath face as a simple keyword;
+	// the rules layer reads it per face. Appended at the end of the enum so
+	// existing keyword ordinals are unchanged.
+	Aftermath
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount
@@ -565,6 +573,14 @@ var (
 	// cost, and the exile-on-resolution are supplied by the rules layer when it
 	// detects this keyword on a card in its owner's graveyard.
 	JumpStartStaticBody = simpleKeywordStaticBody("Jump-start", JumpStart)
+
+	// AftermathStaticBody is the reusable StaticAbility for aftermath (CR
+	// 702.127a), carried on the Aftermath half of a split card: "Aftermath
+	// (Cast this spell only from your graveyard. Then exile it.)" The rules
+	// layer supplies the graveyard cast permission, the other-zone cast
+	// restriction, and the leave-the-stack exile when it detects this keyword
+	// on the half being cast.
+	AftermathStaticBody = simpleKeywordStaticBody("Aftermath", Aftermath)
 
 	// LivingMetalStaticBody is the reusable StaticAbility for living metal (CR
 	// 702.176): "During your turn, this Vehicle is also a creature." It adds the
