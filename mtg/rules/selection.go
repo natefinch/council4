@@ -353,6 +353,12 @@ func matchSelection(s *selectionSubject, sel *game.Selection) bool {
 	if sel.OwnerNotController && !s.ownerDiffersFromController() {
 		return false
 	}
+	if sel.ControllerGraveyardCount.Exists {
+		count, ok := s.controllerGraveyardSize()
+		if !ok || !sel.ControllerGraveyardCount.Val.Matches(count) {
+			return false
+		}
+	}
 	if sel.ControlledByEventPlayer && !s.controlledByEventPlayer() {
 		return false
 	}
@@ -891,6 +897,21 @@ func (s *selectionSubject) ownerDiffersFromController() bool {
 		return false
 	}
 	return s.permanent.Owner != effectiveController(s.g, s.permanent)
+}
+
+// controllerGraveyardSize returns the number of cards in the graveyard of the
+// subject permanent's current effective controller ("whose controller has
+// eight or more cards in their graveyard"). Only an on-battlefield permanent
+// has a controller, so every other subject reports no count.
+func (s *selectionSubject) controllerGraveyardSize() (int, bool) {
+	if s.kind != subjectPermanent || s.permanent == nil || s.g == nil {
+		return 0, false
+	}
+	controller, ok := playerByID(s.g, effectiveController(s.g, s.permanent))
+	if !ok || controller == nil {
+		return 0, false
+	}
+	return controller.Graveyard.Size(), true
 }
 
 // controlledByEventPlayer reports whether the subject permanent is controlled by
