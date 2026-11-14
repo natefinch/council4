@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/cardprogram"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func (c *programContext) mintFoundCard(card *game.CardInstance, from zone.Type) cardprogram.FoundCard {
@@ -16,9 +17,8 @@ func (c *programContext) mintFoundCard(card *game.CardInstance, from zone.Type) 
 	if c.foundZones == nil {
 		c.foundZones = make(map[game.ObjectID]zone.Type)
 	}
-	identity := game.ZoneCardSnapshot{CardID: card.ID, ZoneVersion: card.ZoneVersion}
-	c.found[card.ID], c.foundZones[card.ID] = identity, from
-	handle := cardprogram.FoundCard{Identity: identity, Info: cardChoiceInfo(c.game, card.ID).Val}
+	handle := c.describeFoundCard(card)
+	c.found[card.ID], c.foundZones[card.ID] = handle.Identity, from
 	if from == zone.Library {
 		if c.libraryEpoch == nil {
 			c.libraryEpoch = make(map[game.ObjectID]uint64)
@@ -29,6 +29,30 @@ func (c *programContext) mintFoundCard(card *game.CardInstance, from zone.Type) 
 		delete(c.libraryEpoch, card.ID)
 	}
 	return handle
+}
+
+// describeFoundCard captures card's identity and characteristics as a card
+// without authorizing any later placement of it.
+func (c *programContext) describeFoundCard(card *game.CardInstance) cardprogram.FoundCard {
+	handle := cardprogram.FoundCard{
+		Identity: game.ZoneCardSnapshot{CardID: card.ID, ZoneVersion: card.ZoneVersion},
+		Info:     cardChoiceInfo(c.game, card.ID).Val,
+	}
+	if power, ok := cardPower(c.game, card); ok {
+		handle.Power = opt.Val(power)
+	}
+	if toughness, ok := cardToughness(c.game, card); ok {
+		handle.Toughness = opt.Val(toughness)
+	}
+	return handle
+}
+
+// revokeFoundCard withdraws placement authority from every handle minted for
+// card, because it became a new object without changing zones.
+func (c *programContext) revokeFoundCard(cardID game.ObjectID) {
+	delete(c.found, cardID)
+	delete(c.foundZones, cardID)
+	delete(c.libraryEpoch, cardID)
 }
 
 func (c *programContext) TargetCards() ([]cardprogram.FoundCard, error) {

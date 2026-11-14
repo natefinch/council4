@@ -101,6 +101,41 @@ func revealUntilCards(g *game.Game, playerID game.PlayerID, prim game.RevealUnti
 	}
 }
 
+// revealUntilToLibraryBottom reveals cards from the top of playerID's library
+// one at a time until a revealed card matches until (CR 701.20), then puts every
+// revealed card, the match included, on the bottom of that library in an order
+// drawn from the game's seeded RNG. No player chooses that order, so it is never
+// observable. It returns the matching card, unset when the library ran out, and
+// the other revealed cards in reveal order. The cards keep their card IDs, but
+// the reordered cards are new objects (CR 701.20d); callers holding handles to
+// them must revoke those handles.
+func revealUntilToLibraryBottom(g *game.Game, obj *game.StackObject, playerID game.PlayerID, until game.Selection) (opt.V[id.ID], []id.ID) {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return opt.V[id.ID]{}, nil
+	}
+	var hit opt.V[id.ID]
+	var others, revealed []id.ID
+	for _, cardID := range player.Library.All() {
+		emitCardRevealEvent(g, obj, playerID, cardID, zone.Library)
+		revealed = append(revealed, cardID)
+		if revealedCardMatches(g, playerID, cardID, until) {
+			hit = opt.Val(cardID)
+			break
+		}
+		others = append(others, cardID)
+	}
+	g.RNG.Shuffle(len(revealed), func(i, j int) {
+		revealed[i], revealed[j] = revealed[j], revealed[i]
+	})
+	for _, cardID := range revealed {
+		if player.Library.Remove(cardID) {
+			player.Library.AddToBottom(cardID)
+		}
+	}
+	return hit, others
+}
+
 func requireLibraryAdvance(player *game.Player, cardID id.ID, epoch uint64) {
 	top, exists := player.Library.Top()
 	if exists && top == cardID && player.Library.ReorderVersion() == epoch {

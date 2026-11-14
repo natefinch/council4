@@ -3170,6 +3170,10 @@ func (r *effectResolver) revealUntilForPlayer(playerID game.PlayerID, prim game.
 		r.engine.revealUntilChosenBottom(r.game, r.obj, playerID, prim, r.agents, r.log)
 		return
 	}
+	if prim.Destination == zone.Library {
+		revealUntilToLibraryBottom(r.game, r.obj, playerID, prim.Until)
+		return
+	}
 	revealUntilCards(r.game, playerID, prim)
 }
 

@@ -21,6 +21,7 @@ func TestProductionZoneArrivalsStayInMovementCore(t *testing.T) {
 
 		// These only reorder cards already in the same library.
 		"library_choices.go:revealUntilMatchAndBottomRest":               "Library",
+		"library_choices.go:revealUntilToLibraryBottom":                  "Library",
 		"library_choices.go:revealUntilChosenBottom":                     "Library",
 		"library_choices.go:commitScryPlacement":                         "Library",
 		"library_choices.go:digCards":                                    "Library",

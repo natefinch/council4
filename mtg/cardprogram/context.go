@@ -86,10 +86,27 @@ type Exchange struct {
 
 // FoundCard is an invocation-local card incarnation obtained through an Engine
 // operation: a revealed search, public target, or actual public arrival.
+// Power and Toughness are the card's values in the zone where the handle was
+// minted, including counters on it. They are unset for a card without them or
+// whose value comes from a characteristic-defining ability the Engine cannot
+// yet evaluate outside the battlefield (#3836).
 type FoundCard struct {
 	Identity     game.ZoneCardSnapshot
 	Info         game.ChoiceCardInfo
 	LibraryEpoch uint64
+	Power        opt.V[int]
+	Toughness    opt.V[int]
+}
+
+// UntilResult reports one "<act> cards until a matching card" process.
+// Available is false when the player was unavailable, so nothing happened.
+// Hit is the matching card, unset when the library ran out first; Others holds
+// every other card the process acted on, in order. Each operation documents
+// whether its handles authorize later placements.
+type UntilResult struct {
+	Available bool
+	Hit       opt.V[FoundCard]
+	Others    []FoundCard
 }
 
 // SearchResult distinguishes an unavailable searcher from an empty search.
@@ -170,4 +187,11 @@ type Context interface {
 	// An unset opponent is chosen by the controller among living opponents; a
 	// set reference names that opponent.
 	Clash(opponent opt.V[game.PlayerReference]) (ClashResult, error)
+	// RevealUntil reveals cards from the top of one player's library until a
+	// card matches Until (CR 701.20), then puts every revealed card, the hit
+	// included, on the bottom of that library in a random order. It requires a
+	// single Player and Destination zone.Library. The reordered cards became
+	// new objects (CR 701.20d), so the handles carry what was revealed but
+	// authorize no placement, and earlier handles to those cards are revoked.
+	RevealUntil(game.RevealUntil) (UntilResult, error)
 }
