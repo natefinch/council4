@@ -473,6 +473,15 @@ type Selection struct {
 	// battlefield, never matches. Placed at the end so the bool joins no
 	// existing cluster's packing.
 	ToughnessLessThanSource bool
+
+	// ControllerGraveyardCount compares the number of cards in the graveyard of
+	// the matched permanent's current controller ("a creature whose controller
+	// has eight or more cards in their graveyard", Lullmage's Domination). The
+	// count is read live whenever the predicate is evaluated, so a cost
+	// reduction gated on it sees the graveyard as the total cost is determined
+	// (CR 601.2f). Only an on-battlefield permanent has a controller to read; a
+	// card, spell, event or player subject never matches.
+	ControllerGraveyardCount opt.V[compare.Int]
 }
 
 // ManaValueDynamicBound bounds a card's mana value by a controller-relative
@@ -557,7 +566,8 @@ func (s Selection) Empty() bool {
 		!s.ManaValueLessThanSourcePower &&
 		!s.BandedWithSource &&
 		s.PutIntoGraveyardThisTurn == GraveyardArrivalNone &&
-		!s.ToughnessLessThanSource
+		!s.ToughnessLessThanSource &&
+		!s.ControllerGraveyardCount.Exists
 }
 
 // Validate reports structural contradictions in the Selection that represent
