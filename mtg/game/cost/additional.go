@@ -340,7 +340,29 @@ const (
 	// spell is cast for its dash cost, the resulting permanent gains haste, and
 	// it is returned to its owner's hand at the beginning of the next end step.
 	AlternativeMechanicDash
+	// AlternativeMechanicSneak marks the Sneak cast (CR 702.190a): any time the
+	// caster could cast an instant during their declare blockers step, the spell
+	// may be cast from hand for its sneak cost plus returning an unblocked
+	// attacker they control to its owner's hand. The alternative must carry an
+	// AdditionalReturnUnblockedAttacker cost.
+	AlternativeMechanicSneak
 )
+
+// SneakAlternative builds the Sneak alternative cost (CR 702.190a): pay
+// manaCost and return an unblocked attacker you control to its owner's hand
+// rather than paying the spell's mana cost.
+func SneakAlternative(manaCost Mana) Alternative {
+	return Alternative{
+		Label:    "Sneak",
+		ManaCost: opt.Val(append(Mana(nil), manaCost...)),
+		AdditionalCosts: []Additional{{
+			Kind:   AdditionalReturnUnblockedAttacker,
+			Text:   "Return an unblocked attacker you control to its owner's hand",
+			Amount: 1,
+		}},
+		Mechanic: AlternativeMechanicSneak,
+	}
+}
 
 // AlternativeCondition identifies a condition that must be true to select an
 // alternative cost.

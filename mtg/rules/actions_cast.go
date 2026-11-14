@@ -184,7 +184,11 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 	// 118.14); only the route actually cast through has its once-per-turn use
 	// recorded or its one-shot linked permission consumed once the spell is put
 	// on the stack.
-	mode := castCostMode{overloaded: cast.Overloaded, bestowed: cast.Bestowed}
+	mode := castCostMode{
+		overloaded: cast.Overloaded,
+		bestowed:   cast.Bestowed,
+		sneak:      sneakCastFor(g, playerID, sourceZone, spellDef, castSelectionFace(g, playerID, card.ID, spellDef, cast.Bestowed)),
+	}
 	castRoutes := permanentTypePlayCastRoutes(spellCastRoutes(g, playerID, card.ID, sourceZone, cast.Face, mode), cast.Permission)
 	// CR 601.2b-c: a cost that includes Phyrexian symbols is proposed, with
 	// each symbol's payment announced, before the targets are chosen. Any
@@ -358,6 +362,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 	obj.Evoked = !cast.Overloaded && evokeAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
 	obj.Converted = !cast.Overloaded && convertedAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
 	obj.Dashed = !cast.Overloaded && dashAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
+	obj.Sneaked = mode.sneak != payment.SneakUnavailable && sneakAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
 	obj.Bestowed = cast.Bestowed
 	obj.BuybackPaid = paymentResult.BuybackPaid
 	obj.Flashback = paymentResult.CastPermission == payment.SpellCastPermissionFlashback
@@ -1192,7 +1197,8 @@ func (e *Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game
 		return false
 	}
 	castFace := castSelectionFace(g, playerID, cardID, spellDef, bestowed)
-	if !canCastAtCurrentTiming(g, playerID, castFace) {
+	sneak := sneakCastFor(g, playerID, sourceZone, spellDef, castFace)
+	if sneak != payment.SneakRequired && !canCastAtCurrentTiming(g, playerID, castFace) {
 		return false
 	}
 	if spellCastProhibited(g, playerID, castFace) {
@@ -1231,7 +1237,7 @@ func (e *Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game
 		Targets:         targets,
 		Bestowed:        bestowed,
 	}
-	mode := castCostMode{overloaded: overloaded, bestowed: bestowed}
+	mode := castCostMode{overloaded: overloaded, bestowed: bestowed, sneak: sneak}
 	routes := spellCastRoutes(g, playerID, card.ID, sourceZone, face, mode)
 	if len(announced) > 0 {
 		routes = permanentTypePlayCastRoutes(routes, announced[0])
@@ -1394,7 +1400,10 @@ func zoneCastXValues(g *game.Game, playerID game.PlayerID, card *game.CardInstan
 	if !costHasVariableMana(announced) {
 		return legalXValuesForCostAndAdditional(g, playerID, announced, spellDef.AdditionalCosts)
 	}
-	mode := castCostMode{overloaded: overloaded}
+	mode := castCostMode{
+		overloaded: overloaded,
+		sneak:      sneakCastFor(g, playerID, sourceZone, spellDef, castSelectionFace(g, playerID, card.ID, spellDef, false)),
+	}
 	base := payment.SpellRequest{
 		PlayerID:        playerID,
 		CardID:          card.ID,
@@ -1570,6 +1579,8 @@ type castCostMode struct {
 	mutate     bool
 	overloaded bool
 	bestowed   bool
+	// sneak is the cast's Sneak permission (CR 702.190a).
+	sneak payment.SneakCast
 }
 
 // otherAlternative reports a cast already using another alternative cost, which
@@ -1609,6 +1620,7 @@ func (m castCostMode) castRouteRequests(base payment.SpellRequest, routes []cast
 		request.SpendAnyMana = route.spendAs
 		request.CastPermissions = route.castPermissions(base.CastPermissions)
 		request.Alternative = m.alternative(base.Card, base.XValue, route)
+		request.Sneak = m.sneak
 		requests[i] = request
 	}
 	return requests

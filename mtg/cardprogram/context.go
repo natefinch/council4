@@ -19,6 +19,9 @@ type Source struct {
 	// EventClash is the captured clash fact of a triggered ability whose
 	// trigger event was a clash ("whenever you clash"; CR 701.30).
 	EventClash opt.V[ClashEvent]
+	// SneakPaid reports whether the resolving spell's sneak cost was paid
+	// (CR 702.190a); a copy of a sneaked spell keeps it (CR 707.10).
+	SneakPaid bool
 }
 
 // ClashEvent is one player's completed clash as captured by a clash trigger:

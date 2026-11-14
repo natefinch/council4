@@ -55,7 +55,7 @@ func (e *Engine) additionalCostPaymentPreferences(g *game.Game, playerID game.Pl
 				continue
 			}
 			prefs.TapChoices = append(prefs.TapChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log, tapExclusions...)...)
-		case cost.AdditionalReturnToHand:
+		case cost.AdditionalReturnToHand, cost.AdditionalReturnUnblockedAttacker:
 			prefs.ReturnChoices = append(prefs.ReturnChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)
 		case cost.AdditionalRemoveCounterAmong:
 			prefs.RemoveCounterChoices = append(prefs.RemoveCounterChoices, e.additionalCostRemoveCounterAmongChoices(g, playerID, additionalCost, amount, agents, log)...)

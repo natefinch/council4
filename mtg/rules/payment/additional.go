@@ -282,7 +282,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.permanentsToTap = append(plan.permanentsToTap, chosen...)
 			reservedTapPermanents = append(reservedTapPermanents, chosen...)
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
-		case cost.AdditionalReturnToHand:
+		case cost.AdditionalReturnToHand, cost.AdditionalReturnUnblockedAttacker:
 			// A source-excluding ("another") return cost drops the ability's own
 			// source permanent. Activated-ability payments carry the source
 			// directly; resolution payments (GenericRequest) carry only the source
@@ -603,6 +603,13 @@ func SelectionForAdditionalCost(additional cost.Additional) (game.Selection, boo
 			{SubtypesAny: []types.Sub{types.Saga}},
 		}
 	}
+	if additional.Kind == cost.AdditionalReturnUnblockedAttacker {
+		// "Return an unblocked attacker you control" (Sneak, CR 702.190a;
+		// Ninjutsu, CR 702.49a) needs an attacking creature that became
+		// unblocked after blockers were declared (CR 506.4, 509.1h).
+		sel.RequiredTypes = append(sel.RequiredTypes, types.Creature)
+		sel.CombatState = game.CombatStateUnblocked
+	}
 	if additional.MatchArtifactEnchantmentOrToken {
 		sel.AnyOf = append(sel.AnyOf,
 			game.Selection{RequiredTypes: []types.Card{types.Artifact}},
@@ -683,6 +690,8 @@ func AdditionalCostText(additional cost.Additional) string {
 		return fmt.Sprintf("Pay {E}x%d", AdditionalCostAmount(additional))
 	case cost.AdditionalReturnToHand:
 		return fmt.Sprintf("Return %d permanents to hand", AdditionalCostAmount(additional))
+	case cost.AdditionalReturnUnblockedAttacker:
+		return "Return an unblocked attacker you control to its owner's hand"
 	case cost.AdditionalExert:
 		return "Exert this permanent"
 	case cost.AdditionalMill:
