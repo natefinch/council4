@@ -3472,6 +3472,15 @@ func (p Goad) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 }
 
 func (p RemoveCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	if p.AllOfKind {
+		if p.AllKinds || p.ChooseKind {
+			return errors.New("remove all counters of a kind cannot combine with AllKinds or ChooseKind")
+		}
+		if p.Amount != (Quantity{}) {
+			return errors.New("remove all counters of a kind must not set an amount")
+		}
+		return validateMassObjectOrGroup(p.Object, p.Group, targets, checkTargets)
+	}
 	if p.AllKinds {
 		if p.Amount != (Quantity{}) {
 			return errors.New("remove all counters must not set an amount")
