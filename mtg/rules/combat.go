@@ -552,6 +552,13 @@ func recordAttackCombatants(g *game.Game, attack game.AttackDeclaration) {
 	if !attack.Target.NoTarget && attack.Target.BattleID != 0 {
 		recordCombatantController(g, attack.Target.BattleID)
 	}
+	// Blockers are declared once, at the start of the declare blockers step
+	// (CR 509.1). A creature put onto the battlefield attacking afterward is
+	// unblocked even if its defending player had nothing to block before (CR
+	// 508.4d), so that player's block declaration window is closed too.
+	if g.Combat != nil && g.Turn.Phase == game.PhaseCombat && g.Turn.Step >= game.StepDeclareBlockers {
+		g.Combat.BlockDeclarationsComplete[attack.Target.Player] = true
+	}
 }
 
 // recordCombatantController records the controller a creature has as it becomes

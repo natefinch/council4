@@ -189,6 +189,7 @@ func newNinjutsuFixture(t *testing.T) ninjutsuFixture {
 			Target:   game.AttackTarget{Player: game.Player2},
 		}},
 	}
+	g.Combat.BlockDeclarationsComplete[game.Player2] = true
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareBlockers
 	g.Turn.PriorityPlayer = game.Player1
@@ -247,6 +248,8 @@ func TestNinjutsuChoiceDistinguishesFaceDownAttackers(t *testing.T) {
 		{Attacker: angel.ObjectID, Target: angelTarget},
 		{Attacker: bears.ObjectID, Target: bearsTarget},
 	}}
+	g.Combat.BlockDeclarationsComplete[game.Player2] = true
+	g.Combat.BlockDeclarationsComplete[game.Player3] = true
 	g.Turn.Phase = game.PhaseCombat
 	g.Turn.Step = game.StepDeclareBlockers
 	g.Turn.ActivePlayer = game.Player1

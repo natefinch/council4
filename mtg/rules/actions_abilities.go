@@ -646,21 +646,41 @@ func chooseNinjutsuAttacker(e *Engine, g *game.Game, playerID game.PlayerID, att
 }
 
 func unblockedAttackers(g *game.Game, playerID game.PlayerID) []*game.Permanent {
-	if g.Combat == nil ||
-		g.Turn.Phase != game.PhaseCombat ||
-		g.Turn.Step < game.StepDeclareBlockers ||
-		g.Turn.Step > game.StepEndOfCombat {
+	if g.Combat == nil {
 		return nil
 	}
 	var attackers []*game.Permanent
 	for _, attack := range g.Combat.Attackers {
+		if !attackIsUnblocked(g, attack) {
+			continue
+		}
 		permanent, ok := permanentByObjectID(g, attack.Attacker)
-		if !ok || effectiveController(g, permanent) != playerID || attackerWasBlocked(g, attack.Attacker) {
+		if !ok || effectiveController(g, permanent) != playerID {
 			continue
 		}
 		attackers = append(attackers, permanent)
 	}
 	return attackers
+}
+
+// attackIsUnblocked reports whether the current attack's creature is an
+// unblocked creature: it is attacking during the combat phase, its defending
+// player has declared blockers, and no creature was declared as its blocker
+// (CR 509.1h). A creature put onto the battlefield attacking after blockers were
+// declared is unblocked too (CR 508.4d). It stays blocked even if every blocker
+// leaves combat, and a creature removed from combat has no attack (CR 506.4).
+// Every rules route that asks for "unblocked" uses this one definition.
+func attackIsUnblocked(g *game.Game, attack game.AttackDeclaration) bool {
+	if g.Combat == nil ||
+		g.Turn.Phase != game.PhaseCombat ||
+		g.Turn.Step < game.StepDeclareBlockers ||
+		g.Turn.Step > game.StepEndOfCombat {
+		return false
+	}
+	if g.Turn.Step == game.StepDeclareBlockers && !g.Combat.BlockDeclarationsComplete[attack.Target.Player] {
+		return false
+	}
+	return !attackerWasBlocked(g, attack.Attacker)
 }
 
 func attackTargetForAttacker(g *game.Game, attackerID id.ID) (game.AttackTarget, bool) {

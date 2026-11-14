@@ -75,7 +75,9 @@ type BlockDeclaration struct {
 // and is nil otherwise.
 type CombatState struct {
 	// Completion is separate from positive attack history (CR 508.8), including
-	// an empty declaration. These windows do not reopen during priority.
+	// an empty declaration. These windows do not reopen during priority. A
+	// defending player first attacked by a creature put onto the battlefield
+	// attacking after blockers were declared is also complete (CR 508.4d).
 	AttackDeclarationComplete bool
 	BlockDeclarationsComplete [NumPlayers]bool
 	// FirstStrikeDamageStarted distinguishes a two-step combat from one with

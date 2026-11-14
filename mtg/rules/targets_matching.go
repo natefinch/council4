@@ -435,6 +435,10 @@ func combatStateMatches(g *game.Game, permanent *game.Permanent, filter game.Com
 	if filter == game.CombatStateAny {
 		return true
 	}
+	if filter == game.CombatStateUnblocked {
+		attack, ok := attackDeclarationForAttacker(g, permanent.ObjectID)
+		return ok && attackIsUnblocked(g, attack)
+	}
 	attacking := false
 	blocking := false
 	if g.Combat != nil {
