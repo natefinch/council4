@@ -66,6 +66,7 @@ func handleDamage(r *effectResolver, prim game.Damage) effectResolved {
 		return res
 	}
 	source.cantBePrevented = prim.CantBePrevented
+	source.creatureLocked = prim.CreatureDamageCantBePreventedOrRedirected
 	// The instruction's damage to all of its recipients is one damage event for
 	// a one-shot "next time ... would deal damage" shield.
 	if scope := beginOneShotPreventionScope(r.game); scope != 0 {
@@ -416,6 +417,11 @@ func (r *effectResolver) damagePermanentRedirectingExcess(res effectResolved, so
 	}
 	excessPlayer, ok := prim.ExcessRecipient.PlayerReference()
 	if !ok {
+		return r.damageReferencedPermanent(res, source, prim.ResultAmountKind, object)
+	}
+	// Damage to a recipient that can't have its damage dealt instead to
+	// another player can't have its excess redirected either (Whippoorwill).
+	if damageEventRecipientLocked(r.game, damageEvent{permanent: permanent, creatureLocked: source.creatureLocked}) {
 		return r.damageReferencedPermanent(res, source, prim.ResultAmountKind, object)
 	}
 	lethalRemaining := lethalDamageRemaining(r.game, permanent)

@@ -135,16 +135,20 @@ func (batch *damageBatch) modifiers() []damageModifier {
 			continue
 		}
 		preventable := !damageEventCantBePrevented(batch.game, event)
+		redirectable := !damageEventRecipientLocked(batch.game, event)
 		if preventable && damageEventProtected(batch.game, event) {
 			result = append(result, damageModifier{kind: damageProtection, member: index, label: "protection"})
 		}
-		// Unpreventable damage can still be redirected (CR 615.12, 614.9).
+		// Unpreventable damage can still be redirected (CR 615.12, 614.9)
+		// unless the damage to its recipient also can't be redirected.
 		for _, shield := range applicablePreventionShieldIndices(batch.game, event) {
 			if member.shields[shield] {
 				continue
 			}
-			if batch.game.PreventionShields[shield].Redirect != game.DamageRedirectNone {
-				result = append(result, damageModifier{kind: damageShield, member: index, shield: shield, label: "damage redirection"})
+			if redirect := batch.game.PreventionShields[shield].Redirect; redirect != game.DamageRedirectNone {
+				if redirectable || redirect == game.DamageRedirectAlsoToDamageSourceController {
+					result = append(result, damageModifier{kind: damageShield, member: index, shield: shield, label: "damage redirection"})
+				}
 			} else if preventable {
 				result = append(result, damageModifier{kind: damageShield, member: index, shield: shield, label: "prevention shield"})
 			}
@@ -153,7 +157,7 @@ func (batch *damageBatch) modifiers() []damageModifier {
 			!batch.usedCounters[event.permanent.ObjectID] {
 			result = append(result, damageModifier{kind: damageShieldCounter, member: index, label: "shield counter"})
 		}
-		if event.permanent == nil {
+		if event.permanent == nil && redirectable {
 			if _, ok := playerDamageRedirectPermanent(batch.game, event.player); ok {
 				result = append(result, damageModifier{kind: damageRedirection, member: index, label: "damage redirection"})
 			}
@@ -238,7 +242,8 @@ func (batch *damageBatch) apply(modifier damageModifier) {
 		player := member.event.player
 		for index := range batch.members {
 			other := &batch.members[index]
-			if other.event.amount > 0 && other.event.permanent == nil && other.event.player == player {
+			if other.event.amount > 0 && other.event.permanent == nil && other.event.player == player &&
+				!damageEventRecipientLocked(batch.game, other.event) {
 				other.event.permanent = permanent
 				other.event.player = 0
 				other.redirected = true
@@ -383,7 +388,8 @@ func (batch *damageBatch) applyRedirectShield(modifier damageModifier) {
 	var indices []int
 	for index, member := range batch.members {
 		if member.event.amount > 0 && !member.shields[modifier.shield] && sameDamageRecipient(recipient, member.event) &&
-			preventionShieldApplies(g, *shield, member.event) && preventionShieldSourceMatches(g, shield, member.event) {
+			preventionShieldApplies(g, *shield, member.event) && preventionShieldSourceMatches(g, shield, member.event) &&
+			(shield.Redirect == game.DamageRedirectAlsoToDamageSourceController || !damageEventRecipientLocked(g, member.event)) {
 			indices = append(indices, index)
 		}
 	}

@@ -1943,6 +1943,11 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 			v.add(faceName, path, CardDefIssueInvalidRuleEffect, err.Error())
 		}
 		v.validateSelection(faceName, appendPath(path, "AffectedSelection"), effect.AffectedSelection)
+	case RuleEffectDamageToCantBePreventedOrRedirected:
+		if err := validateDamageToCantBePreventedOrRedirectedRuleEffect(effect, false); err != nil {
+			v.add(faceName, path, CardDefIssueInvalidRuleEffect, err.Error())
+		}
+		v.validateSelection(faceName, appendPath(path, "AffectedSelection"), effect.AffectedSelection)
 	case RuleEffectCascadeLandOption:
 		payload := *effect
 		payload.Kind = RuleEffectNone
@@ -3214,22 +3219,43 @@ func isKnownProtectionColor(c color.Color) bool {
 // one damage-source scope: the effect's source, an instruction object, or a
 // permanent selection.
 func validateDamageCantBePreventedRuleEffect(effect *RuleEffect, hasObject bool) error {
+	if damageRuleEffectScopes(effect, hasObject) > 1 {
+		return errors.New("unpreventable-damage rule accepts at most one damage-source scope")
+	}
+	if !damageRuleEffectHasOnlyScope(effect) {
+		return errors.New("unpreventable-damage rule accepts only a duration and a damage-source scope")
+	}
+	return nil
+}
+
+// validateDamageToCantBePreventedOrRedirectedRuleEffect accepts only a
+// duration and exactly one damage-recipient scope: the effect's source, an
+// instruction object, or a permanent selection.
+func validateDamageToCantBePreventedOrRedirectedRuleEffect(effect *RuleEffect, hasObject bool) error {
+	if damageRuleEffectScopes(effect, hasObject) != 1 {
+		return errors.New("unpreventable, unredirectable damage rule requires exactly one damage-recipient scope")
+	}
+	if !damageRuleEffectHasOnlyScope(effect) {
+		return errors.New("unpreventable, unredirectable damage rule accepts only a duration and a damage-recipient scope")
+	}
+	return nil
+}
+
+func damageRuleEffectScopes(effect *RuleEffect, hasObject bool) int {
 	scopes := 0
 	for _, scoped := range []bool{effect.AffectedSource, hasObject, !effect.AffectedSelection.Empty()} {
 		if scoped {
 			scopes++
 		}
 	}
-	if scopes > 1 {
-		return errors.New("unpreventable-damage rule accepts at most one damage-source scope")
-	}
+	return scopes
+}
+
+func damageRuleEffectHasOnlyScope(effect *RuleEffect) bool {
 	payload := *effect
 	payload.Kind = RuleEffectNone
 	payload.Duration = DurationPermanent
 	payload.AffectedSource = false
 	payload.AffectedSelection = Selection{}
-	if !reflect.DeepEqual(payload, RuleEffect{}) {
-		return errors.New("unpreventable-damage rule accepts only a duration and a damage-source scope")
-	}
-	return nil
+	return reflect.DeepEqual(payload, RuleEffect{})
 }

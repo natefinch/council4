@@ -826,6 +826,9 @@ type effectDamageSource struct {
 	// cantBePrevented is set when the dealing instruction says the damage
 	// can't be prevented (CR 615.12).
 	cantBePrevented bool
+	// creatureLocked is set when the dealing instruction says damage it would
+	// deal to a creature can't be prevented or redirected.
+	creatureLocked bool
 	// preventionScope groups the recipients of one damage instruction into
 	// one damage event for one-shot prevention shields.
 	preventionScope id.ID
@@ -856,6 +859,7 @@ func (s effectDamageSource) deal(g *game.Game, event damageEvent) int {
 	event.sourceObjectID = s.sourceObjectID
 	event.controller = s.controller
 	event.cantBePrevented = s.cantBePrevented
+	event.creatureLocked = s.creatureLocked
 	event.preventionScope = s.preventionScope
 	result := resolveDamageBatch(g, []damageEvent{event}, 0, false, nil)[0]
 	if result.event.permanent != nil {
@@ -893,6 +897,7 @@ func (s effectDamageSource) dealSimultaneously(g *game.Game, assignments []effec
 			controller:      s.controller,
 			amount:          assignment.amount,
 			cantBePrevented: s.cantBePrevented,
+			creatureLocked:  s.creatureLocked,
 			preventionScope: s.preventionScope,
 		}
 		if assignment.permanent != nil {

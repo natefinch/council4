@@ -49,6 +49,11 @@ type damageEvent struct {
 	// it unpreventable (CR 615.12). It travels with the event through
 	// redirection.
 	cantBePrevented bool
+	// creatureLocked records that the instruction dealing this damage made
+	// damage it would deal to a creature unpreventable and unredirectable
+	// (Lava Burst). It travels with the event and is checked against the
+	// event's current recipient.
+	creatureLocked bool
 	// preventionScope identifies the damage event one instruction deals to
 	// several recipients through separate batches, so a one-shot prevention
 	// shield prevents all of that event's in-scope damage as one use. It is
@@ -1813,7 +1818,7 @@ func matchingDamageReplacementEffects(
 // evaluated live at the event, so control changes and continuous type changes
 // are honored before replacement/prevention ordering begins.
 func damageEventCantBePrevented(g *game.Game, event damageEvent) bool {
-	if event.cantBePrevented {
+	if event.cantBePrevented || damageEventRecipientLocked(g, event) {
 		return true
 	}
 	var source *game.Permanent
@@ -1845,6 +1850,29 @@ func damageEventCantBePrevented(g *game.Game, event damageEvent) bool {
 				}
 			}
 		default:
+		}
+	}
+	return false
+}
+
+// damageEventRecipientLocked reports whether damage that would be dealt to this
+// event's current recipient can't be prevented or dealt instead to another
+// permanent or player: its dealing instruction locked damage to creatures and
+// the recipient is a creature (Lava Burst), or an active rule locks damage to
+// that permanent (Whippoorwill). The recipient is checked live, so damage a
+// redirection moved onto a locked recipient is locked there (CR 616.2).
+func damageEventRecipientLocked(g *game.Game, event damageEvent) bool {
+	if event.permanent == nil {
+		return false
+	}
+	if event.creatureLocked && permanentHasType(g, event.permanent, types.Creature) {
+		return true
+	}
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		if effects[i].Kind == game.RuleEffectDamageToCantBePreventedOrRedirected &&
+			ruleEffectMatchesPermanent(g, &effects[i], event.permanent) {
+			return true
 		}
 	}
 	return false

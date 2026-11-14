@@ -84,6 +84,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 		RuleEffectPlayFromGraveyardPerPermanentType,
 		RuleEffectCascadeLandOption,
 		RuleEffectDamageCantBePrevented,
+		RuleEffectDamageToCantBePreventedOrRedirected,
 	}
 	for _, kind := range valid {
 		if !kind.Valid() {
@@ -94,7 +95,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 	invalid := []RuleEffectKind{
 		RuleEffectNone,
 		-1,
-		RuleEffectDamageCantBePrevented + 1,
+		RuleEffectDamageToCantBePreventedOrRedirected + 1,
 		RuleEffectKind(1 << 20),
 	}
 	for _, kind := range invalid {
@@ -113,7 +114,7 @@ func TestValidateApplyRulePlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectDamageCantBePrevented + 1,
+		"future":       RuleEffectDamageToCantBePreventedOrRedirected + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -137,7 +138,7 @@ func TestValidateCardDefPlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectDamageCantBePrevented + 1,
+		"future":       RuleEffectDamageToCantBePreventedOrRedirected + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -405,6 +406,57 @@ func TestValidateDamageCantBePreventedRuleEffect(t *testing.T) {
 		},
 	}})
 	if sourceAndObject == nil {
+		t.Error("instruction with both source and object scopes accepted")
+	}
+}
+
+func TestValidateDamageToCantBePreventedOrRedirectedRuleEffect(t *testing.T) {
+	t.Parallel()
+
+	creatures := Selection{RequiredTypes: []types.Card{types.Creature}}
+	for _, effect := range []RuleEffect{
+		{Kind: RuleEffectDamageToCantBePreventedOrRedirected, AffectedSource: true},
+		{Kind: RuleEffectDamageToCantBePreventedOrRedirected, AffectedSelection: creatures, Duration: DurationUntilEndOfTurn},
+	} {
+		if issues := ValidateCardDef(cardDefWithRuleEffect(&effect)); len(issues) != 0 {
+			t.Errorf("valid static %+v issues = %+v, want none", effect, issues)
+		}
+		if err := validateApplyRuleTestEffect(&effect); err != nil {
+			t.Errorf("valid instruction %+v rejected: %v", effect, err)
+		}
+	}
+	if err := ValidateInstructionSequence([]Instruction{{
+		Primitive: ApplyRule{
+			Object:      opt.Val(TargetPermanentReference(0)),
+			RuleEffects: []RuleEffect{{Kind: RuleEffectDamageToCantBePreventedOrRedirected}},
+			Duration:    DurationUntilEndOfTurn,
+		},
+	}}); err != nil {
+		t.Errorf("object-scoped instruction rejected: %v", err)
+	}
+
+	for name, effect := range map[string]RuleEffect{
+		"unscoped":   {Kind: RuleEffectDamageToCantBePreventedOrRedirected},
+		"two scopes": {Kind: RuleEffectDamageToCantBePreventedOrRedirected, AffectedSource: true, AffectedSelection: creatures},
+		"controller": {Kind: RuleEffectDamageToCantBePreventedOrRedirected, AffectedSource: true, AffectedController: ControllerYou},
+		"attached":   {Kind: RuleEffectDamageToCantBePreventedOrRedirected, AffectedAttached: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if !hasCardDefIssue(ValidateCardDef(cardDefWithRuleEffect(&effect)), CardDefIssueInvalidRuleEffect) {
+				t.Fatalf("static %+v accepted", effect)
+			}
+			if err := validateApplyRuleTestEffect(&effect); err == nil {
+				t.Fatalf("instruction %+v accepted", effect)
+			}
+		})
+	}
+	if err := ValidateInstructionSequence([]Instruction{{
+		Primitive: ApplyRule{
+			Object:      opt.Val(TargetPermanentReference(0)),
+			RuleEffects: []RuleEffect{{Kind: RuleEffectDamageToCantBePreventedOrRedirected, AffectedSource: true}},
+		},
+	}}); err == nil {
 		t.Error("instruction with both source and object scopes accepted")
 	}
 }
