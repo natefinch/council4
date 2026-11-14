@@ -2236,13 +2236,14 @@ type CopyStackObject struct {
 // then puts those cards into their <zone>" family. Exactly one of Player or
 // PlayerGroup is set; the group form runs the reveal for every member in APNAP
 // order. Destination is the zone the revealed cards move to (graveyard or hand);
-// other zones are not modeled and fail closed upstream. An empty Until matches
-// the first card revealed.
+// zone.Library instead puts every revealed card, the match included, on the
+// bottom of that library in a random order. Other zones are not modeled and
+// fail closed upstream. An empty Until matches the first card revealed.
 type RevealUntil struct {
 	Player      PlayerReference      // single player; zero if PlayerGroup is set
 	PlayerGroup PlayerGroupReference // opponents or all players; zero if Player is set
 	Until       Selection            // first revealed card matching this stops the reveal
-	Destination zone.Type            // graveyard or hand
+	Destination zone.Type            // graveyard, hand, or library (random bottom)
 	// MatchToDestinationRestRandomBottom moves only the matching card to
 	// Destination and returns the other revealed cards to the library bottom in
 	// random order.

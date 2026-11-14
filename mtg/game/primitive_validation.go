@@ -3242,8 +3242,8 @@ func (p DiscardUnlessType) validatePrimitive(targets []TargetSpec, checkTargets 
 }
 
 func (p RevealUntil) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
-	if p.Destination != zone.Graveyard && p.Destination != zone.Hand {
-		return errors.New("RevealUntil requires a Graveyard or Hand Destination")
+	if p.Destination != zone.Graveyard && p.Destination != zone.Hand && p.Destination != zone.Library {
+		return errors.New("RevealUntil requires a Graveyard, Hand or Library Destination")
 	}
 	if (p.MatchToDestinationRestRandomBottom || p.MatchToDestinationRestChosenBottom) && p.Destination != zone.Hand {
 		return errors.New("RevealUntil matching-card partition requires a Hand Destination")
