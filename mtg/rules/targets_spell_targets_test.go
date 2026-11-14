@@ -128,3 +128,25 @@ func TestStackSpellTargetCandidatesRespectYouPlayerRelation(t *testing.T) {
 		t.Fatal("candidates included spell targeting another player under a you relation")
 	}
 }
+
+// TestStackSpellTargetCandidatesIncludeSplicedTargets proves a spell whose
+// spliced text targets a permanent you control is a spell that targets it,
+// since spliced text is part of the spell (CR 702.47c, 115.9b).
+func TestStackSpellTargetCandidatesIncludeSplicedTargets(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	mine := addBattlefieldPermanent(g, game.Player1, "My Bear", []types.Card{types.Creature})
+
+	spliced := addStackSpell(g, game.Player2, "Spliced Spell", []types.Card{types.Instant})
+	spliced.Targets = []game.Target{game.PlayerTarget(game.Player2)}
+	spliced.SplicedTargets = [][]game.Target{{game.PermanentTarget(mine.ObjectID)}}
+
+	spec := counterSpellThatTargetsSpec([]game.SpellTargetRequirement{{
+		Kind:       game.SpellTargetRequirementPermanent,
+		Controller: game.ControllerYou,
+	}})
+	candidates := targetCandidatesForSpecChosenBy(g, game.Player1, game.Player1, counterTargetSpell(&spec), 0, game.Event{}, &spec)
+
+	if !slices.Contains(candidates, game.StackObjectTarget(spliced.ID)) {
+		t.Fatalf("candidates = %+v, want spell whose spliced text targets a permanent the counter's controller controls", candidates)
+	}
+}

@@ -198,6 +198,42 @@ func TestValidateCardDefValidatesTargetGatedSpellCostReduction(t *testing.T) {
 	}
 }
 
+// TestValidateCardDefAcceptsSpellOrAbilityThatTargetsWithPower proves a "spell
+// or ability that targets a creature you control with power 7 or greater"
+// restriction is valid on a mixed stack-object target, and that a power filter
+// is rejected on a player requirement.
+func TestValidateCardDefAcceptsSpellOrAbilityThatTargetsWithPower(t *testing.T) {
+	t.Parallel()
+
+	makeCard := func(requirement SpellTargetRequirement) *CardDef {
+		return &CardDef{CardFace: CardFace{
+			Name:  "Spell Or Ability Counter",
+			Types: []types.Card{types.Instant},
+			SpellAbility: opt.Val(Mode{
+				Targets: []TargetSpec{{
+					MinTargets: 1,
+					MaxTargets: 1,
+					Allow:      TargetAllowStackObject,
+					Predicate: TargetPredicate{
+						StackObjectKinds: []StackObjectKind{StackSpell, StackActivatedAbility, StackTriggeredAbility},
+						SpellTargets:     []SpellTargetRequirement{requirement},
+					},
+				}},
+				Sequence: []Instruction{{Primitive: CounterObject{Object: TargetStackObjectReference(0)}}},
+			}.Ability()),
+		}}
+	}
+	power := opt.Val(compare.Int{Op: compare.GreaterOrEqual, Value: 7})
+	valid := SpellTargetRequirement{Kind: SpellTargetRequirementPermanent, RequiredTypes: []types.Card{types.Creature}, Controller: ControllerYou, Power: power}
+	if issues := ValidateCardDef(makeCard(valid)); len(issues) != 0 {
+		t.Fatalf("spell-or-ability power restriction issues = %+v, want none", issues)
+	}
+	invalid := SpellTargetRequirement{Kind: SpellTargetRequirementPlayer, Power: power}
+	if issues := ValidateCardDef(makeCard(invalid)); !hasCardDefIssue(issues, CardDefIssueInvalidTargetSpec) {
+		t.Fatalf("player requirement with power issues = %+v, want an invalid target issue", issues)
+	}
+}
+
 func TestValidateCardDefValidatesColoredSpellCostReduction(t *testing.T) {
 	t.Parallel()
 

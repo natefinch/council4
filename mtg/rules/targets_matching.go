@@ -150,33 +150,37 @@ func stackObjectTargetInstanceCount(obj *game.StackObject) int {
 	return count
 }
 
-// stackObjectSpellTargetsMatch enforces a "Counter target spell that targets
-// <X>" restriction: the matched spell must have at least one chosen target
-// satisfying one of the requirements. Abilities never satisfy the restriction,
-// since only spells carry the "that targets" qualifier (CR 115.4). An empty
-// requirement list imposes no restriction.
+// stackObjectSpellTargetsMatch enforces a "Counter target spell [or ability]
+// that targets <X>" restriction: the matched spell or ability must have at
+// least one chosen target, counting spliced text's targets, satisfying one of
+// the requirements. It reads the targets' current state whether or not they are
+// still legal for obj; a target that left its zone is no longer found and so
+// is ignored (CR 115.9b). An empty requirement list imposes no restriction.
 func stackObjectSpellTargetsMatch(g *game.Game, controller game.PlayerID, obj *game.StackObject, requirements []game.SpellTargetRequirement) bool {
 	if len(requirements) == 0 {
 		return true
 	}
-	if obj.Kind != game.StackSpell {
-		return false
-	}
-	for i := range obj.Targets {
-		for j := range requirements {
-			if spellTargetSatisfiesRequirement(g, controller, obj.Targets[i], &requirements[j]) {
-				return true
+	matches := func(targets []game.Target) bool {
+		for i := range targets {
+			for j := range requirements {
+				if spellTargetSatisfiesRequirement(g, controller, targets[i], &requirements[j]) {
+					return true
+				}
 			}
 		}
+		return false
 	}
-	return false
+	if matches(obj.Targets) {
+		return true
+	}
+	return slices.ContainsFunc(obj.SplicedTargets, matches)
 }
 
-// spellTargetSatisfiesRequirement reports whether one of a matched spell's
-// chosen targets satisfies a single "that targets" requirement: a permanent
-// requirement checks the targeted permanent's types and controller; a player
-// requirement checks the targeted player's relation. Relations are evaluated
-// relative to the player choosing the counter target.
+// spellTargetSatisfiesRequirement reports whether one of a matched spell or
+// ability's chosen targets satisfies a single "that targets" requirement: a
+// permanent requirement checks the targeted permanent's types, controller and
+// power; a player requirement checks the targeted player's relation. Relations
+// are evaluated relative to the player choosing the counter target.
 func spellTargetSatisfiesRequirement(g *game.Game, controller game.PlayerID, target game.Target, requirement *game.SpellTargetRequirement) bool {
 	switch requirement.Kind {
 	case game.SpellTargetRequirementPlayer:
@@ -197,6 +201,12 @@ func spellTargetSatisfiesRequirement(g *game.Game, controller game.PlayerID, tar
 		}
 		for _, cardType := range requirement.RequiredTypes {
 			if !permanentHasType(g, permanent, cardType) {
+				return false
+			}
+		}
+		if requirement.Power.Exists {
+			values := effectivePermanentValues(g, permanent)
+			if !slices.Contains(values.types, types.Creature) || !values.powerOK || !requirement.Power.Val.Matches(values.power) {
 				return false
 			}
 		}
