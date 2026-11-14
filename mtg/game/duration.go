@@ -47,6 +47,14 @@ const (
 	// monarch, the effect ends. Added last so existing durations keep their wire
 	// values.
 	DurationForAsLongAsPlayerIsMonarch
+	// DurationUntilEndOfYourNextUpkeep expires as the next upkeep step of the
+	// player bound in ExpiresFor ends ("until the end of your next upkeep",
+	// Halfdane; CR 500.5, 503). An effect created during that player's upkeep
+	// step survives that step and ends with their following one, so the
+	// effect records the creating turn and upkeep-step ordinal (CreatedTurn,
+	// CreatedUpkeepStep). Only continuous effects support it. Added last so
+	// existing durations keep their wire values.
+	DurationUntilEndOfYourNextUpkeep
 )
 
 // DelayedTriggerTiming describes when a delayed triggered ability should fire.

@@ -2152,11 +2152,14 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 		runtimeEffect.Controller = obj.Controller
 		runtimeEffect.Timestamp = timestamp
 		runtimeEffect.CreatedTurn = g.Turn.TurnNumber
+		runtimeEffect.CreatedUpkeepStep = g.Turn.UpkeepStepsThisTurn
 		snapshotContinuousX(g, obj, &runtimeEffect)
 		if duration != game.DurationPermanent {
 			runtimeEffect.Duration = duration
 		}
-		if runtimeEffect.Duration == game.DurationUntilYourNextTurn && runtimeEffect.ExpiresFor == game.Player1 {
+		if (runtimeEffect.Duration == game.DurationUntilYourNextTurn ||
+			runtimeEffect.Duration == game.DurationUntilEndOfYourNextUpkeep) &&
+			runtimeEffect.ExpiresFor == game.Player1 {
 			runtimeEffect.ExpiresFor = obj.Controller
 		}
 		if runtimeEffect.ExpiresForRef.Exists {

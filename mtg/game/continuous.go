@@ -121,6 +121,11 @@ type ContinuousEffect struct {
 	Duration       EffectDuration
 	CreatedTurn    int
 	ExpiresFor     PlayerID
+	// CreatedUpkeepStep is TurnState.UpkeepStepsThisTurn when the effect was
+	// created. With CreatedTurn it identifies the creating step, so a
+	// DurationUntilEndOfYourNextUpkeep effect created during an upkeep step
+	// does not expire as that same step ends.
+	CreatedUpkeepStep int
 
 	// ExpiresForRef binds ExpiresFor to a player resolved at application time,
 	// used by DurationForAsLongAsPlayerIsMonarch to bind the duration to the

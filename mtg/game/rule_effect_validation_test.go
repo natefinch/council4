@@ -409,6 +409,22 @@ func TestValidateDamageCantBePreventedRuleEffect(t *testing.T) {
 	}
 }
 
+func TestValidateApplyRuleRejectsNextUpkeepDuration(t *testing.T) {
+	t.Parallel()
+
+	effect := RuleEffect{Kind: RuleEffectDamageCantBePrevented}
+	if err := ValidateInstructionSequence([]Instruction{{Primitive: ApplyRule{
+		RuleEffects: []RuleEffect{effect},
+		Duration:    DurationUntilEndOfYourNextUpkeep,
+	}}}); err == nil {
+		t.Error("instruction duration until the end of your next upkeep accepted for a rule effect")
+	}
+	effect.Duration = DurationUntilEndOfYourNextUpkeep
+	if err := validateApplyRuleTestEffect(&effect); err == nil {
+		t.Error("rule effect duration until the end of your next upkeep accepted")
+	}
+}
+
 func TestValidateCastEntryCountersRider(t *testing.T) {
 	t.Parallel()
 

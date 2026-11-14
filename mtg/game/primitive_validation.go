@@ -1314,10 +1314,16 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 	if len(p.RuleEffects) == 0 {
 		return errors.New("rule effect instruction has no declarations")
 	}
+	if p.Duration == DurationUntilEndOfYourNextUpkeep {
+		return errors.New("rule effects do not support an until-the-end-of-your-next-upkeep duration")
+	}
 	for i := range p.RuleEffects {
 		effect := &p.RuleEffects[i]
 		if !effect.Kind.Valid() {
 			return errors.New("rule effect has an unsupported kind")
+		}
+		if effect.Duration == DurationUntilEndOfYourNextUpkeep {
+			return errors.New("rule effects do not support an until-the-end-of-your-next-upkeep duration")
 		}
 		switch effect.Kind {
 		case RuleEffectPlayFromGraveyardPerPermanentType:

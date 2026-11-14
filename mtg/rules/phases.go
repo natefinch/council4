@@ -307,6 +307,8 @@ func (e *Engine) runUpkeepStep(g *game.Game, agents [game.NumPlayers]PlayerAgent
 	}
 	g.Turn.PriorityPlayer = g.Turn.ActivePlayer
 	e.runPriorityLoop(g, agents, log)
+	// CR 500.5: "until the end of your next upkeep" effects end as this step ends.
+	expireEndOfUpkeepDurations(g)
 	completeTurnBoundary(g)
 }
 
