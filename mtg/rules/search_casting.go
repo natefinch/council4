@@ -6,7 +6,7 @@ import (
 )
 
 func synchronousSearchOrPayment(g *game.Game) bool {
-	return len(g.SearchControlScopes) != 0 || len(g.ManaPaymentScopes) != 0
+	return len(g.SearchControlScopes) != 0 || len(g.HiddenZoneSearchScopes) != 0 || len(g.ManaPaymentScopes) != 0
 }
 
 func searchCastCardAllowed(g *game.Game, player game.PlayerID, card *game.CardInstance) bool {

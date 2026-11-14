@@ -244,10 +244,11 @@ func (o PlayerObservation) Hand() []CardView {
 	return o.HandOf(o.Player)
 }
 
-// HandOf exposes only a hand the viewer may see, including controlled players.
-// A controlled player never gains reciprocal access to their controller's hand.
+// HandOf exposes only a hand the viewer may see, including controlled players
+// and a hand the viewer is searching. A controlled player never gains
+// reciprocal access to their controller's hand.
 func (o PlayerObservation) HandOf(player game.PlayerID) []CardView {
-	if !o.g.CanSeePlayerInformation(o.viewer, player) {
+	if !o.g.LookingAtHand(o.viewer, player) {
 		return nil
 	}
 	return o.cardViews(&o.g.Players[player].Hand)

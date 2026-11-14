@@ -101,7 +101,7 @@ func resampleHiddenFaceDown(g *game.Game, observer game.PlayerID, rng *rand.Rand
 		if len(pool) == 0 {
 			continue
 		}
-		if !g.CanSeePlayerInformation(observer, player.ID) {
+		if !g.LookingAtHand(observer, player.ID) {
 			for _, cardID := range player.Hand.All() {
 				if !isCommanderCardID(g, cardID) {
 					pool = append(pool, cardID)

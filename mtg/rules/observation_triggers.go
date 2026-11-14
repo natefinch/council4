@@ -253,7 +253,7 @@ func (o PlayerObservation) visibleBoundCardID(cardID id.ID, zoneVersion uint64) 
 		case player.Graveyard.Contains(cardID), player.Exile.Contains(cardID), player.CommandZone.Contains(cardID):
 			return cardID
 		case player.Hand.Contains(cardID):
-			if o.g.CanSeePlayerInformation(o.viewer, player.ID) {
+			if o.g.LookingAtHand(o.viewer, player.ID) {
 				return cardID
 			}
 			return 0
