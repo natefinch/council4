@@ -76,6 +76,39 @@ type SpellRequest struct {
 	// It applies to every cost option's total mana cost, including alternative,
 	// additional, kicker and splice mana, and never adds or removes an option.
 	SpendAnyMana game.ManaSpendPermission
+	// Sneak is this cast's Sneak permission (CR 702.190a). Only a cast the
+	// caster begins with priority in their declare blockers step may offer it.
+	Sneak SneakCast
+}
+
+// SneakCast is whether a cast may be made for its Sneak alternative cost
+// (CR 702.190a): from hand, any time its caster could cast an instant during
+// their declare blockers step while controlling an unblocked attacker.
+type SneakCast uint8
+
+const (
+	// SneakUnavailable leaves out every Sneak alternative cost.
+	SneakUnavailable SneakCast = iota
+	// SneakAvailable offers a Sneak alternative cost with the spell's other
+	// cost options.
+	SneakAvailable
+	// SneakRequired offers only a Sneak alternative cost, because Sneak's
+	// timing permission is the only one letting the spell be cast now. Every
+	// other cost option, including a forced alternative, is unavailable.
+	SneakRequired
+)
+
+// allows reports whether a cost option, which is a Sneak alternative cost when
+// sneak is set, may be offered for a cast with this permission.
+func (c SneakCast) allows(sneak bool) bool {
+	switch c {
+	case SneakAvailable:
+		return true
+	case SneakRequired:
+		return sneak
+	default:
+		return !sneak
+	}
 }
 
 // SpellManaRequest describes a mana cost to check as the total mana cost of

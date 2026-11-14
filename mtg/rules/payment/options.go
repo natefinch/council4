@@ -29,6 +29,8 @@ type spellCostOption struct {
 	bargained        bool
 	buybackPaid      bool
 	locked           bool
+	// sneak marks the Sneak alternative cost (CR 702.190a).
+	sneak bool
 	// spendAs is the request's spending permission (CR 609.4b). It travels with
 	// the option, including a prepared total, so it governs only how the
 	// option's mana is paid.
@@ -159,6 +161,7 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 			additionalCosts: additional,
 			castPermission:  permission,
 			bargained:       bargained,
+			sneak:           alternative.Mechanic == cost.AlternativeMechanicSneak,
 		})
 	}
 	return options
@@ -332,7 +335,10 @@ func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCo
 		return nil
 	}
 	if !req.Alternative.Exists {
-		return spellCostOptionsForZoneAndKicker(s, req.PlayerID, req.Card, req.SourceZone, req.KickerPaid, req.KickerCount, req.Bargained, req.CastPermissions)
+		options := spellCostOptionsForZoneAndKicker(s, req.PlayerID, req.Card, req.SourceZone, req.KickerPaid, req.KickerCount, req.Bargained, req.CastPermissions)
+		return slices.DeleteFunc(options, func(option spellCostOption) bool {
+			return !req.Sneak.allows(option.sneak)
+		})
 	}
 	if req.Card == nil {
 		return nil
@@ -350,7 +356,8 @@ func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCo
 		return nil
 	}
 	alternative := req.Alternative.Val
-	if !alternativeCostConditionSatisfied(s, req.PlayerID, alternative) {
+	sneak := alternative.Mechanic == cost.AlternativeMechanicSneak
+	if !alternativeCostConditionSatisfied(s, req.PlayerID, alternative) || !req.Sneak.allows(sneak) {
 		return nil
 	}
 	kicker, kickerOK := spellKicker(req.Card)
@@ -379,6 +386,7 @@ func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCo
 		additionalCosts: additional,
 		castPermission:  castPermission,
 		bargained:       req.Bargained,
+		sneak:           sneak,
 	}}
 }
 

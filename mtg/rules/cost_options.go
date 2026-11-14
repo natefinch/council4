@@ -43,6 +43,17 @@ func dashAlternativeChosen(card *game.CardDef, alternativeIndex int) bool {
 	return card.AlternativeCosts[index].Mechanic == cost.AlternativeMechanicDash
 }
 
+// sneakAlternativeChosen reports whether the spell cost option selected by the
+// payment preferences is the spell's Sneak alternative cost (CR 702.190a),
+// indexed like dashAlternativeChosen.
+func sneakAlternativeChosen(card *game.CardDef, alternativeIndex int) bool {
+	index := alternativeIndex - 1
+	if card == nil || index < 0 || index >= len(card.AlternativeCosts) {
+		return false
+	}
+	return card.AlternativeCosts[index].Mechanic == cost.AlternativeMechanicSneak
+}
+
 func manaCostPtr(manaCost opt.V[cost.Mana]) *cost.Mana {
 	if !manaCost.Exists {
 		return nil

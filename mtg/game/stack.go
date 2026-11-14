@@ -256,6 +256,11 @@ type StackObject struct {
 	// owner's hand at the beginning of the next end step.
 	Dashed bool
 
+	// Sneaked is true if this spell was cast for its Sneak alternative cost
+	// (CR 702.190a), so "if this spell's sneak cost was paid" is true. A copy
+	// of the spell keeps it (CR 707.10).
+	Sneaked bool
+
 	// Bestowed is true if this spell was cast for its Bestow alternative cost
 	// (CR 702.103); the spell is a bestowed Aura spell that requires an enchant
 	// target and, on resolution, attaches to that creature and enters marked
