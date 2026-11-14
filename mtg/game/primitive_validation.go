@@ -3540,6 +3540,10 @@ func (p Attach) validatePrimitive(targets []TargetSpec, checkTargets bool) error
 	return validateObjectReference(p.Target, targets, checkTargets)
 }
 
+func (p Unattach) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
+	return validateObjectReference(p.Attachment, targets, checkTargets)
+}
+
 func (p SkipStep) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	return validatePlayerReference(p.Player, targets, checkTargets)
 }

@@ -1922,6 +1922,19 @@ func handleAttach(r *effectResolver, prim game.Attach) effectResolved {
 	return res
 }
 
+// handleUnattach moves a non-Aura attachment away from whatever it is attached
+// to, leaving it on the battlefield under its current controller (CR 701.3d).
+func handleUnattach(r *effectResolver, prim game.Unattach) effectResolved {
+	res := effectResolved{accepted: true}
+	attachment, ok := r.resolveObject(prim.Attachment)
+	if !ok || !attachment.AttachedTo.Exists || isAuraPermanent(r.game, attachment) {
+		return res
+	}
+	detachPermanent(r.game, attachment)
+	res.succeeded = true
+	return res
+}
+
 // attachParticipants resolves the attachment and the permanent it attaches to.
 // A side named by a choice group is chosen by the resolving controller among
 // the group's permanents that are legal for the other, fixed side; it is not

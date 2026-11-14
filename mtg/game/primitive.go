@@ -388,10 +388,13 @@ const (
 	// the controller puts Amount loyalty counters on a Jace planeswalker token
 	// they control, first creating one if they control none (game.EmpowerJace).
 	PrimitiveEmpowerJace
+	// PrimitiveUnattach moves a referenced Equipment or Fortification away from
+	// whatever it is attached to (CR 701.3d, game.Unattach).
+	PrimitiveUnattach
 )
 
 // primitiveKindCount is the number of supported primitive kinds.
-const primitiveKindCount = int(PrimitiveEmpowerJace) + 1
+const primitiveKindCount = int(PrimitiveUnattach) + 1
 
 // PrimitiveKindCount exposes primitiveKindCount to packages that need fixed-size tables.
 const PrimitiveKindCount = primitiveKindCount
@@ -2735,6 +2738,20 @@ type Attach struct {
 	Optional             bool
 	Prompt               string
 	PublishLinked        LinkedKey
+}
+
+// Unattach moves the referenced Equipment or Fortification away from whatever
+// it is attached to, so it stays on the battlefield under its current
+// controller but is attached to nothing (CR 701.3d). Unattaching something
+// that is not attached, or that has left the battlefield, does nothing. A
+// delayed "unattach it" references the attachment through CapturedObject, so
+// it acts only on that object while it remains on the battlefield (CR 400.7,
+// 603.7c) and unattaches it from whatever it is then attached to. An Aura is
+// left where it is: no card unattaches one, and CR 701.3d defines unattaching
+// only for Equipment. The result succeeds only when something became
+// unattached.
+type Unattach struct {
+	Attachment ObjectReference
 }
 
 // SkipStep schedules a referenced player to skip a step.
