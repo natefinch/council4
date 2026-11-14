@@ -412,6 +412,9 @@ func (e *Engine) sourceCounterKindChoices(g *game.Game, playerID game.PlayerID, 
 			amounts[i] = (&rulesPaymentState{g: g}).AdditionalDynamicAmountValue(playerID, additionalCost.AmountDynamic)
 		}
 		if additionalCost.Kind == cost.AdditionalRemoveCounter && !additionalCost.AnyCounterKind {
+			if additionalCost.RemoveAll {
+				amounts[i] = source.Counters.Get(additionalCost.CounterKind)
+			}
 			reserved[additionalCost.CounterKind] += amounts[i]
 		}
 	}

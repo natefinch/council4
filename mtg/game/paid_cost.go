@@ -5,7 +5,8 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// PaidCostKind distinguishes a consumed permanent from a discarded card.
+// PaidCostKind distinguishes a consumed permanent from a discarded card, or
+// from a counted counter removal.
 type PaidCostKind uint8
 
 // Paid cost subject kinds.
@@ -13,6 +14,11 @@ const (
 	PaidCostUnknown PaidCostKind = iota
 	PaidCostSacrifice
 	PaidCostDiscard
+	// PaidCostCounterRemoval records how many counters one source
+	// counter-removal cost component actually removed. It names no object; its
+	// Amount backs "the number of counters removed this way" (CR 601.2h,
+	// 602.2b), and copies keep it as a cost decision (CR 707.10).
+	PaidCostCounterRemoval
 )
 
 // PaidCostSubject records one actual member of a paid cost component. Snapshot
@@ -24,6 +30,9 @@ type PaidCostSubject struct {
 	Snapshot             ObjectSnapshot
 	CardZoneVersion      opt.V[uint64]
 	CharacteristicsKnown bool
+	// Amount is the number of counters a PaidCostCounterRemoval component
+	// removed, possibly zero. It is zero for object subjects.
+	Amount int
 }
 
 // ClonePaidCostSubjects preserves the immutable payment facts in independent

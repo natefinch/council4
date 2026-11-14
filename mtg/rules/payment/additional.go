@@ -49,6 +49,11 @@ type counterRemoval struct {
 	source *game.Permanent
 	kind   counter.Kind
 	amount int
+	// all removes every counter of kind the source has as the cost is paid,
+	// which may differ from the planned amount and may be zero.
+	all bool
+	// key publishes the actually removed count as a PaidCostCounterRemoval.
+	key string
 }
 
 type counterPlacement struct {
@@ -151,7 +156,8 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.untapSource = source
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalRemoveCounter:
-			if source == nil || s.EffectiveController(source) != playerID {
+			if source == nil || s.EffectiveController(source) != playerID ||
+				additional.RemoveAll && additional.AnyCounterKind {
 				return plan, false
 			}
 			if additional.AnyCounterKind {
@@ -163,11 +169,17 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				plan.paid = append(plan.paid, AdditionalCostText(additional))
 				continue
 			}
+			if additional.RemoveAll && (!additional.CounterKind.Valid() || additional.CounterKind.PlayerOnly()) {
+				return plan, false
+			}
 			planned := 0
 			for _, removal := range plan.counterRemovals {
 				if removal.source == source && removal.kind == additional.CounterKind {
 					planned += removal.amount
 				}
+			}
+			if additional.RemoveAll {
+				amount = max(source.Counters.Get(additional.CounterKind)-planned, 0)
 			}
 			if source.Counters.Get(additional.CounterKind) < planned+amount {
 				return plan, false
@@ -176,6 +188,8 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				source: source,
 				kind:   additional.CounterKind,
 				amount: amount,
+				all:    additional.RemoveAll,
+				key:    additional.SubjectKey,
 			})
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalRemoveCounterAmong:
@@ -696,6 +710,9 @@ func AdditionalCostText(additional cost.Additional) string {
 	case cost.AdditionalUntap:
 		return "{Q}"
 	case cost.AdditionalRemoveCounter:
+		if additional.RemoveAll && !additional.AnyCounterKind {
+			return fmt.Sprintf("Remove all %s counters", additional.CounterKind)
+		}
 		return "Remove a counter"
 	case cost.AdditionalRemoveCounterAmong:
 		if additional.AnyCounterKind {

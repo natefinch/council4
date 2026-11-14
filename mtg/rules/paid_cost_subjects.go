@@ -98,6 +98,22 @@ func (s *rulesPaymentState) PayRandomDiscardSubjects(playerID game.PlayerID, key
 	return subjects, true
 }
 
+// paidCostCounterAmount totals the counters actually removed by obj's
+// counter-removal cost component named key, as locked at payment.
+func paidCostCounterAmount(obj *game.StackObject, key string) int {
+	if obj == nil || key == "" {
+		return 0
+	}
+	total := 0
+	for i := range obj.PaidCostSubjects {
+		subject := &obj.PaidCostSubjects[i]
+		if subject.Key == key && subject.Kind == game.PaidCostCounterRemoval {
+			total += subject.Amount
+		}
+	}
+	return total
+}
+
 func resolvePaidCostSubject(obj *game.StackObject, ref game.ObjectReference) (resolvedObjectReference, bool) {
 	if obj == nil || ref.Kind() != game.ObjectReferencePaidCost || len(ref.Validate()) != 0 {
 		return resolvedObjectReference{}, false

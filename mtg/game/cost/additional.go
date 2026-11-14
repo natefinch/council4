@@ -165,6 +165,15 @@ type Additional struct {
 	// payment planner removes whatever counters the chosen permanents carry.
 	AnyCounterKind bool
 
+	// RemoveAll marks a kind-specific AdditionalRemoveCounter cost as "remove
+	// all CounterKind counters from this permanent". The cost removes however
+	// many such counters the source has as it is paid, including zero, so it is
+	// always payable while the source is a permanent its payer controls (CR
+	// 118.3, 602.2b). Amount, AmountFromX and AmountDynamic are ignored. With a
+	// SubjectKey the removed count is locked on the stack object for
+	// DynamicAmountPaidCostCounters ("the number of counters removed this way").
+	RemoveAll bool
+
 	// RequireTapped constrains battlefield costs to tapped permanents.
 	RequireTapped bool
 
@@ -231,6 +240,8 @@ type Additional struct {
 
 	// SubjectKey publishes the actual objects consumed by this cost component
 	// for resolving predicates. It is independent of effect result/link keys.
+	// On a kind-specific AdditionalRemoveCounter cost it instead publishes the
+	// number of counters actually removed (PaidCostCounterRemoval).
 	SubjectKey string
 }
 

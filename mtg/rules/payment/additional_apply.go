@@ -26,6 +26,9 @@ func additionalCostPlanStillValid(s State, player *game.Player, plan additionalC
 		if !ok || current != removal.source || s.EffectiveController(current) != player.ID {
 			return false
 		}
+		if removal.all {
+			continue
+		}
 		if plannedCounters[current] == nil {
 			plannedCounters[current] = make(map[counter.Kind]int)
 		}
@@ -127,8 +130,19 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) []game.PaidCostSu
 		}
 	}
 	for _, removal := range plan.counterRemovals {
-		if !s.RemoveCounters(plan.player, removal.source, removal.kind, removal.amount) {
+		amount := removal.amount
+		if removal.all {
+			// "Remove all" removes the count present as the cost is paid; zero is a
+			// legal payment that removes nothing (CR 118.3, 602.2b).
+			amount = removal.source.Counters.Get(removal.kind)
+		}
+		if (!removal.all || amount > 0) && !s.RemoveCounters(plan.player, removal.source, removal.kind, amount) {
 			panic("additional cost plan became invalid while removing counters")
+		}
+		if removal.key != "" {
+			subjects = append(subjects, game.PaidCostSubject{
+				Key: removal.key, Kind: game.PaidCostCounterRemoval, Amount: amount,
+			})
 		}
 	}
 	// Pay reserved counter removals before stun can replace the untap (CR 601.2h).

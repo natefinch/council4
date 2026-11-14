@@ -235,6 +235,10 @@ func dynamicAmountValueBeforeLayerWithGroupMember(g *game.Game, obj opt.V[*game.
 		if obj.Exists {
 			amount = obj.Val.KickerCount
 		}
+	case game.DynamicAmountPaidCostCounters:
+		if obj.Exists {
+			amount = paidCostCounterAmount(obj.Val, dynamic.CostKey)
+		}
 	case game.DynamicAmountMaxOf:
 		amount = maxOfDynamicAmounts(g, obj, controller, dynamic.Operands, before, groupMember)
 	case game.DynamicAmountSumOf:
