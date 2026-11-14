@@ -373,7 +373,7 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 
 func (e *Engine) legalCommanderCardCastActions(g *game.Game, playerID game.PlayerID, card *game.CardInstance) []action.Action {
 	var actions []action.Action
-	for _, face := range card.Def.LegalCastFaces() {
+	for _, face := range card.Def.LegalCastFacesFromZone(zone.Command) {
 		spellDef := cardFaceOrDefault(card, face)
 		if face == game.FaceFront {
 			if _, ok := spellDef.MutateCost(); ok {

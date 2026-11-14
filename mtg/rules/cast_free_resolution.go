@@ -73,7 +73,7 @@ func (e *Engine) freeCastSpellOptions(g *game.Game, playerID game.PlayerID, card
 // mana value limit sees (CR 709.4d). From any other zone only the halves are
 // offered.
 func freeCastFaces(playerID game.PlayerID, card *game.CardInstance, fromZone zone.Type) []game.FaceIndex {
-	faces := card.Def.LegalCastFaces()
+	faces := card.Def.LegalCastFacesFromZone(fromZone)
 	if canFuseFromZone(playerID, card, fromZone) {
 		faces = append(faces, game.FaceFused)
 	}

@@ -1644,6 +1644,11 @@ func independentCastPermissions(g *game.Game, playerID game.PlayerID, cardID id.
 		len(grantedGraveyardCastAlternatives(g, playerID, cardFaceOrDefault(card, game.FaceFront))) > 0 {
 		permissions = append(permissions, payment.SpellCastPermissionEscape)
 	}
+	// Aftermath lets its half be cast from its owner's graveyard by paying
+	// its normal cost (CR 702.127a).
+	if cardOK && card.Owner == playerID && card.Def.FaceHasAftermath(face) {
+		permissions = append(permissions, payment.SpellCastPermissionAftermath)
+	}
 	// A group permission ("You may cast creature spells from your graveyard",
 	// Leonardo, Sewer Samurai) authorizes the cast in whichever cast mode it
 	// matches; spellCastRoutes keeps each cast to the mode's own permissions.
@@ -2084,7 +2089,7 @@ func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []zone.Type {
 			if !ok {
 				continue
 			}
-			for _, face := range card.Def.LegalCastFaces() {
+			for _, face := range card.Def.LegalCastFacesFromZone(zone.Graveyard) {
 				if !canCastFromZoneByRuleEffect(g, playerID, cardID, zone.Graveyard, face) {
 					continue
 				}
@@ -2097,7 +2102,7 @@ func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []zone.Type {
 			if !ok {
 				continue
 			}
-			if slices.ContainsFunc(card.Def.LegalCastFaces(), func(face game.FaceIndex) bool {
+			if slices.ContainsFunc(card.Def.LegalCastFacesFromZone(zone.Exile), func(face game.FaceIndex) bool {
 				return exileCastAuthorized(g, playerID, cardID, face)
 			}) {
 				zones = append(zones, zone.Exile)
@@ -2106,7 +2111,7 @@ func castableZonesForPlayer(g *game.Game, playerID game.PlayerID) []zone.Type {
 		}
 		if topID, ok := player.Library.Top(); ok {
 			if card, cardOK := g.GetCardInstance(topID); cardOK &&
-				slices.ContainsFunc(card.Def.LegalCastFaces(), func(face game.FaceIndex) bool {
+				slices.ContainsFunc(card.Def.LegalCastFacesFromZone(zone.Library), func(face game.FaceIndex) bool {
 					return castSpellsFromZonePermitsSomeCast(g, playerID, topID, zone.Library, face)
 				}) {
 				zones = append(zones, zone.Library)
