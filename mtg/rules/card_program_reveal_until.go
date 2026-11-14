@@ -32,7 +32,9 @@ func (c *programContext) RevealUntil(prim game.RevealUntil) (cardprogram.UntilRe
 	describe := func(cardID game.ObjectID) cardprogram.FoundCard {
 		card, _ := c.game.GetCardInstance(cardID)
 		c.revokeFoundCard(cardID)
-		return c.describeFoundCard(card)
+		handle := c.describeFoundCard(card)
+		handle.Zone = zone.Library
+		return handle
 	}
 	hit, others := revealUntilToLibraryBottom(c.game, c.obj, player, prim.Until)
 	if hit.Exists {

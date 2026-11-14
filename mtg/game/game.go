@@ -156,6 +156,8 @@ type Game struct {
 	ControlGrantsEnded [NumPlayers]bool
 	// SearchControlScopes are synchronous, scoped player-control permissions.
 	SearchControlScopes []SearchControlScope
+	// HiddenZoneSearchScopes are open searches of a player's hand and library.
+	HiddenZoneSearchScopes []HiddenZoneSearchScope
 	// ManaPaymentScopes grant mana activation, never ordinary priority.
 	ManaPaymentScopes []PlayerID
 	// LibraryTopWindows are the open CR 401.5 windows, outermost first.

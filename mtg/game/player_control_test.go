@@ -77,3 +77,23 @@ func TestPlayerControlNestedDecisionAndVisibility(t *testing.T) {
 		t.Fatal("departing controller left decision/information control behind")
 	}
 }
+
+func TestHiddenZoneSearchScopeIsDirectionalAndClones(t *testing.T) {
+	g := NewGame([NumPlayers]PlayerConfig{})
+	g.Turn.TurnNumber = 1
+	g.PlayerControlEffects = []PlayerControlEffect{{ID: 1, Player: Player1, Controller: Player3, Turn: 1}}
+	g.HiddenZoneSearchScopes = []HiddenZoneSearchScope{{Searcher: Player1, Player: Player2}}
+	if !g.LookingAtHand(Player1, Player2) || !g.LookingAtLibrary(Player1, Player2) ||
+		!g.LookingAtHand(Player3, Player2) || !g.LookingAtLibrary(Player3, Player2) {
+		t.Fatal("the searcher, or the searcher's controller, could not look at the searched zones")
+	}
+	if g.LookingAtHand(Player2, Player1) || g.LookingAtLibrary(Player2, Player2) || g.LookingAtHand(Player4, Player2) ||
+		g.DecisionMaker(Player2, DecisionRules) != Player2 {
+		t.Fatal("a hidden-zone search granted reverse, uninvolved or decision access")
+	}
+	clone := g.Clone()
+	clone.HiddenZoneSearchScopes[0].Searcher = Player4
+	if !g.LookingAtHand(Player1, Player2) || g.LookingAtHand(Player4, Player2) {
+		t.Fatal("clone aliased the hidden-zone search scope")
+	}
+}

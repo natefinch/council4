@@ -89,13 +89,16 @@ type Exchange struct {
 // Power and Toughness are the card's values in the zone where the handle was
 // minted, including counters on it. They are unset for a card without them or
 // whose value comes from a characteristic-defining ability the Engine cannot
-// yet evaluate outside the battlefield (#3836).
+// yet evaluate outside the battlefield (#3836). Zone is the zone the identified
+// incarnation was in when the operation reported it: a found card's origin, or
+// a moved card's actual destination after replacement effects.
 type FoundCard struct {
 	Identity     game.ZoneCardSnapshot
 	Info         game.ChoiceCardInfo
 	LibraryEpoch uint64
 	Power        opt.V[int]
 	Toughness    opt.V[int]
+	Zone         zone.Type
 }
 
 // UntilResult reports one "<act> cards until a matching card" process.
@@ -112,6 +115,66 @@ type UntilResult struct {
 // SearchResult distinguishes an unavailable searcher from an empty search.
 type SearchResult struct {
 	Available bool
+	Cards     []FoundCard
+}
+
+// SameNameQuantity is how many cards a same-name search finds.
+type SameNameQuantity int
+
+const (
+	// SameNameAll finds "all cards with the same name": every match in the
+	// public graveyard is found, while matches in the hidden hand and library
+	// may be left behind (CR 701.23b; Eradicate and Quash rulings).
+	SameNameAll SameNameQuantity = iota
+	// SameNameAnyNumber finds "any number of cards", none required, the
+	// graveyard included (Surgical Extraction ruling).
+	SameNameAnyNumber
+	// SameNameUpTo finds "up to Max cards" across all three zones.
+	SameNameUpTo
+	// SameNameCards finds "Max cards" ("a card named ..."): it must find as
+	// many as the graveyard's matches allow, up to Max, and may find the rest
+	// in the hand or library or not at all (CR 701.23b).
+	SameNameCards
+)
+
+// SameName is the reference a same-name search compares against. Set exactly
+// one field. Two objects have the same name when they share at least one name;
+// an object with no name, such as a face-down permanent, matches nothing (CR
+// 201.2a), but the zones are still searched.
+type SameName struct {
+	// Snapshot is a permanent's last known information, such as the object
+	// Execute reports exiling (CR 608.2h): the name it had as it left.
+	Snapshot opt.V[game.ObjectSnapshot]
+	// Spell is a target stack object reference: the countered spell's
+	// captured cast-face name, or its current name if it is still on the stack.
+	Spell opt.V[game.ObjectReference]
+	// Card is a card in a zone other than the stack: every name it has there,
+	// both halves of a split card (CR 709.4) but only a double-faced card's
+	// front face (CR 712.6a).
+	Card opt.V[FoundCard]
+	// Name is a chosen card name.
+	Name string
+}
+
+// SameNameSearch searches one player's graveyard, hand and library for cards
+// with the same name as a reference. The source's controller searches. Max is
+// the count for SameNameUpTo and SameNameCards and must be zero otherwise.
+type SameNameSearch struct {
+	Player   game.PlayerReference
+	Name     SameName
+	Quantity SameNameQuantity
+	Max      int
+}
+
+// SameNameResult reports a same-name search. Available is false when the
+// searched player was unavailable, so nothing was searched. Cards are the found
+// cards, unrevealed (CR 701.23e), with Zone set to their graveyard, hand or
+// library origin; library handles stop authorizing placement once that library
+// is shuffled, so move them first. Cards that an opponent's search control
+// exiled during the search (Opposition Agent) are not returned.
+type SameNameResult struct {
+	Available bool
+	Player    game.PlayerID
 	Cards     []FoundCard
 }
 
@@ -194,4 +257,9 @@ type Context interface {
 	// new objects (CR 701.20d), so the handles carry what was revealed but
 	// authorize no placement, and earlier handles to those cards are revoked.
 	RevealUntil(game.RevealUntil) (UntilResult, error)
+	// SearchSameName searches one player's graveyard, hand and library for
+	// cards with the same name as a reference (CR 701.23). Move the returned
+	// handles with MoveCards as one simultaneous placement, then shuffle with
+	// Execute(game.ShuffleLibrary).
+	SearchSameName(SameNameSearch) (SameNameResult, error)
 }

@@ -35,6 +35,15 @@ type SearchControlScope struct {
 	BeforeFind bool
 }
 
+// HiddenZoneSearchScope lasts only while Searcher searches Player's hand and
+// library, which lets Searcher (and anyone who can see Searcher's information,
+// CR 723.4) look at every card in both zones (CR 701.23a). It grants no
+// decision control over Player.
+type HiddenZoneSearchScope struct {
+	Searcher PlayerID
+	Player   PlayerID
+}
+
 // SearchCastingAllowed reports a real own-library search's before-find window.
 func (g *Game) SearchCastingAllowed(player PlayerID) bool {
 	for i := len(g.SearchControlScopes) - 1; i >= 0; i-- {
@@ -129,10 +138,26 @@ func (g *Game) CanSeePlayerInformation(viewer, player PlayerID) bool {
 }
 
 // LookingAtLibrary reports the scoped search permission, not permission to see
-// a library merely because its owner is controlled during a turn.
+// a library merely because its owner is controlled during a turn: a player's
+// search of their own library, or of another player's hidden zones.
 func (g *Game) LookingAtLibrary(viewer, player PlayerID) bool {
 	for _, scope := range g.SearchControlScopes {
 		if scope.Player == player && g.CanSeePlayerInformation(viewer, player) {
+			return true
+		}
+	}
+	return g.searchingHiddenZones(viewer, player)
+}
+
+// LookingAtHand reports whether viewer may see player's hand: their own or a
+// controlled player's (CR 723.4), or one viewer is searching (CR 701.23a).
+func (g *Game) LookingAtHand(viewer, player PlayerID) bool {
+	return g.CanSeePlayerInformation(viewer, player) || g.searchingHiddenZones(viewer, player)
+}
+
+func (g *Game) searchingHiddenZones(viewer, player PlayerID) bool {
+	for _, scope := range g.HiddenZoneSearchScopes {
+		if scope.Player == player && g.CanSeePlayerInformation(viewer, scope.Searcher) {
 			return true
 		}
 	}

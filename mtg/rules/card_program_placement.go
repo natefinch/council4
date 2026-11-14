@@ -63,6 +63,7 @@ func (c *programContext) putFoundCardsOnBattlefield(placements []cardprogram.Car
 		arrivals = append(arrivals, cardprogram.FoundCard{
 			Identity: game.ZoneCardSnapshot{CardID: card.ID, ZoneVersion: card.ZoneVersion},
 			Info:     cardChoiceInfo(c.game, card.ID).Val,
+			Zone:     zone.Battlefield,
 		})
 	}
 	return arrivals, nil

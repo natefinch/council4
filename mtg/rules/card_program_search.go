@@ -18,6 +18,7 @@ func (c *programContext) mintFoundCard(card *game.CardInstance, from zone.Type) 
 		c.foundZones = make(map[game.ObjectID]zone.Type)
 	}
 	handle := c.describeFoundCard(card)
+	handle.Zone = from
 	c.found[card.ID], c.foundZones[card.ID] = handle.Identity, from
 	if from == zone.Library {
 		if c.libraryEpoch == nil {
@@ -252,7 +253,7 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 				!c.game.Players[card.Owner].Exile.IsFaceDown(card.ID) {
 				moved = append(moved, c.mintFoundCard(card, replacement.destination))
 			} else {
-				moved = append(moved, cardprogram.FoundCard{Identity: identity, Info: move.member.Info})
+				moved = append(moved, cardprogram.FoundCard{Identity: identity, Info: move.member.Info, Zone: replacement.destination})
 			}
 		}
 	}
