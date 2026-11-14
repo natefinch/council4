@@ -13,6 +13,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
@@ -1430,7 +1431,7 @@ func spellCastXValues(g *game.Game, spellDef *game.CardDef, requests []payment.S
 		return nil
 	}
 	playerID, cardID, sourceZone := requests[0].PlayerID, requests[0].CardID, requests[0].SourceZone
-	reduction, noGeneric, replacesCost := maxSpellGenericCostReduction(g, playerID, cardID, sourceZone, spellDef)
+	reduction, coloredReduction, noGeneric, replacesCost := maxSpellCostReduction(g, playerID, cardID, sourceZone, spellDef)
 	if noGeneric {
 		reduction = math.MaxInt
 	}
@@ -1445,7 +1446,7 @@ func spellCastXValues(g *game.Game, spellDef *game.CardDef, requests []payment.S
 				if replacesCost {
 					return true
 				}
-				lowered := genericReducedManaCost(optionMana, x, reduction)
+				lowered := reducedManaCost(optionMana, x, reduction, coloredReduction)
 				return paymentOrch.canPaySpellManaCost(g, payment.SpellManaRequest{
 					PlayerID:   playerID,
 					CardID:     cardID,
@@ -1466,9 +1467,11 @@ func spellCastXValues(g *game.Game, spellDef *game.CardDef, requests []payment.S
 	return slices.Sorted(maps.Keys(candidates))
 }
 
-// maxSpellGenericCostReduction bounds the generic mana the spell cost modifiers
-// applicable to casting spellDef from sourceZone could remove from its total
-// cost (CR 601.2f), whatever targets, Bargain or Bestow choice the cast makes.
+// maxSpellCostReduction bounds the generic mana, and the colored mana symbols,
+// the spell cost modifiers applicable to casting spellDef from sourceZone could
+// remove from its total cost (CR 601.2f), whatever targets, Bargain or Bestow
+// choice the cast makes; each color's bound is the most symbols of it any one
+// choice removes.
 // The modifiers are gathered as the payment planner gathers them, once per
 // optional cost-determining choice, with every battlefield permanent, stack
 // object and graveyard card offered as a target so each target-gated reduction
@@ -1479,7 +1482,7 @@ func spellCastXValues(g *game.Game, spellDef *game.CardDef, requests []payment.S
 // no generic mana need be payable at all; replacesCost reports that some
 // modifier replaces the whole mana cost, so no printed symbol bounds X and every
 // sampled candidate is left to full validation.
-func maxSpellGenericCostReduction(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, spellDef *game.CardDef) (reduction int, noGeneric, replacesCost bool) {
+func maxSpellCostReduction(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, spellDef *game.CardDef) (reduction int, colored []mana.Color, noGeneric, replacesCost bool) {
 	targets := make([]game.Target, 0, len(g.Battlefield))
 	for _, permanent := range g.Battlefield {
 		targets = append(targets, game.PermanentTarget(permanent.ObjectID))
@@ -1493,25 +1496,40 @@ func maxSpellGenericCostReduction(g *game.Game, playerID game.PlayerID, cardID i
 		}
 	}
 	state := &rulesPaymentState{g: g}
+	coloredCounts := map[mana.Color]int{}
 	for _, bargained := range []bool{false, spellHasBargain(spellDef)} {
 		for _, bestowed := range []bool{false, spellHasBestow(spellDef)} {
 			total := 0
+			counts := map[mana.Color]int{}
 			for _, modifier := range state.CostModifiersForSpell(playerID, spellDef, cardID, sourceZone, targets, bargained, bestowed) {
 				noGeneric = noGeneric || modifier.SetGeneric.Exists
 				replacesCost = replacesCost || modifier.SetManaCost.Exists
 				total += max(0, modifier.GenericReduction)
+				for _, c := range modifier.ColoredReduction {
+					counts[c]++
+				}
 			}
 			reduction = max(reduction, total)
+			for c, n := range counts {
+				coloredCounts[c] = max(coloredCounts[c], n)
+			}
 		}
 	}
-	return reduction, noGeneric, replacesCost
+	for _, c := range slices.Sorted(maps.Keys(coloredCounts)) {
+		for range coloredCounts[c] {
+			colored = append(colored, c)
+		}
+	}
+	return reduction, colored, noGeneric, replacesCost
 }
 
-// genericReducedManaCost resolves manaCost's X symbols to xValue and lowers its
-// combined generic amount by reduction, never below zero, leaving every other
-// symbol unchanged. Generic cost reductions affect only the generic component
-// and can't take it below zero (CR 118.7a, 601.2f).
-func genericReducedManaCost(manaCost cost.Mana, xValue, reduction int) cost.Mana {
+// reducedManaCost resolves manaCost's X symbols to xValue, removes a symbol of
+// each colored reduction's color, and lowers its combined generic amount by
+// reduction plus each colored reduction the cost had no symbol of that color
+// for, never below zero, leaving every other symbol unchanged. Generic cost
+// reductions affect only the generic component and can't take it below zero
+// (CR 118.7a-c, 601.2f).
+func reducedManaCost(manaCost cost.Mana, xValue, reduction int, colored []mana.Color) cost.Mana {
 	lowered := make(cost.Mana, 0, len(manaCost)+1)
 	generic := 0
 	for _, symbol := range manaCost {
@@ -1524,7 +1542,8 @@ func genericReducedManaCost(manaCost cost.Mana, xValue, reduction int) cost.Mana
 			lowered = append(lowered, symbol)
 		}
 	}
-	if generic > reduction {
+	lowered, excess := lowered.ReduceColored(colored)
+	if generic -= excess; generic > reduction {
 		lowered = append(lowered, cost.O(generic-reduction))
 	}
 	return lowered

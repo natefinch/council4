@@ -2,6 +2,7 @@
 package cost
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/natefinch/council4/mtg/game/color"
@@ -95,6 +96,29 @@ func (m Mana) Multiply(count int) Mana {
 	result := make(Mana, 0, len(nonGeneric)+1)
 	result = append(result, O(generic))
 	return append(result, nonGeneric...)
+}
+
+// ReduceColored removes one colored mana symbol of each listed color from the
+// cost, as a cost reduction by that amount of colored mana does (CR 118.7).
+// excess counts the listed colors the cost has no remaining colored symbol of
+// that color to absorb; the caller reduces the generic component by that
+// amount instead (CR 118.7b, 118.7c). Only ordinary single-color symbols are a
+// requirement of that color: hybrid, Phyrexian and other symbols are kept. The
+// receiver is never modified.
+func (m Mana) ReduceColored(colors []mana.Color) (reduced Mana, excess int) {
+	if len(colors) == 0 {
+		return m, 0
+	}
+	reduced = append(Mana(nil), m...)
+	for _, c := range colors {
+		index := slices.IndexFunc(reduced, func(s Symbol) bool { return s.Kind == ColoredSymbol && s.Color == c })
+		if index < 0 {
+			excess++
+			continue
+		}
+		reduced = slices.Delete(reduced, index, index+1)
+	}
+	return reduced, excess
 }
 
 // ManaForColor returns the mana color corresponding to the given color.

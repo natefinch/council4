@@ -230,10 +230,14 @@ func (s *rulesPaymentState) SpellHasGrantedKeyword(playerID game.PlayerID, card 
 // the modifier carries a CountZone, the matching cards in the caster's own
 // graveyard or hand), evaluating the dynamic amount now, evaluating the board-
 // and player-state condition against the caster now, or matching the spell's
-// announced targets. Generic mana may fall to zero but colored requirements are
-// never touched, because the resolved reduction flows through the shared
-// generic cost modifier path. It also expands exact per-target-beyond-first
-// increases such as strive from the spell's announced targets.
+// announced targets. A gated flat reduction may also carry a ColoredReduction
+// ("This spell costs {1}{U} less to cast if it targets an instant or sorcery
+// spell.", Brush Off), which the shared cost modifier path takes from the
+// matching colored requirements, or from generic mana when the total cost has
+// none of that color (CR 118.7b, 118.7c). Otherwise generic mana may fall to
+// zero but colored requirements are never touched. It also expands exact
+// per-target-beyond-first increases such as strive from the spell's announced
+// targets.
 func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardDef, targets []game.Target, bargained bool) []game.CostModifier {
 	if card == nil {
 		return nil
@@ -266,6 +270,7 @@ func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *ga
 				continue
 			}
 			reduction := 0
+			var coloredReduction []mana.Color
 			switch {
 			case modifier.PerObjectReduction > 0:
 				var count int
@@ -279,22 +284,23 @@ func sourceSpellSelfCostModifiers(g *game.Game, playerID game.PlayerID, card *ga
 				reduction = dynamicAmountValue(g, nil, playerID, *modifier.DynamicReduction)
 			case modifier.ReductionCondition.Exists:
 				if conditionSatisfied(g, conditionContext{controller: playerID, obj: &game.StackObject{Bargained: bargained}}, modifier.ReductionCondition) {
-					reduction = modifier.GenericReduction
+					reduction, coloredReduction = modifier.GenericReduction, modifier.ColoredReduction
 				}
 			case modifier.ReductionTarget != nil:
 				if spellTargetsMatchReductionTarget(g, playerID, modifier.ReductionTarget, targets) {
-					reduction = modifier.GenericReduction
+					reduction, coloredReduction = modifier.GenericReduction, modifier.ColoredReduction
 				}
 			default:
 				continue
 			}
 
-			if reduction <= 0 {
+			if reduction <= 0 && len(coloredReduction) == 0 {
 				continue
 			}
 			modifiers = append(modifiers, game.CostModifier{
 				Kind:             game.CostModifierSpell,
-				GenericReduction: reduction,
+				GenericReduction: max(0, reduction),
+				ColoredReduction: coloredReduction,
 			})
 		}
 	}
