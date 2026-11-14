@@ -336,6 +336,11 @@ type Event struct {
 	// trigger's intervening "if its dash cost was paid" condition.
 	EnterDashed bool
 
+	// EnterSneaked records whether an entering permanent resulted from a spell
+	// whose sneak cost was paid (CR 702.190b). It feeds "when ~ enters, if its
+	// sneak cost was paid" intervening-if conditions.
+	EnterSneaked bool
+
 	// EnterWasCast records whether a permanent entered from resolving a cast
 	// spell: a non-copy spell or a copy that was itself cast (CR 707.12).
 	EnterWasCast bool

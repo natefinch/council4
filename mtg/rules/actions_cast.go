@@ -330,6 +330,12 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 	request, undoMana, ok = e.lockCastPayment(g, requests[route], proposal, agents, log)
 	riderSnapshot, _ := manaSpendRiderSnapshot(g, playerID)
 	var paymentResult payment.SpellPaymentResult
+	// CR 702.190b: returning the unblocked attacker removes it from combat, so
+	// what it was attacking is read from the declarations before payment.
+	var attacksBeforePayment []game.AttackDeclaration
+	if mode.sneak != payment.SneakUnavailable && g.Combat != nil {
+		attacksBeforePayment = slices.Clone(g.Combat.Attackers)
+	}
 	if ok {
 		paymentResult, ok = paymentOrch.paySpellCosts(g, request)
 	}
@@ -363,6 +369,9 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 	obj.Converted = !cast.Overloaded && convertedAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
 	obj.Dashed = !cast.Overloaded && dashAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
 	obj.Sneaked = mode.sneak != payment.SneakUnavailable && sneakAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
+	if obj.Sneaked {
+		obj.SneakAttackTarget = sneakAttackTarget(attacksBeforePayment, paymentResult.ReturnedAttackerIDs)
+	}
 	obj.Bestowed = cast.Bestowed
 	obj.BuybackPaid = paymentResult.BuybackPaid
 	obj.Flashback = paymentResult.CastPermission == payment.SpellCastPermissionFlashback

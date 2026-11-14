@@ -236,9 +236,14 @@ type SpellPaymentResult struct {
 	// sacrificed permanent's last-known information ("the sacrificed creature's
 	// mana value" — Eldritch Evolution, "add mana equal to its mana value" —
 	// Burnt Offering). It mirrors AbilityCostPayment.SacrificedIDs.
-	SacrificedIDs  []id.ID
-	PoolSpend      map[mana.Unit]int
-	CastPermission SpellCastPermission
+	SacrificedIDs []id.ID
+	// ReturnedAttackerIDs are the object IDs of the unblocked attackers
+	// returned to hand to pay a Sneak cost, in plan order, so a sneaked
+	// permanent spell can enter attacking the defender a returned attacker
+	// was attacking (CR 702.190b).
+	ReturnedAttackerIDs []id.ID
+	PoolSpend           map[mana.Unit]int
+	CastPermission      SpellCastPermission
 }
 
 // NextPhyrexianChoice returns the next Phyrexian payment preference, advancing

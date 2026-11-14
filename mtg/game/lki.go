@@ -57,9 +57,13 @@ type ObjectSnapshot struct {
 	// permanent this turn so a triggered ability can resolve after its source
 	// leaves the battlefield.
 	SaddleContributorIDs []id.ID
-	AttachedTo           opt.V[id.ID]
-	AttachedToPlayer     opt.V[PlayerID]
-	ZoneOrderIndex       int
+	// SneakPaid and SneakPaidTurn preserve the permanent's sneak-paid state
+	// (CR 702.190b) for an ability that resolves after it leaves.
+	SneakPaid        bool
+	SneakPaidTurn    int
+	AttachedTo       opt.V[id.ID]
+	AttachedToPlayer opt.V[PlayerID]
+	ZoneOrderIndex   int
 }
 
 // ZoneCardSnapshot identifies one exact card incarnation produced when a

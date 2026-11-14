@@ -198,6 +198,13 @@ type Permanent struct {
 	// Tribute.
 	TributePaid bool
 
+	// SneakPaid records that this permanent is the one a spell whose sneak
+	// cost was paid became (CR 702.190b), and SneakPaidTurn is the turn number
+	// on which it entered, for "if its sneak cost was paid this turn". A new
+	// object, including the same card returning, does not have them (CR 400.7).
+	SneakPaid     bool
+	SneakPaidTurn int
+
 	// BattleProtector is the player protecting this battle (CR 310.9). It is
 	// chosen by the battle's controller as the battle enters (CR 310.9a) and is
 	// independent of control: a control change does not change it, and it does
