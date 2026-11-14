@@ -955,6 +955,11 @@ type TriggerCondition struct {
 	// entering permanent event preserves whether the spell was cast for its Dash
 	// alternative cost for both trigger-time and resolution-time checks.
 	InterveningIfEventPermanentWasDashed bool
+	// InterveningIfEventPermanentWasSneaked is true for "when ~ enters, if its
+	// sneak cost was paid" (CR 702.190b). The entering permanent event preserves
+	// whether the spell's sneak cost was paid for both trigger-time and
+	// resolution-time checks.
+	InterveningIfEventPermanentWasSneaked bool
 	// InterveningIfEventPermanentWasCastByController is true for "if you cast
 	// it" and additionally requires the trigger controller to be the caster.
 	InterveningIfEventPermanentWasCastByController bool

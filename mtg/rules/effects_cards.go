@@ -686,6 +686,7 @@ func prepareTokenEntryWithOptions(e *Engine, g *game.Game, controller game.Playe
 		permanent.CastXValue = options.XValue
 	}
 	initializePermanentCounters(permanent, visible)
+	options.applySneakPaid(g, permanent)
 	initializeReadAhead(e, g, permanent, agents, log)
 	permanent.Tapped = tapped
 	destination := applyEnterBattlefieldReplacementEffects(options.entryContext(e, agents, log), g, permanent, fromZone)
@@ -716,7 +717,7 @@ func commitTokenEntries(g *game.Game, entries []preparedTokenEntry, simultaneous
 			PermanentID: permanent.ObjectID, TokenName: entry.visible.Name, TokenDef: entry.token,
 			FromZone: zone.None, ToZone: entry.destination, SimultaneousID: simultaneousID,
 			KickerPaid: entry.options.KickerPaid, Bargained: entry.options.Bargained, OffspringPaid: entry.options.OffspringPaid,
-			EnterEvoked: entry.options.Evoked, EnterDashed: entry.options.Dashed,
+			EnterEvoked: entry.options.Evoked, EnterDashed: entry.options.Dashed, EnterSneaked: entry.options.Sneaked,
 			EnterWasCast: entry.options.WasCast, EnterHasSpellAnnouncement: permanent.HasSpellAnnouncement,
 			EnterXValue: permanent.CastXValue, EnterCastController: entry.options.CastController,
 			EnterHasCastController: entry.options.HasCastController, EnterCastFromZone: entry.options.CastFromZone,
@@ -761,7 +762,8 @@ func commitTokenEntries(g *game.Game, entries []preparedTokenEntry, simultaneous
 // A resolving spell copy becomes one token; it is not token creation (CR 111.13).
 func (e *Engine) enterPermanentSpellCopy(g *game.Game, obj *game.StackObject, spellDef *game.CardDef, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (*game.Permanent, string) {
 	token, face := permanentSpellCopyTokenDef(g, obj, spellDef)
-	entry, ok := prepareTokenEntryWithOptions(e, g, obj.Controller, token, false, nil, zone.Stack, permanentSpellEntryOptions(obj), agents, log, face)
+	options := permanentSpellEntryOptions(obj)
+	entry, ok := prepareTokenEntryWithOptions(e, g, obj.Controller, token, options.ForceTapped, nil, zone.Stack, options, agents, log, face)
 	if !ok {
 		return nil, "invalid copy"
 	}

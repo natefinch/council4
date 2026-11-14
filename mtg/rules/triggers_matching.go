@@ -889,6 +889,9 @@ func triggerInterveningIfWithObject(g *game.Game, source *game.Permanent, contro
 	if trigger.InterveningIfEventPermanentWasDashed && (event == nil || !event.EnterDashed) {
 		return false
 	}
+	if trigger.InterveningIfEventPermanentWasSneaked && (event == nil || !event.EnterSneaked) {
+		return false
+	}
 	if trigger.InterveningIfEventPermanentWasCastByController &&
 		(event == nil || !event.EnterWasCast || !event.EnterHasCastController ||
 			event.EnterCastController != controller) {

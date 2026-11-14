@@ -13,7 +13,6 @@ import (
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
-	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -31,7 +30,7 @@ import (
 // turn, after blockers are declared; tokens entering attacking were never
 // declared as attackers; each token's defender is chosen separately. Verified
 // official CR (effective 2026-11-06 copy) read: 702.190a-b (Sneak; permanent
-// spells enter attacking, which these fixtures do not cover), 117.1a (instant
+// spells entering attacking are proven in sneak_permanent_test.go), 117.1a (instant
 // timing), 118.9a (one alternative cost), 509.1h and 506.4 (unblocked
 // creatures; a creature returned to hand leaves combat), 601.2b/f/h (announce,
 // total cost including modifiers, pay) and 707.10 (a copy copies the
@@ -462,26 +461,6 @@ func TestSneakCostIncludesCostIncreases(t *testing.T) {
 		t.Fatalf("mana left = %d, want 0 after paying {1}{U}", got)
 	}
 	f.assertAttackerReturned(t)
-}
-
-// TestSneakIsNotOfferedForPermanentSpells keeps a creature with Sneak out of
-// this nonpermanent-only route: its sneak cast must enter attacking
-// (CR 702.190b), which is not supported.
-func TestSneakIsNotOfferedForPermanentSpells(t *testing.T) {
-	f := newSneakFixture(t)
-	creature := &game.CardDef{CardFace: game.CardFace{
-		Name: "Sneak Creature", Types: []types.Card{types.Creature},
-		ManaCost: opt.Val(cost.Mana{cost.O(3)}), Power: opt.Val(game.PT{Value: 2}), Toughness: opt.Val(game.PT{Value: 2}),
-		AlternativeCosts: []cost.Alternative{cost.SneakAlternative(cost.Mana{cost.U})},
-	}}
-	cardID := addCardToHand(f.game, game.Player1, creature)
-	f.game.Players[game.Player1].ManaPool.Add(mana.U, 1)
-	if actionsContain(f.engine.legalActions(f.game, game.Player1), action.CastSpell(cardID, nil, 0, nil)) {
-		t.Fatal("permanent spell with Sneak was offered")
-	}
-	if sneak := sneakCastFor(f.game, game.Player1, zone.Hand, creature, creature); sneak != payment.SneakUnavailable {
-		t.Fatalf("sneakCastFor(creature) = %v, want unavailable", sneak)
-	}
 }
 
 // TestSneakCombinesWithOtherSpellCosts pays Sneak alongside an optional mana

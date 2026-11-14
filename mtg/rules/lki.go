@@ -56,6 +56,8 @@ func snapshotPermanent(g *game.Game, permanent *game.Permanent, zoneType zone.Ty
 			[]id.ID(nil),
 			permanent.SaddleContributorIDs...,
 		),
+		SneakPaid:        permanent.SneakPaid,
+		SneakPaidTurn:    permanent.SneakPaidTurn,
 		AttachedTo:       permanent.AttachedTo,
 		AttachedToPlayer: permanent.AttachedToPlayer,
 		ZoneOrderIndex:   -1,
@@ -204,6 +206,8 @@ func abilitySourceLastKnownPermanent(g *game.Game, obj *game.StackObject) *game.
 		Attachments:      append([]id.ID(nil), snapshot.Attachments...),
 		AttachedTo:       snapshot.AttachedTo,
 		AttachedToPlayer: snapshot.AttachedToPlayer,
+		SneakPaid:        snapshot.SneakPaid,
+		SneakPaidTurn:    snapshot.SneakPaidTurn,
 	}
 }
 

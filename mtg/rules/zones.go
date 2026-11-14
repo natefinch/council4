@@ -58,6 +58,11 @@ type permanentCreationOptions struct {
 	// "if its dash cost was paid" condition. It is false for every permanent that
 	// did not enter from a dashed cast.
 	Dashed bool
+	// Sneaked makes the entering permanent record that its spell's sneak cost
+	// was paid (CR 702.190b): the permanent and its enter event carry it for
+	// "if its sneak cost was paid" conditions. It is false for every permanent
+	// that did not enter from a spell whose sneak cost was paid.
+	Sneaked bool
 	// Bestowed makes the entering permanent a bestowed Aura (CR 702.103b): it
 	// records that the resolving spell was cast bestowed so the permanent's
 	// Bestow static ability changes it from a creature into an Aura and it stays
@@ -111,6 +116,14 @@ type permanentCreationOptions struct {
 	// attached to it when that is legal (CR 608.3c); otherwise it enters
 	// unattached for the resolving spell's CR 303.4i or 702.103f outcome.
 	auraSpellTarget opt.V[game.Target]
+}
+
+// applySneakPaid records on an entering permanent that its spell's sneak cost
+// was paid this turn (CR 702.190b).
+func (options permanentCreationOptions) applySneakPaid(g *game.Game, permanent *game.Permanent) {
+	if options.Sneaked {
+		permanent.SneakPaid, permanent.SneakPaidTurn = true, g.Turn.TurnNumber
+	}
 }
 
 func (options permanentCreationOptions) entryContext(e *Engine, agents [game.NumPlayers]PlayerAgent, log *TurnLog) enterBattlefieldContext {
@@ -173,6 +186,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	}
 	initializePermanentCounters(permanent, faceDef)
 	permanent.Bestowed = options.Bestowed
+	options.applySneakPaid(g, permanent)
 	applyInitialContinuousEffects(g, permanent, continuous)
 	registerPermanentReplacementEffects(g, permanent)
 	initializeReadAhead(e, g, permanent, agents, log)
@@ -210,6 +224,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		OffspringPaid:             options.OffspringPaid,
 		EnterEvoked:               options.Evoked,
 		EnterDashed:               options.Dashed,
+		EnterSneaked:              options.Sneaked,
 		EnterWasCast:              options.WasCast,
 		EnterHasSpellAnnouncement: permanent.HasSpellAnnouncement,
 		EnterCastController:       options.CastController,
@@ -279,6 +294,7 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 	}
 	initializePermanentCounters(permanent, faceDef)
 	permanent.Bestowed = options.Bestowed
+	options.applySneakPaid(g, permanent)
 	// CR 611.2e characteristics participate in the entry replacement check.
 	// The entrant itself remains outside the battlefield until the batch commits.
 	applyInitialContinuousEffects(g, permanent, continuous)
@@ -367,6 +383,7 @@ func simultaneousCardPermanentEntryEvent(entry *preparedCardPermanentEntry) game
 		OffspringPaid:             entry.options.OffspringPaid,
 		EnterEvoked:               entry.options.Evoked,
 		EnterDashed:               entry.options.Dashed,
+		EnterSneaked:              entry.options.Sneaked,
 		EnterWasCast:              entry.options.WasCast,
 		EnterHasSpellAnnouncement: permanent.HasSpellAnnouncement,
 		EnterCastController:       entry.options.CastController,

@@ -261,6 +261,12 @@ type StackObject struct {
 	// of the spell keeps it (CR 707.10).
 	Sneaked bool
 
+	// SneakAttackTarget is what the creature returned to pay a sneaked
+	// permanent spell's cost was attacking as it was returned. The permanent
+	// the spell becomes enters attacking it (CR 702.190b); a copy keeps it.
+	// It is absent for a spell whose sneak cost was not paid.
+	SneakAttackTarget opt.V[AttackTarget]
+
 	// Bestowed is true if this spell was cast for its Bestow alternative cost
 	// (CR 702.103); the spell is a bestowed Aura spell that requires an enchant
 	// target and, on resolution, attaches to that creature and enters marked

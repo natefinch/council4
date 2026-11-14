@@ -767,6 +767,9 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		permanent.SuspendHasteController = opt.Val(obj.Controller)
 	}
 	applySpellKeywordRiders(g, obj, permanent)
+	if obj.SneakAttackTarget.Exists {
+		putSneakedPermanentAttacking(g, permanent, obj.SneakAttackTarget.Val)
+	}
 	if ok && isAttachmentPermanent(g, permanent) && len(obj.Targets) > 0 {
 		if _, reanimates := game.CardDefReanimationEnchant(spellDef); reanimates {
 			// A graveyard-reanimation Aura targets a creature card in a
@@ -838,6 +841,9 @@ func permanentSpellEntryOptions(obj *game.StackObject) permanentCreationOptions 
 		KickerPaid: obj.KickerPaid, KickCount: obj.KickerCount, Bargained: obj.Bargained,
 		OffspringPaid: obj.OffspringPaid, Evoked: obj.Evoked, Dashed: obj.Dashed,
 		Bestowed: obj.Bestowed, EntersTransformed: obj.Converted,
+		// CR 702.190b: a permanent spell whose sneak cost was paid enters
+		// tapped; resolution then puts it into combat attacking.
+		Sneaked: obj.Sneaked, ForceTapped: obj.Sneaked,
 	}
 	if stackObjectCarriesCastFacts(obj) {
 		options.WasCast, options.HasCastController = true, true

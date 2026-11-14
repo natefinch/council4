@@ -20,8 +20,14 @@ type Source struct {
 	// trigger event was a clash ("whenever you clash"; CR 701.30).
 	EventClash opt.V[ClashEvent]
 	// SneakPaid reports whether the resolving spell's sneak cost was paid
-	// (CR 702.190a); a copy of a sneaked spell keeps it (CR 707.10).
-	SneakPaid bool
+	// (CR 702.190a); a copy of a sneaked spell keeps it (CR 707.10). For an
+	// activated or triggered ability it reports whether the ability's source
+	// permanent, or its last known information once it left, is the permanent a
+	// sneaked spell became (CR 702.190b): "if this creature's sneak cost was
+	// paid". SneakPaidThisTurn additionally requires that it entered this turn:
+	// "if its sneak cost was paid this turn".
+	SneakPaid         bool
+	SneakPaidThisTurn bool
 }
 
 // ClashEvent is one player's completed clash as captured by a clash trigger:

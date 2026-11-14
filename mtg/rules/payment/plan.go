@@ -110,6 +110,7 @@ func paySpellCosts(s State, req SpellRequest) (SpellPaymentResult, bool) {
 		AdditionalCostsPaid: plan.additional.paid,
 		PaidCostSubjects:    subjects,
 		SacrificedIDs:       sacrificedPermanentIDs(plan.additional),
+		ReturnedAttackerIDs: returnedAttackerIDs(plan.additional),
 		PoolSpend:           clonePoolSpend(plan.mana.poolSpend),
 		CastPermission:      plan.option.castPermission,
 	}, true
@@ -384,6 +385,18 @@ func sacrificedPermanentIDs(plan additionalCostPlan) []id.ID {
 	ids := make([]id.ID, 0, len(plan.sacrifices))
 	for _, sacrifice := range plan.sacrifices {
 		ids = append(ids, sacrifice.ObjectID)
+	}
+	return ids
+}
+
+// returnedAttackerIDs returns the object IDs of the unblocked attackers
+// returned to hand to pay a Sneak cost, in plan order.
+func returnedAttackerIDs(plan additionalCostPlan) []id.ID {
+	var ids []id.ID
+	for _, returned := range plan.returnsToHand {
+		if returned.additional.Kind == cost.AdditionalReturnUnblockedAttacker {
+			ids = append(ids, returned.permanent.ObjectID)
+		}
 	}
 	return ids
 }
