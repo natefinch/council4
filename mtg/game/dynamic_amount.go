@@ -344,6 +344,15 @@ const (
 	// 608.2c). It backs Balance's "Players discard cards ... the same way".
 	// Added last so existing kinds keep their wire values.
 	DynamicAmountFewestCardsInHand
+	// DynamicAmountPaidCostCounters is the number of counters the resolving
+	// spell or ability's counter-removal cost component named by CostKey
+	// actually removed ("the number of +1/+1 counters removed this way",
+	// Molten Hydra). The count was locked when the cost was paid (CR 601.2h,
+	// 602.2b), so counters later put on or removed from the source don't change
+	// it, and a copy keeps the original's count (CR 707.10). An ability with no
+	// such paid component counts zero. Added last so existing kinds keep their
+	// wire values.
+	DynamicAmountPaidCostCounters
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves
@@ -374,6 +383,9 @@ type DynamicAmount struct {
 	// LinkedKey names the exact card batch consumed by linked-card aggregate
 	// amounts. It is empty for every other dynamic amount kind.
 	LinkedKey LinkedKey
+	// CostKey names the paid cost component (cost.Additional.SubjectKey) read
+	// by DynamicAmountPaidCostCounters. It is empty for every other kind.
+	CostKey string
 	// Divisor, when greater than one, divides the amount after the multiplier and
 	// addend are applied, rounding down unless RoundUp is set. It backs the "half
 	// their library, rounded up/down" mill amounts (Traumatize, Fleet Swallower),
