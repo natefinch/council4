@@ -149,6 +149,55 @@ func TestValidateCardDefValidatesDynamicSpellCostReduction(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefValidatesTargetGatedSpellCostReduction(t *testing.T) {
+	t.Parallel()
+
+	makeCard := func(modifier CostModifier) *CardDef {
+		return &CardDef{CardFace: CardFace{
+			Name:  "Target Reducer",
+			Types: []types.Card{types.Instant},
+			StaticAbilities: []StaticAbility{{
+				RuleEffects: []RuleEffect{{
+					Kind:           RuleEffectCostModifier,
+					AffectedSource: true,
+					CostModifier:   modifier,
+				}},
+			}},
+		}}
+	}
+	valid := func() CostModifier {
+		return CostModifier{
+			Kind:             CostModifierSpell,
+			GenericReduction: 2,
+			ReductionTarget: &TargetSpec{
+				Allow:     TargetAllowStackObject,
+				Predicate: TargetPredicate{StackObjectKinds: []StackObjectKind{StackSpell}, SpellColors: []color.Color{color.Blue}},
+			},
+		}
+	}
+	if issues := ValidateCardDef(makeCard(valid())); len(issues) != 0 {
+		t.Fatalf("valid target-gated reduction issues = %+v, want none", issues)
+	}
+
+	invalid := map[string]func(*CostModifier){
+		"no reduction":          func(m *CostModifier) { m.GenericReduction = 0 },
+		"ability modifier":      func(m *CostModifier) { m.Kind = CostModifierAbility },
+		"target count":          func(m *CostModifier) { m.ReductionTarget.MaxTargets = 1 },
+		"unspecified allow":     func(m *CostModifier) { m.ReductionTarget.Allow = TargetAllowUnspecified },
+		"legacy constraint":     func(m *CostModifier) { m.ReductionTarget.Constraint = "blue spell" },
+		"with condition":        func(m *CostModifier) { m.ReductionCondition = opt.Val(Condition{}) },
+		"stack without a kind":  func(m *CostModifier) { m.ReductionTarget.Predicate.StackObjectKinds = nil },
+		"with per-object count": func(m *CostModifier) { m.PerObjectReduction = 1 },
+	}
+	for name, mutate := range invalid {
+		modifier := valid()
+		mutate(&modifier)
+		if issues := ValidateCardDef(makeCard(modifier)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) && !hasCardDefIssue(issues, CardDefIssueInvalidTargetSpec) {
+			t.Errorf("%s issues = %+v, want an invalid rule effect or target issue", name, issues)
+		}
+	}
+}
+
 func TestValidateCardDefColorDisjunctionCostModifier(t *testing.T) {
 	t.Parallel()
 

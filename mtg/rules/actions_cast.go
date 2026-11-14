@@ -1470,9 +1470,11 @@ func spellCastXValues(g *game.Game, spellDef *game.CardDef, requests []payment.S
 // applicable to casting spellDef from sourceZone could remove from its total
 // cost (CR 601.2f), whatever targets, Bargain or Bestow choice the cast makes.
 // The modifiers are gathered as the payment planner gathers them, once per
-// optional cost-determining choice, with every battlefield permanent offered as
-// a target so each target-gated reduction ("Spells you cast that target this
-// creature cost {2} less to cast.", Elderwood Scion) counts. Increases are
+// optional cost-determining choice, with every battlefield permanent, stack
+// object and graveyard card offered as a target so each target-gated reduction
+// ("Spells you cast that target this creature cost {2} less to cast.",
+// Elderwood Scion; "This spell costs {2} less to cast if it targets a blue
+// permanent.", Torch Breath) counts. Increases are
 // ignored. noGeneric reports that some modifier replaces the generic amount, so
 // no generic mana need be payable at all; replacesCost reports that some
 // modifier replaces the whole mana cost, so no printed symbol bounds X and every
@@ -1481,6 +1483,14 @@ func maxSpellGenericCostReduction(g *game.Game, playerID game.PlayerID, cardID i
 	targets := make([]game.Target, 0, len(g.Battlefield))
 	for _, permanent := range g.Battlefield {
 		targets = append(targets, game.PermanentTarget(permanent.ObjectID))
+	}
+	for _, obj := range g.Stack.Objects() {
+		targets = append(targets, game.StackObjectTarget(obj.ID))
+	}
+	for _, player := range g.Players {
+		for _, graveyardCardID := range player.Graveyard.All() {
+			targets = append(targets, game.CardTarget(graveyardCardID))
+		}
 	}
 	state := &rulesPaymentState{g: g}
 	for _, bargained := range []bool{false, spellHasBargain(spellDef)} {

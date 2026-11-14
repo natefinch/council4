@@ -130,9 +130,20 @@ type CostModifier struct {
 	// PerObjectReduction and DynamicReduction. An absent option leaves the
 	// reduction ungated.
 	ReductionCondition opt.V[Condition]
-	// TargetsTappedCreature gates a source spell's flat reduction on at least one
-	// chosen target being a tapped creature.
-	TargetsTappedCreature bool
+	// ReductionTarget gates a source spell's flat GenericReduction on its own
+	// targets ("This spell costs {N} less to cast if it targets <object>.",
+	// Banish from Edoras, Mystical Dispute, No One Left Behind): the spell costs
+	// GenericReduction generic mana less only when at least one target chosen
+	// for it (CR 601.2c) matches this spec's Allow categories, Selection
+	// (permanent and card characteristics, with TargetZone for cards) and
+	// Predicate (stack-object qualifiers), as the total cost is determined (CR
+	// 601.2f). It describes only which chosen objects qualify; MinTargets,
+	// MaxTargets and Constraint are unused, and the spell's own TargetSpecs still
+	// govern which targets are legal. It is set only on an AffectedSource
+	// CostModifierSpell and is mutually exclusive with the other conditional
+	// and dynamic reductions. A nil pointer leaves the reduction ungated by
+	// targets; it is a pointer so CostModifier stays cheap to copy.
+	ReductionTarget *TargetSpec
 
 	// SourceZone constrains a spell cost modifier to spells being cast from a
 	// single zone ("Spells you cast from your graveyard cost {N} less to cast.",

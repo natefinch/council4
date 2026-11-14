@@ -2292,16 +2292,22 @@ func (v *cardDefValidator) validateCostModifier(faceName, path string, modifier 
 			v.add(faceName, appendPath(path, "ReductionCondition"), CardDefIssueInvalidRuleEffect, "conditional cost reduction cannot combine with a per-object or dynamic reduction")
 		}
 	}
-	if modifier.TargetsTappedCreature {
+	if target := modifier.ReductionTarget; target != nil {
+		targetPath := appendPath(path, "ReductionTarget")
 		if modifier.Kind != CostModifierSpell {
-			v.add(faceName, appendPath(path, "TargetsTappedCreature"), CardDefIssueInvalidRuleEffect, "target-state cost reduction requires a spell modifier")
+			v.add(faceName, targetPath, CardDefIssueInvalidRuleEffect, "target-gated cost reduction requires a spell modifier")
 		}
 		if modifier.GenericReduction <= 0 {
-			v.add(faceName, appendPath(path, "TargetsTappedCreature"), CardDefIssueInvalidRuleEffect, "target-state cost reduction requires a positive generic reduction")
+			v.add(faceName, targetPath, CardDefIssueInvalidRuleEffect, "target-gated cost reduction requires a positive generic reduction")
 		}
 		if modifier.ReductionCondition.Exists || modifier.PerObjectReduction > 0 || modifier.DynamicReduction != nil {
-			v.add(faceName, appendPath(path, "TargetsTappedCreature"), CardDefIssueInvalidRuleEffect, "target-state cost reduction cannot combine with another conditional or dynamic reduction")
+			v.add(faceName, targetPath, CardDefIssueInvalidRuleEffect, "target-gated cost reduction cannot combine with another conditional or dynamic reduction")
 		}
+		if target.Allow == TargetAllowUnspecified || target.Constraint != "" || target.MinTargets != 0 || target.MaxTargets != 0 ||
+			target.Chooser != TargetChooserController || target.ControlledBy.Exists {
+			v.add(faceName, targetPath, CardDefIssueInvalidRuleEffect, "target-gated cost reduction describes qualifying targets only by Allow, Selection, Predicate and TargetZone")
+		}
+		v.validateTargetSpec(faceName, targetPath, target)
 	}
 	v.validateSharedExiledCardTypeReduction(faceName, path, modifier)
 }
