@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/action"
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -466,12 +467,21 @@ func TestSneakCostIncludesCostIncreases(t *testing.T) {
 // TestSneakCombinesWithOtherSpellCosts pays Sneak alongside an optional mana
 // cost (Buyback) and a nonmana additional cost choosing another creature: the
 // unblocked attacker pays only Sneak and the sacrifice takes a different
-// creature (CR 118.9d, 601.2h). Declining Buyback still offers Sneak.
+// creature (CR 118.9d, 601.2h). Declining Buyback still offers Sneak. Whether
+// the attacker comes before or after the other creatures on the battlefield,
+// the sacrifice is never offered the attacker that the later Sneak return
+// needs (#3917).
 func TestSneakCombinesWithOtherSpellCosts(t *testing.T) {
 	for _, tt := range []struct {
-		name    string
-		buyback bool
-	}{{name: "with buyback", buyback: true}, {name: "without buyback"}} {
+		name          string
+		buyback       bool
+		attackerFirst bool
+	}{
+		{name: "with buyback", buyback: true},
+		{name: "without buyback"},
+		{name: "attacker first with buyback", buyback: true, attackerFirst: true},
+		{name: "attacker first without buyback", attackerFirst: true},
+	} {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newSneakFixture(t)
 			g := f.game
@@ -489,11 +499,19 @@ func TestSneakCombinesWithOtherSpellCosts(t *testing.T) {
 				Name: "Bystander", Types: []types.Card{types.Creature},
 				Power: opt.Val(game.PT{Value: 1}), Toughness: opt.Val(game.PT{Value: 1}),
 			}})
-			// The cost planner commits greedily to the first sacrifice
-			// candidate (#3917), so the bystander precedes the attacker.
-			slices.Reverse(g.Battlefield)
+			onlooker := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+				Name: "Onlooker", Types: []types.Card{types.Creature},
+				Power: opt.Val(game.PT{Value: 1}), Toughness: opt.Val(game.PT{Value: 1}),
+			}})
+			if !tt.attackerFirst {
+				slices.Reverse(g.Battlefield)
+			}
+			if first := g.Battlefield[0] == f.attacker; first != tt.attackerFirst {
+				t.Fatalf("attacker first on battlefield = %v, want %v", first, tt.attackerFirst)
+			}
 			g.Players[game.Player1].ManaPool.Add(mana.U, 4)
 			var offered [][]string
+			var sacrificeOffers [][]string
 			agent := &authoredCopyChoiceAgent{choose: func(request game.ChoiceRequest) []int {
 				if request.Kind != game.ChoicePayment {
 					return request.DefaultSelection
@@ -508,6 +526,9 @@ func TestSneakCombinesWithOtherSpellCosts(t *testing.T) {
 					}
 				}
 				offered = append(offered, labels)
+				if slices.Contains(labels, permanentChoiceLabel(g, bystander)) {
+					sacrificeOffers = append(sacrificeOffers, labels)
+				}
 				if chosen < 0 {
 					t.Fatalf("no wanted option in %v", labels)
 				}
@@ -517,9 +538,16 @@ func TestSneakCombinesWithOtherSpellCosts(t *testing.T) {
 			if !f.engine.applyActionWithChoices(g, game.Player1, action.CastSpell(spellID, nil, 0, nil), agents, &TurnLog{}) {
 				t.Fatalf("sneak cast with other costs failed; offered %v", offered)
 			}
+			want := []string{permanentChoiceLabel(g, bystander), permanentChoiceLabel(g, onlooker)}
+			if len(sacrificeOffers) != 1 || !slices.Equal(slices.Sorted(slices.Values(sacrificeOffers[0])), slices.Sorted(slices.Values(want))) {
+				t.Fatalf("sacrifice offers = %v, want one offer of %v without the attacker", sacrificeOffers, want)
+			}
 			f.assertAttackerReturned(t)
 			if permanentForCard(g, bystander.CardInstanceID) != nil || !g.Players[game.Player1].Graveyard.Contains(bystander.CardInstanceID) {
 				t.Fatal("the other creature was not sacrificed")
+			}
+			if permanentForCard(g, onlooker.CardInstanceID) == nil {
+				t.Fatal("a creature the player did not choose was sacrificed")
 			}
 			obj, _ := g.Stack.Peek()
 			if !obj.Sneaked || obj.BuybackPaid != tt.buyback {
@@ -537,6 +565,97 @@ func TestSneakCombinesWithOtherSpellCosts(t *testing.T) {
 				t.Fatalf("spell in hand after resolution = %v, want %v", got, tt.buyback)
 			}
 		})
+	}
+}
+
+// sneakSacrificeFixture is Donatello's Technique with an added "Sacrifice
+// amount creatures" spell cost, whose creatures overlap the unblocked attacker
+// Sneak returns, with the attacker first on the battlefield.
+func sneakSacrificeFixture(t *testing.T, amount int, others ...string) (sneakFixture, id.ID, []*game.Permanent) {
+	t.Helper()
+	f := newSneakFixture(t)
+	def := donatellosTechniqueFixture()
+	def.AdditionalCosts = []cost.Additional{{
+		Kind: cost.AdditionalSacrifice, Text: "Sacrifice creatures", Amount: amount,
+		MatchPermanentType: true, PermanentType: types.Creature,
+	}}
+	spellID := addCardToHand(f.game, game.Player1, def)
+	var creatures []*game.Permanent
+	for _, name := range others {
+		creatures = append(creatures, addCombatPermanent(f.game, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name: name, Types: []types.Card{types.Creature},
+			Power: opt.Val(game.PT{Value: 1}), Toughness: opt.Val(game.PT{Value: 1}),
+		}}))
+	}
+	if f.game.Battlefield[0] != f.attacker {
+		t.Fatal("the attacker is not first on the battlefield")
+	}
+	f.game.Players[game.Player1].ManaPool.Add(mana.U, 1)
+	return f, spellID, creatures
+}
+
+// TestSneakSacrificeCostCannotTakeTheOnlyAttacker proves the sacrifice and the
+// Sneak return need distinct permanents (CR 601.2h): with the unblocked
+// attacker as the only creature, Sneak is not castable and nothing is paid.
+func TestSneakSacrificeCostCannotTakeTheOnlyAttacker(t *testing.T) {
+	f, spellID, _ := sneakSacrificeFixture(t, 1)
+	g := f.game
+	cast := action.CastSpell(spellID, nil, 0, nil)
+	if actionsContain(f.engine.legalActions(g, game.Player1), cast) {
+		t.Fatal("sneak cast is legal when its sacrifice could only take the attacker it returns")
+	}
+	agent := &sneakAgent{cost: "Sneak"}
+	if f.engine.applyActionWithChoices(g, game.Player1, cast, [game.NumPlayers]PlayerAgent{game.Player1: agent}, &TurnLog{}) {
+		t.Fatal("sneak cast succeeded with one creature for two permanent costs")
+	}
+	if permanentForCard(g, f.attacker.CardInstanceID) == nil || !g.Players[game.Player1].Hand.Contains(spellID) {
+		t.Fatal("an unpayable cast moved the attacker or the spell")
+	}
+}
+
+// TestSneakMultiCreatureSacrificeChoosesCompatibleCreatures pays "Sacrifice
+// two creatures" with Sneak while the attacker comes first: the player picks
+// the sacrificed creatures one at a time from the creatures other than the
+// attacker, and the chosen ones are sacrificed.
+func TestSneakMultiCreatureSacrificeChoosesCompatibleCreatures(t *testing.T) {
+	f, spellID, creatures := sneakSacrificeFixture(t, 2, "Alpha", "Beta", "Gamma")
+	g := f.game
+	var offers [][]string
+	agent := &authoredCopyChoiceAgent{choose: func(request game.ChoiceRequest) []int {
+		if request.Kind != game.ChoicePayment || request.Prompt != "Sacrifice creatures" {
+			for _, option := range request.Options {
+				if strings.Contains(option.Label, "Sneak") {
+					return []int{option.Index}
+				}
+			}
+			return request.DefaultSelection
+		}
+		var labels []string
+		for _, option := range request.Options {
+			labels = append(labels, option.Label)
+		}
+		offers = append(offers, labels)
+		if request.MinChoices != 1 || request.MaxChoices != 1 {
+			t.Fatalf("sacrifice choice takes %d-%d creatures, want one at a time", request.MinChoices, request.MaxChoices)
+		}
+		return []int{len(request.Options) - 1}
+	}}
+	agents := [game.NumPlayers]PlayerAgent{game.Player1: agent}
+	if !f.engine.applyActionWithChoices(g, game.Player1, action.CastSpell(spellID, nil, 0, nil), agents, &TurnLog{}) {
+		t.Fatalf("sneak cast with a two-creature sacrifice failed; offers %v", offers)
+	}
+	label := func(p *game.Permanent) string { return permanentChoiceLabel(g, p) }
+	alpha, beta, gamma := creatures[0], creatures[1], creatures[2]
+	want := [][]string{{label(alpha), label(beta), label(gamma)}, {label(alpha), label(beta)}}
+	if !slices.EqualFunc(offers, want, slices.Equal[[]string]) {
+		t.Fatalf("sacrifice offers = %v, want %v", offers, want)
+	}
+	f.assertAttackerReturned(t)
+	if permanentForCard(g, alpha.CardInstanceID) == nil || permanentForCard(g, beta.CardInstanceID) != nil || permanentForCard(g, gamma.CardInstanceID) != nil {
+		t.Fatal("the chosen creatures Beta and Gamma were not the ones sacrificed")
+	}
+	if obj, _ := g.Stack.Peek(); obj == nil || !obj.Sneaked {
+		t.Fatal("the spell was not cast for its sneak cost")
 	}
 }
 

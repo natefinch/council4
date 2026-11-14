@@ -41,6 +41,14 @@ func (e *Engine) paymentPreferencesForCostFromSource(g *game.Game, playerID game
 func (e *Engine) additionalCostPaymentPreferences(g *game.Game, playerID game.PlayerID, additionalCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog, tapExclusions ...id.ID) *payment.Preferences {
 	prefs := &payment.Preferences{}
 	reservedGraveyardCards := map[id.ID]bool{}
+	var reservedPermanents []id.ID
+	permanentChoices := func(i, amount int, excludedTapIDs ...id.ID) []id.ID {
+		chosen := e.additionalCostPermanentChoices(g, playerID, additionalCosts, i, amount, xValue, sourceCardID, reservedPermanents, agents, log, excludedTapIDs...)
+		if additionalCosts[i].ChoiceGroup == 0 {
+			reservedPermanents = append(reservedPermanents, chosen...)
+		}
+		return chosen
+	}
 	for i, additionalCost := range additionalCosts {
 		amount := payment.AdditionalCostAmountFor(additionalCost, xValue)
 		if additionalCost.AmountDynamic != cost.AdditionalDynamicAmountNone {
@@ -48,7 +56,7 @@ func (e *Engine) additionalCostPaymentPreferences(g *game.Game, playerID game.Pl
 		}
 		switch additionalCost.Kind {
 		case cost.AdditionalSacrifice:
-			prefs.SacrificeChoices = append(prefs.SacrificeChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)
+			prefs.SacrificeChoices = append(prefs.SacrificeChoices, permanentChoices(i, amount)...)
 		case cost.AdditionalTapPermanents:
 			if additionalCost.TotalPowerAtLeast > 0 {
 				// The payment planner greedily selects which creatures to tap to
@@ -56,9 +64,9 @@ func (e *Engine) additionalCostPaymentPreferences(g *game.Game, playerID game.Pl
 				// gathered here.
 				continue
 			}
-			prefs.TapChoices = append(prefs.TapChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log, tapExclusions...)...)
+			prefs.TapChoices = append(prefs.TapChoices, permanentChoices(i, amount, tapExclusions...)...)
 		case cost.AdditionalReturnToHand, cost.AdditionalReturnUnblockedAttacker:
-			prefs.ReturnChoices = append(prefs.ReturnChoices, e.additionalCostPermanentChoices(g, playerID, additionalCost, amount, agents, log)...)
+			prefs.ReturnChoices = append(prefs.ReturnChoices, permanentChoices(i, amount)...)
 		case cost.AdditionalRemoveCounterAmong:
 			prefs.RemoveCounterChoices = append(prefs.RemoveCounterChoices, e.additionalCostRemoveCounterAmongChoices(g, playerID, additionalCost, amount, agents, log)...)
 		case cost.AdditionalDiscard:
@@ -399,26 +407,60 @@ func isPhyrexianSymbol(symbol cost.Symbol) bool {
 	return symbol.Kind == cost.PhyrexianSymbol || symbol.Kind == cost.PhyrexianGenericSymbol
 }
 
-func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.PlayerID, addCost cost.Additional, amount int, agents [game.NumPlayers]PlayerAgent, log *TurnLog, excludedTapIDs ...id.ID) []id.ID {
-	candidates := candidateSacrificePermanents(g, playerID, addCost, excludedTapIDs)
-	if len(candidates) <= amount {
-		return paymentPermanentIDs(candidates)
+// additionalCostPermanentChoices asks the player which permanents pay
+// costs[index], a sacrifice, tap or return cost of amount permanents. Each
+// payment cost takes its own permanents (CR 601.2h), so permanents reserved by
+// earlier costs are not offered, and only permanents that leave the payment's
+// later sacrifice, tap and return costs payable are. When a later cost could
+// take one of these candidates, a multi-permanent cost is chosen one permanent
+// at a time so every selection stays compatible.
+func (e *Engine) additionalCostPermanentChoices(g *game.Game, playerID game.PlayerID, costs []cost.Additional, index, amount, xValue int, sourceCardID id.ID, reserved []id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog, excludedTapIDs ...id.ID) []id.ID {
+	addCost := costs[index]
+	candidates := slices.DeleteFunc(candidateSacrificePermanents(g, playerID, addCost, excludedTapIDs), func(permanent *game.Permanent) bool {
+		return slices.Contains(reserved, permanent.ObjectID)
+	})
+	reserved = slices.Clone(reserved)
+	var chosen []id.ID
+	for len(chosen) < amount {
+		need := amount - len(chosen)
+		assignable, shared := payment.AssignablePermanentsForCost(&rulesPaymentState{g: g}, playerID, costs, index, xValue, candidates, need, sourceCardID, reserved, excludedTapIDs)
+		if len(assignable) == 0 {
+			// No compatible assignment exists; offer the plain candidates and let
+			// the planner reject the payment.
+			assignable = slices.DeleteFunc(slices.Clone(candidates), func(permanent *game.Permanent) bool {
+				return slices.Contains(reserved, permanent.ObjectID)
+			})
+			shared = false
+		}
+		if len(assignable) <= need {
+			return append(chosen, paymentPermanentIDs(assignable)...)
+		}
+		pick := need
+		if shared {
+			pick = 1
+		}
+		options := make([]game.ChoiceOption, 0, len(assignable))
+		for i, permanent := range assignable {
+			options = append(options, game.ChoiceOption{Index: i, Label: permanentChoiceLabel(g, permanent), Card: permanentChoiceInfo(g, permanent)})
+		}
+		request := game.ChoiceRequest{
+			Kind:             game.ChoicePayment,
+			Player:           playerID,
+			Prompt:           payment.AdditionalCostText(addCost),
+			Options:          options,
+			MinChoices:       pick,
+			MaxChoices:       pick,
+			DefaultSelection: firstChoiceIndices(pick),
+		}
+		picked := selectedPaymentPermanentIDs(assignable, e.chooseChoice(g, agents, request, log))
+		if len(picked) == 0 {
+			break
+		}
+		picked = picked[:min(len(picked), pick)]
+		chosen = append(chosen, picked...)
+		reserved = append(reserved, picked...)
 	}
-	options := make([]game.ChoiceOption, 0, len(candidates))
-	for i, permanent := range candidates {
-		options = append(options, game.ChoiceOption{Index: i, Label: permanentChoiceLabel(g, permanent), Card: permanentChoiceInfo(g, permanent)})
-	}
-	request := game.ChoiceRequest{
-		Kind:             game.ChoicePayment,
-		Player:           playerID,
-		Prompt:           payment.AdditionalCostText(addCost),
-		Options:          options,
-		MinChoices:       amount,
-		MaxChoices:       amount,
-		DefaultSelection: firstChoiceIndices(amount),
-	}
-	selected := e.chooseChoice(g, agents, request, log)
-	return selectedPaymentPermanentIDs(candidates, selected)
+	return chosen
 }
 
 // additionalCostRemoveCounterAmongChoices gathers the per-counter selection for
