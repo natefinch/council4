@@ -55,6 +55,13 @@ const (
 	// CreatedUpkeepStep). Only continuous effects support it. Added last so
 	// existing durations keep their wire values.
 	DurationUntilEndOfYourNextUpkeep
+	// DurationDuringExtraTurn applies only during the specific extra turn bound
+	// in the effect's ExtraTurnID and ends when that turn ends or is never taken
+	// ("Take an extra turn after this one. During that turn, damage can't be
+	// prevented.", Alchemist's Gambit; CR 500.7). Only game.TakeExtraTurn
+	// creates such effects. Added last so existing durations keep their wire
+	// values.
+	DurationDuringExtraTurn
 )
 
 // DelayedTriggerTiming describes when a delayed triggered ability should fire.
@@ -252,6 +259,11 @@ type DelayedTrigger struct {
 	CreatedTurn    int
 	Timing         DelayedTriggerTiming
 	Ability        TriggeredAbility
+	// ExtraTurnID, when non-zero, binds a fixed-phase delayed trigger to the
+	// extra turn with this identity (TurnState.ExtraTurnID): it fires only at
+	// that turn's boundary and is removed when that turn ends or is never taken
+	// ("At the beginning of that turn's end step, ...").
+	ExtraTurnID id.ID
 	// EventPattern, OneShot, and Window mirror the same fields on
 	// DelayedTriggerDef for an event-based delayed trigger. EventPattern is
 	// absent for fixed-phase delayed triggers, which fire on a step boundary via

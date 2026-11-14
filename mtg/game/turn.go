@@ -1,6 +1,9 @@
 package game
 
-import "github.com/natefinch/council4/opt"
+import (
+	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/opt"
+)
 
 // Phase represents one of the five phases of a Magic turn (CR 500).
 type Phase int
@@ -143,9 +146,15 @@ type TurnState struct {
 	// like Exploration or Oracle of Mul Daya.
 	LandsAllowedThisTurn int
 
-	// ExtraTurns is a queue of players who will take extra turns after
-	// the current turn ends. Processed LIFO (most recently added first).
-	ExtraTurns []PlayerID
+	// ExtraTurns is a queue of extra turns to be taken after the current turn
+	// ends. Processed LIFO: the most recently created extra turn is taken first
+	// (CR 500.7).
+	ExtraTurns []ExtraTurn
+
+	// ExtraTurnID identifies the current turn when it is an extra turn granted
+	// with an identity (ExtraTurn.ID), and is zero during every other turn.
+	// Effects and delayed triggers scoped to "that turn" (CR 500.7) bind to it.
+	ExtraTurnID id.ID
 
 	// ExtraPhases is the pending queue of additional phases inserted into the
 	// current turn by extra-phase effects ("After this main phase, there is
@@ -267,4 +276,14 @@ func (to *TurnOrder) ActivePlayerCount() int {
 		}
 	}
 	return count
+}
+
+// ExtraTurn is one pending extra turn (CR 500.7). ID is the game-owned identity
+// of that specific turn, so effects created with the grant ("During that turn,
+// ..." and "At the beginning of that turn's end step, ...") apply to it and not
+// to another extra turn queued for the same player. TakeExtraTurn always
+// assigns a nonzero ID; a zero ID has nothing scoped to it.
+type ExtraTurn struct {
+	ID     id.ID
+	Player PlayerID
 }

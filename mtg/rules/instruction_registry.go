@@ -196,6 +196,7 @@ func newPrimitiveRegistry() *primitiveRegistry {
 	registerPrimitiveHandler(reg, handleAmass)
 	registerPrimitiveHandler(reg, handleIncubate)
 	registerPrimitiveHandler(reg, handleEmpowerJace)
+	registerPrimitiveHandler(reg, handleTakeExtraTurn)
 	registerPrimitiveHandler(reg, handleBolster)
 	registerPrimitiveHandler(reg, handleAddExtraPhases)
 	registerPrimitiveHandler(reg, handleAddExtraUpkeepStep)

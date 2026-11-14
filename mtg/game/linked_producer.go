@@ -92,6 +92,15 @@ func (p CreateDelayedTrigger) NestedAbilityContents() []AbilityContent {
 	return []AbilityContent{p.Trigger.Content}
 }
 
+// NestedAbilityContents exposes the bodies of the extra turn's end-step triggers.
+func (p TakeExtraTurn) NestedAbilityContents() []AbilityContent {
+	contents := make([]AbilityContent, 0, len(p.EndStepTriggers))
+	for i := range p.EndStepTriggers {
+		contents = append(contents, p.EndStepTriggers[i].Content)
+	}
+	return contents
+}
+
 // NestedAbilityContents exposes the reflexive body.
 func (p CreateReflexiveTrigger) NestedAbilityContents() []AbilityContent {
 	return []AbilityContent{p.Trigger.Content}

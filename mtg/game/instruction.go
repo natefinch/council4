@@ -316,6 +316,19 @@ func validateInstructionSequenceWithLinked(
 				return fmt.Errorf("instruction[%d]: %w", i, err)
 			}
 		}
+		if extraTurn, ok := instr.Primitive.(TakeExtraTurn); ok {
+			for j := range extraTurn.EndStepTriggers {
+				if err := validateNestedAbilityContent(
+					extraTurn.EndStepTriggers[j].Content,
+					publishedLinked,
+					targets,
+					checkTargets,
+					siblingLinked,
+				); err != nil {
+					return fmt.Errorf("instruction[%d]: EndStepTriggers[%d]: %w", i, j, err)
+				}
+			}
+		}
 		if reflexive, ok := instr.Primitive.(CreateReflexiveTrigger); ok {
 			if err := validateNestedAbilityContent(
 				reflexive.Trigger.Content,

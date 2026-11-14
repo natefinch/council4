@@ -910,6 +910,9 @@ type RuleEffect struct {
 	AffectedAttached bool
 	Duration         EffectDuration
 	CreatedTurn      int
+	// ExtraTurnID binds a DurationDuringExtraTurn effect to the extra turn
+	// (TurnState.ExtraTurnID) during which it applies.
+	ExtraTurnID id.ID
 
 	AffectedPlayer     PlayerRelation
 	AffectedController ControllerRelation
