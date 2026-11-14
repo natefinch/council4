@@ -86,17 +86,6 @@ func reservedPermanentIDs(permanents []*game.Permanent) map[id.ID]bool {
 	return reserved
 }
 
-// truncatePermanents returns at most amount permanents from a battlefield-order
-// candidate list, used by the fixed-count permanent costs (sacrifice, tap,
-// return) that take the first eligible objects. A shorter result signals the
-// player cannot supply enough objects, which the caller treats as unpayable.
-func truncatePermanents(permanents []*game.Permanent, amount int) []*game.Permanent {
-	if len(permanents) > amount {
-		return permanents[:amount]
-	}
-	return permanents
-}
-
 // CandidatePermanentsForCost returns the permanents the player may choose for an
 // additional permanent cost — the same eligible set the planner enumerates. The
 // choice layer calls it through the payment State so candidate presentation and

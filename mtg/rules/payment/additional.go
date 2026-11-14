@@ -129,6 +129,13 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 	if source != nil && hasTapCostOf(costs) {
 		reservedTapPermanents = append(reservedTapPermanents, source)
 	}
+	// Each sacrifice, tap and return selection leaves the later ones payable
+	// with distinct permanents instead of greedily taking a permanent only a
+	// later cost can use (CR 601.2h).
+	tapReserved := reservedPermanentIDs(reservedTapPermanents)
+	laterPermanentCosts := func(i int) []permanentCostSlot {
+		return permanentCostSlots(s, playerID, costs[i+1:], xValue, source, sourceCardID, tapReserved)
+	}
 	for i, additional := range costs {
 		amount := AdditionalCostAmountFor(additional, xValue)
 		if additional.AmountDynamic != cost.AdditionalDynamicAmountNone {
@@ -245,9 +252,10 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalSacrifice:
 			hadPreference := prefs != nil && len(prefs.SacrificeChoices) > 0
-			chosen := preferredSacrificePermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), prefs, source)
+			later := laterPermanentCosts(i)
+			chosen := preferredSacrificePermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), prefs, source, later...)
 			if len(chosen) != amount && preferenceFallbackAllowed(prefs, hadPreference) {
-				chosen = chooseSacrificePermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), source)
+				chosen = chooseSacrificePermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), source, later...)
 			}
 			if len(chosen) != amount {
 				return plan, false
@@ -272,9 +280,10 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				continue
 			}
 			hadPreference := prefs != nil && len(prefs.TapChoices) > 0
-			chosen := preferredTapPermanents(s, playerID, additional, amount, append(plannedBattlefieldCosts(plan), reservedTapPermanents...), prefs)
+			later := laterPermanentCosts(i)
+			chosen := preferredTapPermanents(s, playerID, additional, amount, append(plannedBattlefieldCosts(plan), reservedTapPermanents...), prefs, later...)
 			if len(chosen) != amount && preferenceFallbackAllowed(prefs, hadPreference) {
-				chosen = chooseTapPermanents(s, playerID, additional, amount, append(plannedBattlefieldCosts(plan), reservedTapPermanents...))
+				chosen = chooseTapPermanents(s, playerID, additional, amount, append(plannedBattlefieldCosts(plan), reservedTapPermanents...), later...)
 			}
 			if len(chosen) != amount {
 				return plan, false
@@ -288,14 +297,12 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			// directly; resolution payments (GenericRequest) carry only the source
 			// card ID, so resolve it to the source's battlefield permanent when
 			// needed so ExcludeSource can match by object ID.
-			returnSource := source
-			if returnSource == nil && additional.ExcludeSource {
-				returnSource = costSourcePermanentByCardID(s, sourceCardID)
-			}
+			returnSource := returnCostSource(s, additional, source, sourceCardID)
 			hadPreference := prefs != nil && len(prefs.ReturnChoices) > 0
-			chosen := preferredReturnPermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), prefs, returnSource)
+			later := laterPermanentCosts(i)
+			chosen := preferredReturnPermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), prefs, returnSource, later...)
 			if len(chosen) != amount && preferenceFallbackAllowed(prefs, hadPreference) {
-				chosen = chooseReturnPermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), returnSource)
+				chosen = chooseReturnPermanents(s, playerID, additional, amount, plannedBattlefieldCosts(plan), returnSource, later...)
 			}
 			if len(chosen) != amount {
 				return plan, false

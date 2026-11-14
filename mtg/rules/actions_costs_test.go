@@ -482,6 +482,64 @@ func TestPaymentChoiceSelectsSacrificeAdditionalCost(t *testing.T) {
 	}
 }
 
+// TestActivatedAbilityPlansCompatibleSacrificeAndTapCosts activates an ability
+// whose "Sacrifice a creature" cost comes before "Tap an untapped artifact you
+// control" while the only artifact is a creature first on the battlefield: the
+// sacrifice takes the other creature so the tap cost stays payable with a
+// distinct permanent (CR 602.2b, 601.2h), and with no other creature the
+// ability cannot be activated (#3917).
+func TestActivatedAbilityPlansCompatibleSacrificeAndTapCosts(t *testing.T) {
+	for _, withOther := range []bool{true, false} {
+		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+		engine := NewEngine(nil)
+		source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Offering Altar",
+			Types: []types.Card{types.Enchantment},
+			ActivatedAbilities: []game.ActivatedAbility{{
+				AdditionalCosts: []cost.Additional{
+					{Kind: cost.AdditionalSacrifice, Text: "Sacrifice a creature", Amount: 1, MatchPermanentType: true, PermanentType: types.Creature},
+					{Kind: cost.AdditionalTapPermanents, Text: "Tap an untapped artifact you control", Amount: 1, MatchPermanentType: true, PermanentType: types.Artifact},
+				},
+				Content: game.Mode{
+					Sequence: []game.Instruction{{Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()}}},
+				}.Ability(),
+			}},
+		}})
+		golem := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Golem",
+			Types: []types.Card{types.Artifact, types.Creature},
+			Power: opt.Val(game.PT{Value: 1}), Toughness: opt.Val(game.PT{Value: 1}),
+		}})
+		var bear *game.Permanent
+		if withOther {
+			bear = addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Bear",
+				Types: []types.Card{types.Creature},
+				Power: opt.Val(game.PT{Value: 2}), Toughness: opt.Val(game.PT{Value: 2}),
+			}})
+		}
+		g.Turn.Phase = game.PhasePrecombatMain
+		g.Turn.Step = game.StepNone
+		act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
+
+		if got := containsAction(engine.legalActions(g, game.Player1), act); got != withOther {
+			t.Fatalf("with another creature = %v: ability legal = %v", withOther, got)
+		}
+		if got := engine.applyAction(g, game.Player1, act); got != withOther {
+			t.Fatalf("with another creature = %v: applyAction = %v", withOther, got)
+		}
+		if !withOther {
+			if golem.Tapped || permanentForCard(g, golem.CardInstanceID) == nil {
+				t.Fatal("an unpayable activation paid part of its cost")
+			}
+			continue
+		}
+		if permanentForCard(g, bear.CardInstanceID) != nil {
+			t.Fatal("the non-artifact creature was not sacrificed")
+		}
+		if permanentForCard(g, golem.CardInstanceID) == nil || !golem.Tapped {
+			t.Fatal("the artifact creature was not kept and tapped for the tap cost")
+		}
+	}
+}
+
 func TestActivatedAbilityTapPermanentsCostRequiresUntappedMatches(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)

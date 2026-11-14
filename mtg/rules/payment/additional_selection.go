@@ -281,18 +281,21 @@ func additionalCostSourceZone(source zone.Type) zone.Type {
 	return source
 }
 
-func chooseSacrificePermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, source *game.Permanent) []*game.Permanent {
+// chooseSacrificePermanents deterministically selects amount permanents for a
+// sacrifice cost, leaving the payment's later permanent costs payable.
+func chooseSacrificePermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, source *game.Permanent, later ...permanentCostSlot) []*game.Permanent {
 	choice, ok := objectCostChoiceForCost(additional)
 	if !ok {
 		return nil
 	}
-	candidates := candidatePermanentsForObjectCost(s, playerID, choice, source, reservedPermanentIDs(alreadyChosen))
-	return truncatePermanents(candidates, amount)
+	reserved := reservedPermanentIDs(alreadyChosen)
+	candidates := candidatePermanentsForObjectCost(s, playerID, choice, source, reserved)
+	return chooseAssignablePermanents(candidates, amount, reserved, later)
 }
 
-func preferredSacrificePermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, prefs *Preferences, source *game.Permanent) []*game.Permanent {
+func preferredSacrificePermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, prefs *Preferences, source *game.Permanent, later ...permanentCostSlot) []*game.Permanent {
 	if prefs == nil || len(prefs.SacrificeChoices) == 0 {
-		return chooseSacrificePermanents(s, playerID, additional, amount, alreadyChosen, source)
+		return chooseSacrificePermanents(s, playerID, additional, amount, alreadyChosen, source, later...)
 	}
 	choice, ok := objectCostChoiceForCost(additional)
 	if !ok {
@@ -317,18 +320,21 @@ func preferredSacrificePermanents(s State, playerID game.PlayerID, additional co
 	return nil
 }
 
-func chooseTapPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent) []*game.Permanent {
+// chooseTapPermanents deterministically selects amount permanents for a
+// fixed-count tap cost, leaving the payment's later permanent costs payable.
+func chooseTapPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, later ...permanentCostSlot) []*game.Permanent {
 	choice, ok := objectCostChoiceForCost(additional)
 	if !ok {
 		return nil
 	}
-	candidates := candidatePermanentsForObjectCost(s, playerID, choice, nil, reservedPermanentIDs(alreadyChosen))
-	return truncatePermanents(candidates, amount)
+	reserved := reservedPermanentIDs(alreadyChosen)
+	candidates := candidatePermanentsForObjectCost(s, playerID, choice, nil, reserved)
+	return chooseAssignablePermanents(candidates, amount, reserved, later)
 }
 
-func preferredTapPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, prefs *Preferences) []*game.Permanent {
+func preferredTapPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, prefs *Preferences, later ...permanentCostSlot) []*game.Permanent {
 	if prefs == nil || len(prefs.TapChoices) == 0 {
-		return chooseTapPermanents(s, playerID, additional, amount, alreadyChosen)
+		return chooseTapPermanents(s, playerID, additional, amount, alreadyChosen, later...)
 	}
 	choice, ok := objectCostChoiceForCost(additional)
 	if !ok {
@@ -440,18 +446,21 @@ func costSourcePermanentByCardID(s State, sourceCardID id.ID) *game.Permanent {
 	return nil
 }
 
-func chooseReturnPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, source *game.Permanent) []*game.Permanent {
+// chooseReturnPermanents deterministically selects amount permanents for a
+// return-to-hand cost, leaving the payment's later permanent costs payable.
+func chooseReturnPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, source *game.Permanent, later ...permanentCostSlot) []*game.Permanent {
 	choice, ok := objectCostChoiceForCost(additional)
 	if !ok {
 		return nil
 	}
-	candidates := candidatePermanentsForObjectCost(s, playerID, choice, source, reservedPermanentIDs(alreadyChosen))
-	return truncatePermanents(candidates, amount)
+	reserved := reservedPermanentIDs(alreadyChosen)
+	candidates := candidatePermanentsForObjectCost(s, playerID, choice, source, reserved)
+	return chooseAssignablePermanents(candidates, amount, reserved, later)
 }
 
-func preferredReturnPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, prefs *Preferences, source *game.Permanent) []*game.Permanent {
+func preferredReturnPermanents(s State, playerID game.PlayerID, additional cost.Additional, amount int, alreadyChosen []*game.Permanent, prefs *Preferences, source *game.Permanent, later ...permanentCostSlot) []*game.Permanent {
 	if prefs == nil || len(prefs.ReturnChoices) == 0 {
-		return chooseReturnPermanents(s, playerID, additional, amount, alreadyChosen, source)
+		return chooseReturnPermanents(s, playerID, additional, amount, alreadyChosen, source, later...)
 	}
 	choice, ok := objectCostChoiceForCost(additional)
 	if !ok {
