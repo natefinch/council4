@@ -33,16 +33,17 @@ type additionalCostPlan struct {
 	// AdditionalDiscard costs marked Random. The specific cards are not chosen
 	// during planning; the rules layer selects them uniformly at random when
 	// the plan is applied.
-	randomDiscardAmount int
-	exiles              []cardZoneSelection
-	reveals             []cardZoneSelection
-	evidence            []evidencePayment
-	lifePaid            int
-	energyPaid          int
-	untapSource         *game.Permanent
-	counterRemovals     []counterRemoval
-	counterAdds         []counterPlacement
-	subjects            []costSubjectSelection
+	randomDiscardAmount  int
+	randomDiscardBatches [][]string
+	exiles               []cardZoneSelection
+	reveals              []cardZoneSelection
+	evidence             []evidencePayment
+	lifePaid             int
+	energyPaid           int
+	untapSource          *game.Permanent
+	counterRemovals      []counterRemoval
+	counterAdds          []counterPlacement
+	subjects             []costSubjectSelection
 }
 
 type counterRemoval struct {
@@ -116,7 +117,7 @@ func withCastingReservedSelections(reserved []cardZoneSelection, castingCardID i
 }
 
 //nolint:maintidx // Centralized cost dispatch keeps cross-cost reservation checks in one place.
-func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []cost.Additional, xValue int, prefs *Preferences, source *game.Permanent, sourceCardID id.ID, sourceZone zone.Type, castingCardID id.ID, tapReservations ...*game.Permanent) (additionalCostPlan, bool) {
+func buildSelectedAdditionalCostPlan(s State, playerID game.PlayerID, costs []cost.Additional, xValue int, prefs *Preferences, source *game.Permanent, sourceCardID id.ID, sourceZone zone.Type, castingCardID id.ID, tapReservations ...*game.Permanent) (additionalCostPlan, bool) {
 	if costsHaveChoiceGroup(costs) {
 		concrete, ok := resolveAdditionalCostChoices(s, playerID, costs, xValue, prefs, source, sourceCardID, sourceZone, castingCardID, tapReservations...)
 		if !ok {
@@ -124,6 +125,19 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 		}
 		return buildAdditionalCostPlanForCosts(s, playerID, concrete, xValue, prefs, source, sourceCardID, sourceZone, castingCardID, tapReservations...)
 	}
+	// Pay fixed removals before "remove all", which can legally remove zero.
+	// Otherwise an earlier remove-all component can consume a later one's
+	// required counters even though the complete payment exists (CR 601.2h).
+	costs = slices.Clone(costs)
+	slices.SortStableFunc(costs, func(a, b cost.Additional) int {
+		if a.RemoveAll == b.RemoveAll {
+			return 0
+		}
+		if a.RemoveAll {
+			return 1
+		}
+		return -1
+	})
 	plan := additionalCostPlan{player: playerID, sourceCardID: sourceCardID}
 	reservedTapPermanents := append([]*game.Permanent(nil), tapReservations...)
 	if source != nil && hasTapCostOf(costs) {
@@ -168,6 +182,10 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				return plan, false
 			}
 			if additional.AnyCounterKind {
+				if amount == 0 && !additional.AmountAtLeastOne {
+					plan.paid = append(plan.paid, AdditionalCostText(additional))
+					continue
+				}
 				removals, ok := planRemoveAnyCounterFromSource(source, amount, plan.counterRemovals, prefs)
 				if !ok {
 					return plan, false
@@ -200,6 +218,10 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			})
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalRemoveCounterAmong:
+			if amount == 0 && additional.AmountFromX && !additional.AmountAtLeastOne {
+				plan.paid = append(plan.paid, AdditionalCostText(additional))
+				continue
+			}
 			if amount <= 0 {
 				return plan, false
 			}
@@ -220,6 +242,10 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalMill:
 			plan.millAmount += amount
+			player, ok := s.Player(playerID)
+			if !ok || player.Library.Size() < plan.millAmount {
+				return plan, false
+			}
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalPutCounter:
 			if source == nil ||
@@ -267,9 +293,9 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 		case cost.AdditionalTapPermanents:
 			if additional.TotalPowerAtLeast > 0 {
 				hadPreference := prefs != nil && len(prefs.TapChoices) > 0
-				chosen := preferredTapPermanentsTotalPower(s, playerID, additional, append(plannedBattlefieldCosts(plan), reservedTapPermanents...), source, prefs)
+				chosen := preferredTapPermanentsTotalPower(s, playerID, additional, reservedTapPermanents, source, prefs)
 				if len(chosen) == 0 && preferenceFallbackAllowed(prefs, hadPreference) {
-					chosen = chooseTapPermanentsTotalPower(s, playerID, additional, append(plannedBattlefieldCosts(plan), reservedTapPermanents...), source)
+					chosen = chooseTapPermanentsTotalPower(s, playerID, additional, reservedTapPermanents, source)
 				}
 				if len(chosen) == 0 {
 					return plan, false
@@ -281,9 +307,9 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			}
 			hadPreference := prefs != nil && len(prefs.TapChoices) > 0
 			later := laterPermanentCosts(i)
-			chosen := preferredTapPermanents(s, playerID, additional, amount, append(plannedBattlefieldCosts(plan), reservedTapPermanents...), prefs, later...)
+			chosen := preferredTapPermanents(s, playerID, additional, amount, reservedTapPermanents, prefs, later...)
 			if len(chosen) != amount && preferenceFallbackAllowed(prefs, hadPreference) {
-				chosen = chooseTapPermanents(s, playerID, additional, amount, append(plannedBattlefieldCosts(plan), reservedTapPermanents...), later...)
+				chosen = chooseTapPermanents(s, playerID, additional, amount, reservedTapPermanents, later...)
 			}
 			if len(chosen) != amount {
 				return plan, false
@@ -320,7 +346,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			if amount != 1 ||
 				sacrificeSource == nil ||
 				!permanentIsCurrent(s, sacrificeSource) ||
-				permanentsInclude(plan.permanentsToTap, sacrificeSource) ||
+				permanentsInclude(plannedBattlefieldCosts(plan), sacrificeSource) ||
 				s.EffectiveController(sacrificeSource) != playerID ||
 				!additionalCostMatchesPermanent(s, sacrificeSource, additional) {
 				return plan, false
@@ -345,6 +371,11 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 					return plan, false
 				}
 				plan.randomDiscardAmount += amount
+				keys := make([]string, amount)
+				for i := range keys {
+					keys[i] = additional.SubjectKey
+				}
+				plan.randomDiscardBatches = append(plan.randomDiscardBatches, keys)
 				plan.subjects = append(plan.subjects, costSubjectSelection{
 					key: additional.SubjectKey, kind: game.PaidCostDiscard, random: true, amount: amount,
 				})
@@ -366,7 +397,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
 		case cost.AdditionalPayLife:
 			player, ok := s.Player(playerID)
-			if !ok || !s.CanPayLife(playerID) || player.Life < plan.lifePaid+amount {
+			if !ok || amount > 0 && !s.CanPayLife(playerID) || player.Life < plan.lifePaid+amount {
 				return plan, false
 			}
 			plan.lifePaid += amount
@@ -408,7 +439,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 				continue
 			}
 			hadPreference := prefs != nil && len(prefs.RevealChoices) > 0
-			reserved := withCastingReservedSelections(plan.reveals, castingCardID, sourceZone)
+			reserved := withCastingReservedSelections(nil, castingCardID, sourceZone)
 			chosen := preferredRevealCards(s, playerID, additional, amount, reserved, prefs)
 			if len(chosen) != amount && preferenceFallbackAllowed(prefs, hadPreference) {
 				chosen = chooseRevealCards(s, playerID, additional, amount, reserved)
@@ -422,7 +453,7 @@ func buildAdditionalCostPlanForCosts(s State, playerID game.PlayerID, costs []co
 			if sourceZone == zone.Battlefield {
 				if amount != 1 ||
 					source == nil ||
-					permanentsInclude(plan.permanentsToTap, source) ||
+					permanentsInclude(plannedBattlefieldCosts(plan), source) ||
 					s.EffectiveController(source) != playerID ||
 					!additionalCostMatchesPermanent(s, source, additional) {
 					return plan, false
@@ -502,7 +533,7 @@ func resolveAdditionalCostChoices(s State, playerID game.PlayerID, costs []cost.
 			member := additional
 			member.ChoiceGroup = 0
 			trial := append(append([]cost.Additional(nil), concrete...), member)
-			if _, ok := buildAdditionalCostPlanForCosts(s, playerID, trial, xValue, prefs, source, sourceCardID, sourceZone, castingCardID, tapReservations...); ok {
+			if _, ok := buildAdditionalCostPlanForCosts(s, playerID, trial, xValue, clonePreferences(prefs), source, sourceCardID, sourceZone, castingCardID, tapReservations...); ok {
 				concrete = append(concrete, member)
 				picked = true
 				break
@@ -518,14 +549,10 @@ func resolveAdditionalCostChoices(s State, playerID game.PlayerID, costs []cost.
 func plannedBattlefieldCosts(plan additionalCostPlan) []*game.Permanent {
 	permanents := make([]*game.Permanent, 0, len(plan.sacrifices)+len(plan.permanentsToTap)+len(plan.returnsToHand)+len(plan.exilePermanents)+1)
 	permanents = append(permanents, plan.sacrifices...)
-	permanents = append(permanents, plan.permanentsToTap...)
 	for _, returned := range plan.returnsToHand {
 		permanents = append(permanents, returned.permanent)
 	}
 	permanents = append(permanents, plan.exilePermanents...)
-	if plan.exertSource != nil {
-		permanents = append(permanents, plan.exertSource)
-	}
 	return permanents
 }
 

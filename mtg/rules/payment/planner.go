@@ -61,6 +61,9 @@ func (p Planner) SpellCostOptions(req SpellRequest) []SpellOptionSummary {
 func (p Planner) PrepareSpellCosts(req SpellRequest) []PreparedSpellCost {
 	var result []PreparedSpellCost
 	for _, option := range spellCostOptionsForRequest(p.s, req) {
+		if req.XValue < 0 || req.XValue != 0 && !costHasVariableMana(option.manaCost) && !additionalCostsUseX(option.additionalCosts) {
+			continue
+		}
 		resolved, ok := resolveManaCostX(option.manaCost, req.XValue)
 		if !ok {
 			continue

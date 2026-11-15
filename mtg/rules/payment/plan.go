@@ -186,19 +186,20 @@ func buildAbilityCostPlan(s State, req AbilityRequest) (abilityCostPlan, bool) {
 	}
 	tapSource := hasTapCostOf(req.AdditionalCosts)
 	sourceCardID, sourceZone := abilityCostSource(req)
-	additional, ok := buildAbilityNonManaCostPlan(s, req, tapSource, sourceCardID, sourceZone)
+	if tapSource && (req.Source == nil || !canTapForAbility(s, req.Source)) {
+		return plan, false
+	}
+	witness, ok := completeAdditional(s, req.PlayerID, req.AdditionalCosts, req.XValue, req.Prefs, req.Source, sourceCardID, sourceZone, 0, nil, nil, nil, func(witness additionalWitness) bool {
+		manaPlan, ok := completeMana(s, req.PlayerID, manaCostPtr(req.ManaCost), req.XValue, abilityManaRestrictions(witness.plan, tapSource, req.Source, true), spendContext{abilitySource: req.Source}, clonePreferences(req.Prefs), witness.plan.lifePaid, nil, 0, zone.None, Partial{})
+		if ok {
+			plan.mana = manaPlan
+		}
+		return ok
+	})
 	if !ok {
 		return plan, false
 	}
-	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, manaCostPtr(req.ManaCost), req.XValue, abilityManaRestrictions(additional, tapSource, req.Source, true), spendContext{abilitySource: req.Source}, clonePreferences(req.Prefs))
-	if !ok {
-		additional, manaPlan, ok = retryAbilityCostPlanAvoidingManaTapConflict(s, req, sourceCardID, sourceZone, tapSource, additional)
-		if !ok {
-			return plan, false
-		}
-	}
-	plan.mana = manaPlan
-	plan.additional = additional
+	plan.additional = witness.plan
 	plan.tapSource = tapSource
 	return plan, true
 }
@@ -459,19 +460,17 @@ func payGenericCost(s State, req GenericRequest) (poolSpend map[mana.Unit]int, o
 
 func buildGenericCostPlan(s State, req GenericRequest) (spellCostPlan, bool) {
 	plan := spellCostPlan{}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, clonePreferences(req.Prefs), req.Source, req.SourceCardID, zone.None, 0)
+	witness, ok := completeAdditional(s, req.PlayerID, req.AdditionalCosts, req.XValue, req.Prefs, req.Source, req.SourceCardID, zone.None, 0, nil, nil, nil, func(witness additionalWitness) bool {
+		manaPlan, ok := completeMana(s, req.PlayerID, req.Cost, req.XValue, additionalManaRestrictions(req.Exclude, witness.plan, true), spendContext{spell: req.Spell}, clonePreferences(req.Prefs), witness.plan.lifePaid, nil, 0, zone.None, Partial{})
+		if ok {
+			plan.mana = manaPlan
+		}
+		return ok
+	})
 	if !ok {
 		return plan, false
 	}
-	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, additionalManaRestrictions(req.Exclude, additional, true), spendContext{spell: req.Spell}, clonePreferences(req.Prefs))
-	if !ok {
-		additional, manaPlan, ok = retryGenericCostPlanAvoidingManaTapConflict(s, req, additional)
-		if !ok {
-			return plan, false
-		}
-	}
-	plan.additional = additional
-	plan.mana = manaPlan
+	plan.additional = witness.plan
 	return plan, true
 }
 
@@ -509,19 +508,17 @@ func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, 
 		option = applyCostModifiers(s, costModificationContext{player: playerID, card: option.card, cardID: cardID, sourceZone: sourceZone, targets: targets, bargained: option.bargained, bestowed: bestowed, option: option})
 	}
 	plan.option = option
-	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, xValue, clonePreferences(prefs), nil, cardID, sourceZone, cardID)
+	witness, ok := completeAdditional(s, playerID, option.additionalCosts, xValue, prefs, nil, cardID, sourceZone, cardID, nil, nil, nil, func(witness additionalWitness) bool {
+		manaPlan, ok := completeMana(s, playerID, option.manaCost, xValue, additionalManaRestrictions(nil, witness.plan, true), option.spendContext(), clonePreferences(prefs), witness.plan.lifePaid, &option, cardID, sourceZone, Partial{})
+		if ok {
+			plan.mana = manaPlan
+		}
+		return ok
+	})
 	if !ok {
 		return plan, false
 	}
-	manaPlan, ok := buildSpellManaPlanForOption(s, playerID, cardID, sourceZone, option, xValue, additionalManaRestrictions(nil, additional, true), clonePreferences(prefs))
-	if !ok {
-		additional, manaPlan, ok = retrySpellCostPlanAvoidingManaTapConflict(s, playerID, cardID, sourceZone, option, xValue, prefs, additional)
-		if !ok {
-			return plan, false
-		}
-	}
-	plan.additional = additional
-	plan.mana = manaPlan
+	plan.additional = witness.plan
 	return plan, true
 }
 
@@ -549,11 +546,7 @@ func retrySpellCostPlanAvoidingManaTapConflict(s State, playerID game.PlayerID, 
 // pays with its own copy of prefs, so every retry honors the same announced
 // Phyrexian payments (CR 601.2b).
 func buildSpellManaPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, restrictions manaSourceRestrictions, prefs *Preferences) (paymentPlan, bool) {
-	manaPlan, ok := buildPaymentPlanWithPreferences(s, playerID, option.manaCost, xValue, restrictions, option.spendContext(), clonePreferences(prefs))
-	if ok {
-		return manaPlan, true
-	}
-	return buildNonManaSpellPlan(s, playerID, cardID, sourceZone, option, xValue, restrictions, prefs)
+	return completeMana(s, playerID, option.manaCost, xValue, restrictions, option.spendContext(), clonePreferences(prefs), 0, &option, cardID, sourceZone, Partial{})
 }
 
 // spellHasCostKeyword reports whether the spell being cast carries keyword,
@@ -643,86 +636,7 @@ func EffectiveManaCost(s State, playerID game.PlayerID, manaCost cost.Mana) cost
 }
 
 func buildPaymentPlanWithPreferences(s State, playerID game.PlayerID, manaCost *cost.Mana, xValue int, restrictions manaSourceRestrictions, ctx spendContext, prefs *Preferences) (paymentPlan, bool) {
-	plan := paymentPlan{poolSpend: make(map[mana.Unit]int)}
-	player, ok := s.Player(playerID)
-	if !ok {
-		return plan, false
-	}
-	pool := snapshotPool(s, player, ctx)
-	manaSources := availableManaSources(s, playerID, restrictions)
-	if xValue < 0 {
-		return plan, false
-	}
-	if manaCost == nil {
-		return plan, true
-	}
-
-	symbols := spendPermissionSymbols(effectiveManaSymbols(s, playerID, *manaCost), ctx.spendAs)
-
-	for _, symbol := range symbols {
-		switch symbol.Kind {
-		case cost.ColoredSymbol:
-			if !payColoredSymbol(&plan, pool, manaSources, symbol, symbol.Color, game.SymbolPaymentMana) {
-				return plan, false
-			}
-		case cost.ColorlessSymbol:
-			if !payColoredSymbol(&plan, pool, manaSources, symbol, mana.C, game.SymbolPaymentMana) {
-				return plan, false
-			}
-		default:
-		}
-	}
-	for _, symbol := range symbols {
-		if symbol.Kind == cost.SnowSymbol {
-			if !paySnowSymbol(&plan, pool, manaSources, symbol) {
-				return plan, false
-			}
-		}
-	}
-	for _, symbol := range symbols {
-		switch symbol.Kind {
-		case cost.HybridSymbol:
-			if !payHybridSymbol(&plan, pool, manaSources, symbol) {
-				return plan, false
-			}
-		case cost.TwobridSymbol:
-			if !payMonoHybridSymbol(&plan, pool, manaSources, symbol) {
-				return plan, false
-			}
-		case cost.PhyrexianSymbol:
-			if !payPhyrexianSymbol(player, &plan, pool, manaSources, symbol, prefs, s.CanPayLife(playerID)) {
-				return plan, false
-			}
-		case cost.PhyrexianGenericSymbol:
-			if !payPhyrexianGenericSymbol(player, &plan, pool, manaSources, symbol, prefs, s.CanPayLife(playerID)) {
-				return plan, false
-			}
-		default:
-		}
-	}
-	for _, symbol := range symbols {
-		switch symbol.Kind {
-		case cost.GenericSymbol:
-			if !payGenericSymbol(&plan, pool, manaSources, symbol, symbol.Generic, game.SymbolPaymentGeneric) {
-				return plan, false
-			}
-		case cost.VariableSymbol:
-			if !payGenericSymbol(&plan, pool, manaSources, symbol, xValue, game.SymbolPaymentX) {
-				return plan, false
-			}
-		default:
-			if symbol.Kind != cost.ColoredSymbol &&
-				symbol.Kind != cost.ColorlessSymbol &&
-				symbol.Kind != cost.SnowSymbol &&
-				symbol.Kind != cost.HybridSymbol &&
-				symbol.Kind != cost.TwobridSymbol &&
-				symbol.Kind != cost.PhyrexianSymbol &&
-				symbol.Kind != cost.PhyrexianGenericSymbol {
-				return plan, false
-			}
-		}
-	}
-	return plan, true
+	return completeMana(s, playerID, manaCost, xValue, restrictions, ctx, prefs, 0, nil, 0, zone.None, Partial{})
 }
 
 func paymentPlanStillValid(s State, player *game.Player, plan paymentPlan) bool {

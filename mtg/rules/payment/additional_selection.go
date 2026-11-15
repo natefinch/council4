@@ -27,6 +27,20 @@ func chooseEvidenceCards(s State, playerID game.PlayerID, threshold int, already
 }
 
 func preferredEvidenceCards(s State, playerID game.PlayerID, threshold int, alreadyChosen []cardZoneSelection, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, prefs *Preferences) []cardZoneSelection {
+	if prefs != nil && len(prefs.evidenceComponentCounts) > 0 {
+		count := prefs.evidenceComponentCounts[0]
+		prefs.evidenceComponentCounts = prefs.evidenceComponentCounts[1:]
+		if len(prefs.EvidenceChoices) < count {
+			return nil
+		}
+		selection := &Preferences{ExileChoices: prefs.EvidenceChoices[:count], StrictReplay: true}
+		chosen := preferredExileCards(s, playerID, cost.Additional{Kind: cost.AdditionalExile, Source: zone.Graveyard}, count, alreadyChosen, remainingCosts, xValue, sourceCardID, sourceZone, selection)
+		if len(chosen) != count || !evidenceCardsMeetThreshold(s, playerID, chosen, threshold) {
+			return nil
+		}
+		prefs.EvidenceChoices = prefs.EvidenceChoices[count:]
+		return chosen
+	}
 	if prefs == nil || len(prefs.EvidenceChoices) == 0 {
 		return chooseEvidenceCards(s, playerID, threshold, alreadyChosen, remainingCosts, xValue, sourceCardID, sourceZone)
 	}
@@ -75,6 +89,23 @@ func chooseThresholdExileCards(s State, playerID game.PlayerID, additional cost.
 }
 
 func preferredThresholdExileCards(s State, playerID game.PlayerID, additional cost.Additional, alreadyChosen []cardZoneSelection, remainingCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, prefs *Preferences) []cardZoneSelection {
+	if prefs != nil && len(prefs.exileComponentCounts) > 0 {
+		count := prefs.exileComponentCounts[0]
+		prefs.exileComponentCounts = prefs.exileComponentCounts[1:]
+		chosen := preferredExileCards(s, playerID, additional, count, alreadyChosen, remainingCosts, xValue, sourceCardID, sourceZone, prefs)
+		total := 0
+		for _, card := range chosen {
+			value, ok := evidenceCardManaValue(s, card.cardID)
+			if !ok {
+				return nil
+			}
+			total += value
+		}
+		if len(chosen) != count || total < additional.TotalManaValueAtLeast {
+			return nil
+		}
+		return chosen
+	}
 	if prefs == nil || len(prefs.ExileChoices) == 0 {
 		return chooseThresholdExileCards(s, playerID, additional, alreadyChosen, remainingCosts, xValue, sourceCardID, sourceZone)
 	}
@@ -391,6 +422,19 @@ func chooseTapPermanentsTotalPower(s State, playerID game.PlayerID, additional c
 // preferredTapPermanentsTotalPower honors an explicit tap selection from prefs
 // for a total-power tap cost, falling back to chooseTapPermanentsTotalPower.
 func preferredTapPermanentsTotalPower(s State, playerID game.PlayerID, additional cost.Additional, alreadyChosen []*game.Permanent, source *game.Permanent, prefs *Preferences) []*game.Permanent {
+	if prefs != nil && len(prefs.tapComponentCounts) > 0 {
+		count := prefs.tapComponentCounts[0]
+		prefs.tapComponentCounts = prefs.tapComponentCounts[1:]
+		chosen := preferredTapPermanents(s, playerID, additional, count, alreadyChosen, prefs)
+		total := 0
+		for _, permanent := range chosen {
+			total += permanentPowerContribution(s, permanent, additional.PowerContribution)
+		}
+		if len(chosen) != count || total < additional.TotalPowerAtLeast {
+			return nil
+		}
+		return chosen
+	}
 	if prefs == nil || len(prefs.TapChoices) == 0 {
 		return chooseTapPermanentsTotalPower(s, playerID, additional, alreadyChosen, source)
 	}

@@ -14,6 +14,44 @@ planner := payment.New(state)
 ok := planner.CanPaySpellCosts(payment.SpellRequest{...})
 ```
 
+The complete-plan API is the entry point for new costed-action callers:
+
+```go
+request := payment.ForSpell(spellRequest) // also ForAbility and ForGeneric
+plan, ok, reason := planner.Complete(request, payment.Partial{})
+options := planner.Options(request, partial, payment.Step{
+    Kind: payment.StepComponent, Index: componentIndex,
+})
+result, ok, reason := planner.Apply(plan)
+```
+
+`Plan` is an immutable witness containing IDs rather than mutable game
+references. Its accessors return independent copies. `Partial` fixes any subset
+of cost-option, X, Phyrexian, grouped-cost, component or nonmana-mechanic choices;
+missing choices remain undecided. Every returned option carries a witness.
+Component steps select one additional object or counter at a time; threshold
+steps can finish once sufficient or continue selecting. Component boundaries
+preserve every selected object, including selections above a threshold.
+`Apply` revalidates the exact selection and allocation against current state,
+including in a game clone, and rejects stale witnesses before mutating anything.
+It does not substitute another payment.
+
+The completion search plans additional-cost selections and mana together.
+It backtracks over finite resource assignments, with search-local memoization
+of failed mana resource states, not game clones or speculative activations.
+Shared resource matching rejects impossible fixed-count payments before subset
+enumeration, and later mandatory source-counter kinds are reserved up front.
+Fixed-count and threshold selections share the existing eligibility predicates.
+Costs reserve resources by what they consume: two zone moves cannot share an
+object, but a tap followed by a sacrifice/return can (CR 601.2h). Phyrexian life
+payments compete with all other life and mana costs. Random-discard components
+remain separate batches; random and library-to-public-zone costs are paid last.
+
+This implements the planner slice of [#3719](https://github.com/natefinch/council4/issues/3719).
+Deterministic side-effecting mana schemas and rules-route migration are the
+subsequent slices of [#3718](https://github.com/natefinch/council4/issues/3718);
+this API does not itself remove their existing payment windows or rewind paths.
+
 The `State` interface is the seam between the planner and the rules engine. It
 provides game queries and mutations that require rules knowledge, such as
 effective controllers, permanent characteristics, cost modifiers, tapping mana
@@ -51,11 +89,13 @@ the package-local `paymentOrch` adapter.
 `Preferences` records choices that the rules engine already collected from the
 agent or deterministic fallback: alternative-cost index, phyrexian mana-vs-life
 choices, and selected permanents/cards for additional costs. The planner treats
-preferences as hints and rejects them if they no longer describe a legal plan.
+preferences as hints, preserving legal selections and falling back when a hint
+is stale unless `StrictReplay` is set. Unlike this compatibility policy, choices
+fixed in `Partial` are constraints and never fall back.
 
 ## Implementation
 
-The package keeps the concrete plan types private. Callers should not depend on
+The mutable application details stay private. Callers should not depend on
 mana-tap ordering, source enumeration, or additional-cost implementation
 details except through behavior covered by tests.
 
