@@ -47,10 +47,11 @@ func TestCompiledBodyConditionVersusActivationRestrictionTiming(t *testing.T) {
 			for range 3 {
 				addCardToLibrary(g, game.Player1, evidenceCard("Drawn", 1))
 			}
-			if legal := canActivateGeneralAbility(g, game.Player1, source, ability, 0, nil, 0); legal != tt.wantLegal {
+			engine := NewEngine(nil)
+			descriptor, valid := engine.describeActivation(g, game.Player1, action.ActivateAbilityAction{SourceID: source.ObjectID})
+			if legal := valid && engine.costedActionAvailable(g, game.Player1, descriptor.cost); legal != tt.wantLegal {
 				t.Fatalf("activation legal=%v, want %v", legal, tt.wantLegal)
 			}
-			engine := NewEngine(nil)
 			if applied := engine.applyAction(g, game.Player1, action.ActivateAbility(source.ObjectID, 0, nil, 0)); applied != tt.wantLegal {
 				t.Fatalf("activation applied=%v, want %v", applied, tt.wantLegal)
 			}

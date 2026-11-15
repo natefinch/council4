@@ -200,10 +200,9 @@ func TestProductionChampionOfStraySoulsCompleteAbilities(t *testing.T) {
 	g.Players[game.Player1].ManaPool.Add(mana.B, 2)
 	if !engine.applyAction(g, game.Player1, action.ActivateAbility(source.CardInstanceID, 1, nil, 0)) {
 		_, ability, found := graveyardAbilitySource(g, game.Player1, source.CardInstanceID, 1)
-		t.Fatalf("Champion graveyard ability rejected: found=%v zone=%v mana=%d C/%d B can=%v",
+		t.Fatalf("Champion graveyard ability rejected: found=%v zone=%v mana=%d C/%d B",
 			found, game.BodyFunctionZone(&ability), g.Players[game.Player1].ManaPool.Amount(mana.C),
-			g.Players[game.Player1].ManaPool.Amount(mana.B),
-			canActivateGraveyardAbility(g, game.Player1, source.CardInstanceID, &ability, 1, nil, 0))
+			g.Players[game.Player1].ManaPool.Amount(mana.B))
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
 	top, present := g.Players[game.Player1].Library.Top()

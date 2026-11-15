@@ -181,7 +181,9 @@ Implemented now:
 - Permanent state-based actions for 0 toughness, lethal damage, deathtouch damage, 0 planeswalker loyalty, 0 battle defense, completed Sagas, illegal Auras/attachments, token cleanup, legendary-rule duplicates, and +1/+1/-1/-1 counter cancellation.
 - Legal action generation for passing, playing lands, casting supported spells from hand, graveyard when permitted, prepared battlefield permanents, or a commander from the command zone with player or permanent targets, casting Morph/Disguise cards face-down, casting Mutate spells targeting owned non-Human creatures, turning face-down permanents face up, activating simple, modal, and choice-bearing mana/equip/loyalty/general abilities from the battlefield or graveyard, Cycling and Ninjutsu from hand, Kicker spell variants, and richer attacker declarations.
 - Action application for passing, playing lands, casting supported spells and prepared spell copies, command-zone commander casts with tax/count tracking, Morph/Disguise face-down casts and turn-face-up special actions, activating simple and choice-bearing mana/equip/loyalty/general abilities from the battlefield or graveyard, Cycling and Ninjutsu from hand, paying attack taxes, and declaring attackers.
-- Mana cost payment helpers that use pool mana first, then activate untapped basic lands, simple tap mana abilities from mana rocks or non-summoning-sick mana dorks, and structurally safe Treasure-style tap/sacrifice/color-choice mana abilities, with generic spell cost modifiers, source-only sacrifice costs, face-down turn-up costs, and attack-tax payment exclusions.
+- Complete cost payment plans with pool-first allocation, automatic lands/rocks,
+  explicit side-effecting mana sources, cost modifiers, source reservations,
+  face-down turn-up costs and attack-tax exclusions.
 - Stack resolution for creature spells entering the battlefield, face-down permanent spells entering as hidden 2/2 creatures, Mutate spells merging over or under their target while preserving the target object's battlefield state, instant/sorcery spells moving to graveyard, modal spell effects, triggered abilities, equip activated abilities, Cycling abilities, Ninjutsu creatures entering tapped and attacking, Kicker effects, loyalty abilities, delayed triggers, and general non-mana activated abilities. A Mutate spell whose target is illegal on resolution enters as an ordinary creature.
 - Delayed beginning-of-next-turn-upkeep triggers wait for a strictly later turn,
   fire once, and use normal APNAP stack ordering. Their controller is resolved
@@ -191,13 +193,25 @@ Implemented now:
   trigger's controller.
 - Effect primitive execution for drawing cards, gaining life, losing life, player damage, permanent damage, destroy, counter, exile, bounce, sacrifice, discard, tap/untap (including distinct bounded "up to" group choices made in instruction order with one untap event per changed permanent), adding/removing/moving permanent counters, adding poison/energy/experience counters to referenced players, exact-zone referenced-card movement, whole-graveyard exile that atomically moves every card in a targeted player's graveyard to exile as one simultaneous zone-change batch ("Exile target player's graveyard.", empty graveyard is a legal no-op), card- and face-specific bounded cast permissions, mass permanent/player selector effects, token creation/investigate with referenced recipients and optional tapped and attacking (CR 508.4) entry, supported library search with card-type/card-type-union/permanent/supertype/subtype/max-mana-value filters that lets the searching player choose which matching cards to find or legally fail to find while unrestricted exact-card searches require one choice whenever the library is nonempty, including singular shuffle-then-library-top tutors with optional public reveal, singular battlefield searches that publish the newly created permanent for a later linked effect, split-destination "up to two" tutors that distribute the found cards across two single-card slots — one onto the battlefield (optionally tapped), the other into hand — with the searching player assigning the two cards or choosing which slot a lone found card fills (Cultivate, Kodama's Reach), including correlated "share a land type" tutors that pick the found basic lands through a staged choice only ever offering cards still able to share a land subtype with those already chosen, so an illegal pair can never be assembled (Myriad Landscape), reveal, discover, linked reveal-to-battlefield flows including target-owner shuffle/reveal/permanent-hit sequences whose linked card keeps its identity through the type check and becomes a fresh battlefield object under that owner, linked exile-then-return (blink) flows that return the exiled card on a fresh object honoring entered-tapped, entry counters, and the under-your-control recipient, shuffle-permanent-into-library, runtime P/T modifiers, declarative runtime continuous and rule effects from battlefield permanents and stack-zone spell abilities, condition-gated effects, referenced damage sources for creature-sourced damage, event-derived/opponent-count/excess-damage dynamic amounts, scry/surveil/mill, look-at-top-N impulse dig flows that let the player keep chosen cards in hand and put the rest into the graveyard, fight, transform, phase out, emblems, proliferate, goad, prevention, regeneration, and delayed triggers. Resolving group `ApplyContinuous` effects snapshot matching permanent object IDs at resolution, so temporary group keyword grants affect current members through cleanup but not later entrants. Player counter placement emits typed counter-addition events, and poison loss remains a state-based action. Source-scoped uncounterable rule effects prevent only their own spell from being countered. Unsupported effect primitives and unsupported variants are logged instead of silently no-oping.
 - Hand-written spell implementation escape hatch through `CardDef.ImplementationID`, `Engine.RegisterCardImplementation`, and `CardContext` mutation helpers.
-- Typed `game.Event` emission for spell casts/resolutions, ETB, death, damage, draw, discard, sacrifice, scry, surveil, activated abilities, counter addition, reveal, face-up turns, zone changes, attack/block declarations, and supported beginning-of-step events. Supported draw, life-change, scry, and surveil events record the affected player's event ordinal during the current turn. Permanent zone changes preserve controller, owner, origin/destination, face-down state, and simultaneous-move identity. Sacrifices emit a distinct authoritative event for both resolving effects and paid costs, and preserve simultaneous batches. Scry and surveil each emit one distinct action event, independently from any card movements they cause. Activated-ability events preserve the activating player, source permanent/card, ability index, stack object, and mana-ability classification, but payment-time mana activations do not yet emit them; only non-mana-only activation trigger patterns are accepted and matched. Turned-face-up events use the changed permanent as their trigger subject. Attack declarations preserve their exact player/planeswalker/battle recipient; block and fight events preserve both combatants; and attacker, blocker, fight, and combat-damage events preserve declaration/resolution/pass batch IDs.
+- Typed `game.Event` emission for spell casts/resolutions, ETB, death, damage,
+  draw, discard, sacrifice, scry, surveil, activated abilities, counters, reveal,
+  face-up turns, zone changes, combat declarations and supported step events.
+  Draw/life/scry/surveil events retain their affected player's turn ordinal.
+  Zone changes preserve controller, owner, zones, face-down state and batch
+  identity. Sacrifice has its own authoritative event for effects and costs;
+  scry/surveil each have an action event independent of their card movements.
+  Activated-ability events retain player, source, index, object and mana
+  classification, including planned payment-time activations. Mana triggers
+  resolve immediately through the canonical operation. Turned-face-up events
+  use the changed permanent; combat events retain exact recipients, combatants
+  and declaration/resolution/pass batch IDs.
 - Triggered ability detection from `game.TriggerPattern`, including permanent-zone-change origin/destination and excluded-destination filters, face-down filters, event-subject Selection, attached/departed sources, LKI event-permanent references, and explicit simultaneous one-or-more coalescing. Draw and beginning-of-step events capture matching battlefield trigger abilities, source identity, and effective controller at event time, so delayed priority processing preserves triggers across source departure/control changes and orders them with trigger-time APNAP ownership. Combat matching uses typed Selections for the attacker/blocker, related combatant, damage source/recipient, and attacked permanent; exact player and recipient relations; combat/noncombat filters; per-attack-target batches; attacker-count relations ("attacks alone" requires exactly one declared attacker, "attack with N or more creatures" requires at least N) read from `game.CombatState.Attackers`; and source/attachment-bound relations. Queued events without a nonzero batch ID are never inferred to be simultaneous. Detection also covers Saga chapter crossings, choice-mediated target selection, APNAP stack placement with choice-mediated same-controller ordering, optional-trigger resolution choices, source-exclusion filters for "another" trigger wording, and structured intervening-if conditions including kicked or cast permanent entry, referenced source live state, event-permanent current/LKI Selection matching and counters, controller-permanent checks, counter-kind absence from event-permanent last-known information, and event-history conditions. Event-history conditions (`Condition.EventHistory`) use `triggerMatchesEvent` over `EventsThisTurn()` or `EventsPreviousTurn()` with the source permanent as the resolution context; a nil source fails closed. Intervening conditions are enforced both when creating and resolving the trigger. Supported beginning-of-step triggers, latched state triggers, implicit Prowess triggers, and resolution through `StackTriggeredAbility` use the same event pipeline.
 - Chosen-creature-type trigger multipliers read the static source's recorded entry subtype, require another creature controlled by the same player with that event-time/LKI subtype, coalesce one-or-more batches before adding occurrences, and apply max-per-turn limits afterward. Each qualifying doubler adds exactly one original-derived occurrence before APNAP ordering and target preparation, so multiple doublers are additive and every occurrence chooses independently. Draw and beginning-of-step captures preserve the multiplier decision at event time.
 - Player- and permanent-targeted spell action generation using `TargetSpec` and runtime `game.Target` values, including min/max target counts, mixed target slots, structured target predicates with legacy string fallback, Shroud, Hexproof, Protection, and exact-one target slots chosen by an opponent during spell or ability announcement. Non-controller chooser support currently covers cast and activated ability announcement; triggered-ability stack placement remains on the existing controller-choice path.
 - Resolution-time target re-checking with counter-by-rules behavior when all targets become illegal.
 - Colorless and X-cost payment, with legal X choices capped for action generation and dynamic X-based effect amounts on resolution.
-- Simple sacrifice-as-cost for spells, with sacrificed permanents excluded from mana payment plans.
+- Joint sacrifice/mana cost reservations: a legal tap then sacrifice can share
+  a permanent, while two consumptions cannot.
 - Modal spell and non-mana activated-ability support using `Mode`, `ChosenModes`, min/max mode counts, duplicate-mode flags, and mode-specific target validation/resolution.
 - Prepare support for permanents that enter prepared: their controller may pay the alternate spell face's cost at its normal timing to cast a copy from the battlefield. Casting the copy unprepares the source without moving it, and the copy resolves through normal spell handling.
 - Flash timing for non-instant cards with the Flash keyword, and typed fixed-mana `FlashbackKeyword` graveyard casting with forced flashback payment, stack marking, and exile whenever the spell leaves the stack. Legacy explicit `Flashback` alternative costs remain compatible.
@@ -274,21 +288,54 @@ When all active players pass in succession, the loop ends the current phase or s
 
 ## Mana payment
 
-The mana-payment layer supports colored, true colorless, generic, X, hybrid, mono-hybrid, phyrexian, and snow costs. `canPayCost` and `payCost` use current mana pools first, then tap untapped basic lands or simple tap mana abilities controlled by the player while preserving scarce constrained resources such as colored and snow mana. Basic land mana is inferred from the land's name or subtype: Plains for white, Island for blue, Swamp for black, Mountain for red, and Forest for green.
+The mana-payment layer supports colored, true colorless, generic, X, hybrid,
+mono-hybrid, Phyrexian and snow costs. The complete planner uses current mana
+first and preserves scarce colored/snow resources when allocating automatic
+sources. Strategic sources retain explicit completion-preserving choices.
+Basic land mana is inferred from its name or subtype: Plains for white, Island
+for blue, Swamp for black, Mountain for red and Forest for green.
 
-Simple mana abilities are activated abilities marked `IsManaAbility` with no targets, no timing restriction, no loyalty cost, and only add-mana effects. They may be exposed as legal actions for floating mana, or auto-used during cost payment. Creature mana abilities with tap costs respect summoning sickness, and conditional mana abilities use the same activation-condition checks in explicit activation and automatic payment planning.
+Mana abilities satisfy current CR 605.1a: no target, no loyalty cost, possible
+mana production, and no intrinsic library-moving cost or effect. Simple
+fixed-output tap/untap sources can be used automatically; side-effecting or
+choice-bearing sources are planned with explicit choices. Creature tap costs
+respect summoning sickness, and explicit activation and planning share timing
+and activation-condition checks.
 
 A mana ability may also carry a self-damage rider — a source-dealt, controller-targeting `game.Damage` instruction alongside its add-mana output, as on the painlands and Ancient Tomb. Such an ability is still a mana ability (CR 605.1a) that resolves immediately, dealing the rider damage to its controller, but it is never auto-used during cost payment; only single-instruction add-mana abilities are taken automatically, so the engine never inflicts that damage without an explicit activation.
 
 The dynamic lands-produce mana ability (`game.TapManaLandsProduceAbility`; Exotic Orchard, Reflecting Pool, Fellwar Stone) computes its choosable mana at resolution from the colors every battlefield land matching its player scope (you control / an opponent controls) could currently produce, unioned in WUBRG order (CR 106.7); the "any type" wording also offers colorless when a matching land could produce it. A land whose own mana ability derives its color from this same source contributes nothing, matching the loop-avoidance ruling for two opposing Exotic Orchards. When no matching land could produce mana the choice is empty and the ability is unactivatable (CR 605.1a).
 
-A mana ability may also carry a mana-spend rider — Path of Ancestry's commander-identity mana whose produced unit scries 1 when spent to cast a creature spell sharing a creature type with the commander. When such a mana ability resolves, `handleAddMana` registers one `game.ManaRiderInstance` per produced unit on the controller's `Player.ManaRiders`, tagging the exact mana unit (color and snow provenance) and the producing permanent. Provenance is tracked on individual mana units and consumed on every payment path: each rider instance is the rider's identity, fired or dropped on the exact payment that spends its backing unit and never reattached to a later unit of the same color. Before any payment by a player holding riders the engine snapshots that player's per-unit pool (`poolUnitsSnapshot`), and the payment planner reports the exact per-unit pool mana the payment consumed (`clonePoolSpend`, threaded out of `paySpellCosts`, `payAbilityCosts`, and `payGenericCost`). Spell payments run the firing path (`resolveSpellCastManaSpendRiders`) after the spell is on the stack; ability and generic (non-spell) payments run the non-firing path (`consumeManaSpendRidersForPayment`) inside the payment orchestrator, so taxes, ward, additional, cycling, suspend, morph, and similar costs all consume tagged mana exactly without firing. A madness cast is a spell cast, so it pays its madness cost through the spell firing path (`payGenericCostForSpell` reports the exact per-unit spend without consuming riders, and the rider is resolved after the madness spell is on the stack) rather than the non-firing generic path, so tagged mana spent on a qualifying madness creature still scries. Since the planner always spends existing pool mana before tapping new sources, the pre-existing pool mana consumed for a unit — the only mana that can carry tags — is `min(before[unit], spent[unit])`; deriving it from the planner's reported per-unit spend rather than a gross before/after pool delta keeps it exact even when a source over-produces the same unit mid-payment and leaves a leftover (the missed-trigger case). Identical mana units are fungible (CR 106.6, 106.12), so on a payment that satisfies a unit's rider condition the engine spends tagged units first and queues each consumed rider's scry to fire; on any other payment it preserves tagged units (spending plain mana first) and only forced tagged consumption removes a rider without firing. Consuming tagged mana on every payment, rather than lazily reconciling riders against the pool before the next spell, is what prevents a stale rider from reattaching to later same-color mana (the false-trigger case). A fired rider is not pushed directly to the stack: it is queued on `Game.FiredManaSpendRiders` and converted to a `StackTriggeredAbility` (sourced from the producing permanent) by `drainFiredManaSpendRiders` during the next triggered-ability pass, so it is ordered with that turn's other triggered abilities under APNAP and same-controller ordering (CR 603.3b) instead of bypassing it. The rider qualification resolves the commander's current characteristics rather than its printed front face: a battlefield-permanent commander (including one merged beneath another card by Mutate) uses its permanent's effective subtypes, so a transformed or face-down commander fails closed and a merged commander uses its chosen top card's types; a commander on the stack uses its selected-face subtypes, so one cast as its back face uses that face; only an off-battlefield, off-stack commander uses front-face printed subtypes (CR 711.2, 712.4a). It fails closed when the caster has no single modeled commander or the commander's current characteristics cannot be resolved, so partner and Background commanders never spuriously scry. Because the produced mana carries a strategic spend rider, a rider-bearing fixed mana ability is excluded from the automatic payment path (which adds untagged pool mana) and stays a manual agent action, where activation tags the mana with its rider. The whole path is a no-op for players holding no riders, so ordinary mana carries no overhead.
+A mana ability may carry a mana-spend rider, such as Path of Ancestry's
+commander-identity mana that scries when spent on a qualifying creature spell.
+`handleAddMana` tags each exact produced unit with its source and rider identity.
+`ApplyResult.ManaBefore` records the pool after planned production and before the
+final spend; spell commits use it with `Spell.PoolSpend`, not a gross pool delta.
+Filter inputs and nonspell payments consume riders during application without
+firing them; all spell routes, including madness, use the spell firing path.
+Identical units are fungible (CR 106.6, 106.12): qualifying payments consume tagged
+units first, while other payments preserve them when possible. A spent rider
+never attaches to later mana of the same color. Fired riders enter
+`Game.FiredManaSpendRiders` for normal APNAP trigger placement, not direct stack
+insertion. Qualification reads the commander's current face and effective
+subtypes, including merged permanents, and fails closed when there is no single
+modeled commander. Rider-bearing sources remain strategic rather than automatic;
+their planned activations use the normal tagging operation.
 
 General activated abilities support mana costs, X costs, tap costs, typed sacrifice/discard/exile additional costs, timing restrictions (`NoTimingRestriction`, sorcery-only, combat, upkeep, during-your-turn, and once-per-turn variants), structured activation conditions, modal content with mode-specific target generation, target generation from `TargetSpec`, and stack resolution through the same effect primitives used by spells and triggers. Graveyard activated abilities can exile their own source card as a cost; discard-self Channel abilities can function from hand. If a source leaves its zone while costs are paid, the source card or token definition is preserved on the stack so the ability can still resolve.
 
-Cycling is the initial keyword-action carry-forward slice. Cards in hand with an activated ability carrying the `Cycling` keyword, a mana cost, and a typed discard-this-card additional cost can be activated at instant speed. The engine pays the mana cost, discards the source card with normal discard/zone-change events, puts a `StackActivatedAbility` on the stack with `SourceCardID` preserved, and resolves its effects, usually drawing a card.
+Cards in hand with the `Cycling` keyword, a mana cost and a typed discard-self
+cost activate at instant speed through the shared procedure. Their
+`StackActivatedAbility` is announced before payment (CR 602.2a); payment
+discards the source with normal discard/zone-change events, preserving
+`SourceCardID` for resolution, usually drawing a card.
 
-Spell cost payment supports typed additional costs, payment choices through the existing `ChoiceAgent` path, phyrexian mana-vs-life choices, minimal spell alternative costs that replace the normal mana cost while preserving required additional costs, Kicker as a combined cost option, and generic cost increases/reductions/set/minimum effects. Deterministic fallback chooses the first valid payment option for agents that do not answer payment choices. Sacrificed permanents and declared attackers are excluded from relevant mana payment plans, so they cannot be used as both mana sources and costs/attackers.
+Spell cost payment supports typed additional costs, `ChoiceAgent` choices,
+binding Phyrexian intentions, alternative costs preserving required additional
+costs, kicker and cost increases/reductions/set/minimum effects. Deterministic
+fallback chooses the first complete option. Resources are reserved jointly:
+a tap then sacrifice may share a permanent, but two consumptions cannot.
+Declared attackers are excluded from attack-tax mana sources.
 
 Cost modifiers run after normal/alternative/kicker cost selection and before additional/mana payment planning. Current modifiers cover generic increases, reductions, set values, and minimum generic rules for spells. Source-scoped per-object reductions on spells and activated abilities use the source's own `CostModifier`: `PerObjectReduction` and `CountSelection` count matching battlefield permanents at cost time, and the resolved reduction applies only to that source's cost. Generic reductions floor at zero and never touch colored requirements. Ghostly Prison-style costs are independent `RuleEffectAttackTax` values rather than cost modifiers.
 
@@ -326,10 +373,33 @@ combat. Resuming an already-entered main never repeats its lore action.
 
 ## Payment planner
 
-Cost payment is implemented by the `mtg/rules/payment` package. `rules`
-adapts `*game.Game` and rules-only helpers to the payment package through
-`rulesPaymentState`; production rules code goes through the package-local
-`paymentOrch` seam instead of calling the payment package directly.
+`Engine.costedAction` is the one announcement/target/locked-total/payment/commit
+procedure for all priority and resolution casts, activated abilities, costed
+special actions, and generic rule/effect/attack payments. Routes supply
+descriptors, not payment loops. `Engine.PaymentPlanner(g, log)` adapts canonical
+rules through `rulesPaymentState` to `mtg/rules/payment`.
+
+`Complete(request, partial)` supplies an immutable witness covering the exact
+caller data, cost option, Phyrexian intentions, components, nonmana mechanics and
+mana allocations. `Options` offers only extensions with a joint completion;
+target prefixes use the same exact completion checks, never policy samples.
+Each mana-ability occurrence owns independent costs and outputs. `Apply`
+revalidates the exact witness and rejects stale plans before mutating, then commits in
+CR 601.2h order, preserving locked totals, late source events and cast receipts.
+
+Planning uses read-only copy-on-write resource projections and canonical
+life/counter/damage/mana/trigger evaluators. Projections clear all derived read
+caches. Query-local read frames end before agent callbacks or mutations.
+Present-pool payments and canonically checked automatic histories precede the
+complete resource search; fixed-depth receipts and exhausted resource graphs,
+not arbitrary run limits, bound its work.
+
+Only a selected opaque mana ability during payment can open the shared
+whole-world checkpoint and exact custom-RNG word journal. Failure restores
+IDs, logs and live references, or retains legal mana actions when CR 734.1
+forbids their reversal. No normal payment clones, probes, partial replay,
+withheld proposals or per-route checkpoints remain. Invalid source
+announcements are still canceled under CR 601.2/602.2 and 734.1–2 before payment.
 
 Payment request types:
 
@@ -337,17 +407,23 @@ Payment request types:
 - `payment.AbilityRequest` — bundles player, ability source permanent, ability definition, X value, and optional preferences for checking or paying an activated-ability cost.
 - `payment.GenericRequest` — covers generic mana payments such as attack taxes, Cycling, Ward, Madness, Suspend, and resolution-payment effects.
 
-Payment orchestrator entry points:
-
-- `paymentOrch.canPaySpellCosts(g, req)` — returns true if spell costs are currently payable.
-- `paymentOrch.paySpellCosts(g, req)` — pays spell costs and returns additional-cost labels; fails if the plan is stale.
-- `paymentOrch.buildAbilityCostPlan(g, req)` — checks activated-ability cost planning without applying it.
-- `paymentOrch.payAbilityCosts(g, req)` — pays activated-ability costs, including tap and additional costs.
-- `paymentOrch.canPayGenericCost(g, req)` / `paymentOrch.payGenericCost(g, req)` — check or pay generic mana and additional costs.
+`paymentOrch` retains compatibility cost-check/payment entry points for existing
+callers and characterization tests. Its generic payments delegate to the shared
+procedure. It is not a second casting or activation implementation.
 
 The payment package keeps payment-plan internals private: mana source discovery,
 Convoke/Delve selection, additional-cost matching, and plan application are
 implementation details behind `payment.Planner`.
+
+Rules read: [official Comprehensive Rules effective 2026-11-06](https://media.wizards.com/2026/downloads/MagicCompRules%2020261106.txt),
+SHA-256 `524f5195a1e5f54bb13c735edf399ac717a4458e2713f398d1a3e6877186b829`;
+sections 601.2, 602.2, 605.1a/605.3, 608.2g and 734.1–2. The current
+illegal-action section is **734**, not 733. Millikin, Deranged Assistant and the
+old #3628 Milling Prism example are not mana abilities under current 605.1a.
+Standalone/enclosing library-top window rules remain; #3628's residual claim
+needs a valid current-edition gameplay reproduction and is not claimed fixed.
+See the implemented [design record](../../docs/adr/0013-plan-then-commit-payment.md)
+and [planner details](payment/README.md).
 
 ## Combat
 
@@ -490,10 +566,13 @@ matching fast path. No policy work budget lowers the required maximum.
 - `declareBlockers` — same for each defending player in priority order.
 - `legalAttackers` — enumerate legal `DeclareAttackers` actions, including attack requirements, goad target constraints, and attack-tax affordability checks.
 - `legalBlockers` — enumerate legal `DeclareBlockers` actions, including Flying/Reach/Menace restrictions.
-- `applyAttackers` — validate and apply a `DeclareAttackersAction`: attack-requirement satisfaction, attack-tax payment via `paymentOrch`, tapping non-Vigilance attackers, and recipient-aware attacker-declared event emission with one declaration batch ID.
+- `applyAttackers` — validate and apply a `DeclareAttackersAction`: attack requirements,
+  attack-tax payment via `costedAction`, tapping non-Vigilance attackers and
+  recipient-aware attacker events with one declaration batch ID.
 - `applyBlockers` — validate and apply a `DeclareBlockersAction`: eligibility re-check, Menace count enforcement, blocker-order tracking, and related-combatant event emission with one declaration batch ID across defending players.
 - `resolveDamagePass` — assign and mark combat damage for all attackers in one first-strike or normal pass, dispatch to the package-level `resolveBlockedCombatDamage` / `resolveUnblockedCombatDamage` helpers, and batch the pass's damage events.
-- `canPayAttackTax` / `payAttackTax` / `attackTaxCost` / `attackingPermanentExclusions` — active-`RuleEffect` attack-tax integration through `paymentOrch`.
+- `canPayAttackTax` / `payAttackTax` / `attackTaxCost` / `attackingPermanentExclusions`
+  — active-`RuleEffect` attack taxes through complete plans and the shared procedure.
 
 `Engine` methods `applyDeclareAttackers` and `applyDeclareBlockers` and the package-level functions `legalDeclareAttackersActions` and `legalDeclareBlockersActions` are thin wrappers that preserve the existing call surface used by `actions.go` and tests.
 
@@ -695,19 +774,17 @@ The action package constructors already copy all slice arguments; the builder pr
 
 ## Payment orchestration
 
-All spell and ability payment operations inside production `rules` code must go through the package-local `paymentOrch` singleton (`paymentOrchestratorType`). The orchestrator currently delegates to the package-level payment functions without changing their behaviour; its purpose is to be the production seam for future transactional payment concerns such as rollback, logging, and plan instrumentation. Payment planner unit tests may still exercise lower-level package functions directly, while characterization tests should cover `paymentOrch` so future wrapper behavior is not invisible.
+The [shared costed-action procedure](#payment-planner) owns all Engine payment
+routes. Use its descriptor and `Engine.PaymentPlanner`, not a route-specific
+choice/payment/rollback sequence. `paymentOrch` preserves compatibility helpers
+where callers still need them; lower-level planner and characterization tests
+can exercise those APIs directly.
 
 `Engine.applyActionWithChoices` validates incoming actions before applying them. Invalid or hand-built actions that do not match the `action.Action` constructor invariants are rejected instead of being applied with zero-valued payloads.
 
-Methods:
-
-- `paymentOrch.canPaySpellCosts(g, req)` — wraps `canPaySpellCosts`.
-- `paymentOrch.paySpellCosts(g, req)` — wraps `paySpellCosts`.
-- `paymentOrch.buildSpellCostPlan(g, req)` — wraps `buildSpellCostPlan`.
-- `paymentOrch.buildAbilityCostPlan(g, req)` — wraps `buildAbilityCostPlan`.
-- `paymentOrch.payAbilityCosts(g, req)` — wraps `payAbilityCosts`.
-
-The request structs (`spellPaymentRequest`, `abilityPaymentRequest`) and the orchestrator remain package-local.
+Requests are `payment.SpellRequest`, `payment.AbilityRequest` and
+`payment.GenericRequest`, unified by `payment.Request`. The orchestrator remains
+package-local.
 
 ## Effect resolver
 
@@ -735,11 +812,18 @@ This struct is the intended seam for a future effect pipeline: middleware, loggi
 
 ### Stack push helpers
 
-All code that puts an object onto the stack must use one of:
+Costed actions put their announced spell/ability object on the stack through
+`Engine.costedAction`, before announcement callbacks or payment. Their commit
+step clears `Casting` on the same spell and calls `emitSpellCastEventsWithTargets`
+after successful payment; face-specific event characteristics preserve filtered
+triggers, while face-down spells record creature type and mana value zero.
+This covers priority, free, paid resolution, madness, prepared-copy and
+face-down routes. Storm records the prior cast count on the event and copies
+the spell (or its LKI) when its trigger resolves, allowing new targets.
 
-- **`pushSpellToStack(g, obj, castEvent)`** — pushes a spell stack object, emits `EventObjectBecameTarget` for each target, emits the `EventZoneChanged` event pre-built by the caller, then emits `EventSpellCast` from the same event. Used for all spell casts (hand, command zone, graveyard, exile, cascade, madness); suspend and rebound casts use the shared free-cast route (`chooseAndCastFreeSpell`), which plans and pays additional costs and cost increases on the free alternative cost. Madness casts plan their madness alternative cost through the same spell-cost planner, lock the total before opening the payment-time mana ability window when it includes mana (CR 601.2f-g), and reverse an unpaid proposal with its reversible mana activations (CR 733.1). Madness, free (including rebound, suspend and copies of cards), and paid resolution casts are proposed, and a Phyrexian symbol's announcement defaults to mana, only when the locked total is payable now or the bounded probe described below finds the caster's payment-time mana abilities can actually make it payable. Face-down (morph/disguise) casts from hand or a permitted graveyard use the same locked-total window: the cast is offered when its total is payable now or when a bounded probe on a game clone, with the card already moved to the stack face down (CR 601.2a), finds a sequence of the caster's payment-time mana abilities that actually makes it payable (an inconclusive probe still offers the reversible proposal, including when an activation moved, reordered, drew, revealed or searched cards hidden from the caster, so offering never reveals hidden information, CR 401.2), and an unpaid proposal is reversed to its original place in its source zone (CR 404.2) and withheld through `castAttempts` like other reversed casts (CR 733.2). Callers must populate `CardTypes`, `CardSupertypes`, `CardSubtypes`, `Colors`, and `ManaValue` in the `castEvent` using the face-specific `cardTypes(spellDef)`, `cardSupertypes(spellDef)`, `cardSubtypes(spellDef)`, `spellColors(spellDef)`, and stack mana-value helpers so that type-, supertype-, subtype-, color-, and mana-value-filtered cast triggers match correctly; face-down casts explicitly record creature type, no colors, no supertypes/subtypes, and mana value 0. Storm is a "when you cast this spell" trigger (CR 702.40a): `prepareEvent` records on the `EventSpellCast` the number of spells cast earlier this turn and the spell's storm instances, and each storm trigger copies the spell (or its last known information, kept on the trigger if the spell leaves the stack) when it resolves, letting its controller choose new targets for each copy.
-
-- **`pushAbilityToStack(g, obj)`** — pushes an activated or triggered ability stack object and emits target events. Used for non-mana activated abilities, cycling, and triggered abilities.
+`pushAbilityToStack(g, obj)` pushes a non-costed ability object and emits its
+target events, notably for triggered abilities. Compatibility stack-push helpers
+are not an alternative casting/payment procedure.
 
 Delayed triggered abilities with no targets may call `g.Stack.Push` directly (no target events to emit). Spell copies, including those a resolving storm trigger creates, call `g.Stack.Push` directly because copies are silent (no zone-change or cast events).
 

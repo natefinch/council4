@@ -182,7 +182,7 @@ func TestPriorityGraveyardCastPreservesRemainingOrder(t *testing.T) {
 	}
 	life := g.Players[game.Player1].Life
 	cast := graveyardCast(cardID, source, types.Creature)
-	outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(&phyrexianWindowAgent{payMana: true}), &TurnLog{}, nil)
+	outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(&phyrexianWindowAgent{payMana: true}), &TurnLog{})
 
 	if outcome != actionApplied || g.Stack.Size() != 1 || g.Players[game.Player1].Life != life-2 ||
 		g.Players[game.Player1].ManaPool.Total() != 0 || len(g.PermanentTypePlayUsesThisTurn) != 1 {

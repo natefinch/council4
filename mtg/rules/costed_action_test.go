@@ -78,7 +78,7 @@ func TestCostedActionAnnouncesBeforeEveryPaymentObservation(t *testing.T) {
 					return req.DefaultSelection
 				}
 			}
-			if outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(a), &TurnLog{}, nil); outcome != actionApplied || a.seen == 0 {
+			if outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(a), &TurnLog{}); outcome != actionApplied || a.seen == 0 {
 				t.Fatalf("outcome/observations = %v/%d", outcome, a.seen)
 			}
 			route.done(t, g, source)
@@ -100,7 +100,7 @@ func TestCostedActionAnnouncesBeforeEveryPaymentObservation(t *testing.T) {
 			t.Fatal("draw activation not offered")
 		}
 		a := &costedObservationAgent{t: t, source: bomb.ObjectID}
-		if outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(a), &TurnLog{}, nil); outcome != actionApplied || a.seen == 0 {
+		if outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(a), &TurnLog{}); outcome != actionApplied || a.seen == 0 {
 			t.Fatalf("outcome/observations = %v/%d", outcome, a.seen)
 		}
 	})
@@ -436,7 +436,7 @@ func TestCostedActionContextualOpaqueAutomaticSource(t *testing.T) {
 		}
 		return req.DefaultSelection
 	}}
-	if outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil); outcome != actionReversed ||
+	if outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}); outcome != actionReversed ||
 		opaqueChoices != 1 || optional != 1 || !reflect.DeepEqual(g.Battlefield, before.Battlefield) || g.IDGen.Current() != before.IDGen.Current() {
 		t.Fatal("contextual opaque mana was not offered, resolved immediately and reversed")
 	}
@@ -531,7 +531,7 @@ func TestCostedActionNestedOpaquePaymentSharesCheckpoint(t *testing.T) {
 		}
 		return req.DefaultSelection
 	}}
-	if outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil); outcome != actionReversed ||
+	if outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}); outcome != actionReversed ||
 		selected != 2 || g.IDGen.Current() != before.IDGen.Current() || !reflect.DeepEqual(g.Players, before.Players) ||
 		!reflect.DeepEqual(g.Battlefield, before.Battlefield) || g.Stack.Size() != 0 {
 		t.Fatal("nested opaque mana payment did not restore through its caller's single checkpoint")
@@ -558,7 +558,7 @@ func TestCostedActionOpaquePreservesIrreversibleLibraryBoundary(t *testing.T) {
 		}
 		return req.DefaultSelection
 	}}
-	if outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil); outcome != actionReversed {
+	if outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}); outcome != actionReversed {
 		t.Fatalf("outcome = %v, want the unpaid ability reversed", outcome)
 	}
 	if !g.Players[game.Player1].Library.Contains(card.ID) || g.Stack.Size() != 0 || g.IDGen.Current() <= ids {
@@ -593,7 +593,7 @@ func TestCostedActionIrreversibleFallbackDropsUnpaidChoices(t *testing.T) {
 		return req.DefaultSelection
 	}}
 	log := &TurnLog{}
-	if outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), log, nil); outcome != actionReversed {
+	if outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), log); outcome != actionReversed {
 		t.Fatal("irreversible fixture was not reversed")
 	}
 	if g.Players[game.Player1].Hand.Size() != 2 || g.Stack.Size() != 0 || slices.ContainsFunc(log.Choices, func(choice game.ChoiceDecision) bool {
@@ -737,7 +737,7 @@ func TestCostedActionOpaqueRestoresWorldIDsLogsAndRealRandomStream(t *testing.T)
 					return req.DefaultSelection
 				}}
 				for attempt := range 2 {
-					outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(a), log, &castAttempts{})
+					outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(a), log)
 					if outcome != actionReversed || g.IDGen.Current() != before.IDGen.Current() ||
 						!reflect.DeepEqual(g.Events, before.Events) || !reflect.DeepEqual(*log, beforeLog) ||
 						!reflect.DeepEqual(g.Battlefield, before.Battlefield) || !reflect.DeepEqual(g.Players, before.Players) || g.Stack.Size() != 0 {
@@ -751,7 +751,7 @@ func TestCostedActionOpaqueRestoresWorldIDsLogsAndRealRandomStream(t *testing.T)
 						}
 					}
 				}
-				if outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(&costedObservationAgent{t: t, source: source}), log, &castAttempts{}); outcome != actionApplied {
+				if outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(&costedObservationAgent{t: t, source: source}), log); outcome != actionApplied {
 					t.Fatal("legal third attempt was withheld")
 				}
 				pending, _ := g.Stack.Peek()

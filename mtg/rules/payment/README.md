@@ -11,10 +11,10 @@ Callers construct a `Planner` with a `State` adapter:
 
 ```go
 planner := payment.New(state)
-ok := planner.CanPaySpellCosts(payment.SpellRequest{...})
+plan, ok, reason := planner.Complete(payment.ForSpell(payment.SpellRequest{...}), payment.Partial{})
 ```
 
-The complete-plan API is the entry point for new costed-action callers:
+The complete-plan API is used by every Engine costed-action route:
 
 ```go
 request := payment.ForSpell(spellRequest) // also ForAbility and ForGeneric
@@ -47,25 +47,56 @@ object, but a tap followed by a sacrifice/return can (CR 601.2h). Phyrexian life
 payments compete with all other life and mana costs. Random-discard components
 remain separate batches; random and library-to-public-zone costs are paid last.
 
-This implements the planner slice of [#3719](https://github.com/natefinch/council4/issues/3719).
-Deterministic side-effecting mana schemas are implemented by
-[#3720](https://github.com/natefinch/council4/issues/3720).
+The [plan-then-commit design](../../../docs/adr/0013-plan-then-commit-payment.md)
+is implemented across priority/resolution spells, activations, costed special
+actions and generic rule/effect/attack payments by `Engine.costedAction`.
 `Engine.PaymentPlanner` binds the planner to canonical resource evaluators and
 mana activation operations. Resource projections are read-only; no ability is
-speculatively executed. Unsupported effect, condition, replacement or trigger
-contexts are explicitly opaque. `StepManaAbility` and `Partial.ManaAbilities`
-offer completion-preserving source choices. `ApplyResult.ManaBefore` records
+speculatively executed and no normal payment clones a game. Copy-on-write
+projections clear every derived read cache; query-local frames exist only during
+pure `Complete`, `Options` and pending-target searches, never agent callbacks or
+mutation. Life, counter, damage, production and triggered-mana forecasts reuse
+canonical evaluators rather than approximating their effects.
+
+Present-pool payments are tried first, then canonically verified automatic-source
+histories, then complete resource search. Fixed allocations are checked at their
+exact depth; exhaustion means no branch reaches the next depth, not an arbitrary
+run budget. Each immutable node can share its cost-paid view across output
+alternatives, not across occurrences or player choices.
+
+Unsupported effect, condition, replacement or trigger contexts are explicitly
+opaque. The shared procedure checkpoints only an opaque activation actually
+selected during payment, never a broad opaque context. Its whole-world, ID,
+log and exact random-word restoration follows CR 734.1–2; irreversible library
+effects retain legal mana actions rather than replaying them. Invalid source
+announcements can still be canceled under CR 601.2/602.2 before payment. There
+are no clone probes, inconclusive-payable results or proposal-withholding retries.
+
+`StepManaAbility` and `Partial.ManaAbilities` offer completion-preserving source
+choices; `ManaActivationKey` binds payments and outputs to independent
+occurrences, including optional repeated Altar activations.
+`ApplyResult.ManaBefore` records
 the pool after planned production and before the final spend, for exact rider
-accounting. Rules-route migration remains the subsequent slices of
-[#3718](https://github.com/natefinch/council4/issues/3718); existing payment
-windows and reversal paths are not yet removed.
+accounting. The locked total, exact caller choices and receipts are owned by the
+immutable witness. Existing compatibility APIs remain for their callers without
+introducing a second Engine payment procedure.
 
 The `State` interface is the seam between the planner and the rules engine. It
 provides game queries and mutations that require rules knowledge, such as
 effective controllers, permanent characteristics, cost modifiers, tapping mana
 sources, zone transitions, and discard/sacrifice handling. In production,
 `mtg/rules` implements this seam with `rulesPaymentState` and exposes it through
-the package-local `paymentOrch` adapter.
+`Engine.PaymentPlanner`; `paymentOrch` retains compatibility entry points.
+
+Rules edition: [official Comprehensive Rules effective 2026-11-06](https://media.wizards.com/2026/downloads/MagicCompRules%2020261106.txt),
+SHA-256 `524f5195a1e5f54bb13c735edf399ac717a4458e2713f398d1a3e6877186b829`.
+Payment sections read: 601.2, 602.2, 605.1a/605.3, 608.2g and 734.1–2
+(not historical section 733). Intrinsic library-moving costs/effects are
+nonmana under 605.1a, including Millikin and Deranged Assistant; no such
+payment window is enabled. The old Milling Prism example in #3628 is not a
+valid current-edition reproduction. General standalone/enclosing library-window
+rules remain; its residual claim needs valid gameplay evidence, not more
+payment scope.
 
 ## Requests
 

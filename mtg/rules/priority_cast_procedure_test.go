@@ -676,7 +676,7 @@ func TestPriorityOpaqueFailureRestoresCastSourceAndCopy(t *testing.T) {
 			}}
 			outcome, _ := e.attemptActionWithChoices(g, game.Player1,
 				action.CastSpellFaceFromZone(card, from, face, []game.Target{game.PlayerTarget(game.Player2)}, 0, nil),
-				reboundKickerAgents(agent), log, nil)
+				reboundKickerAgents(agent), log)
 			if outcome != actionReversed || !g.Stack.IsEmpty() || g.IDGen.Current() != before.IDGen.Current() ||
 				!reflect.DeepEqual(g.Players, before.Players) || !reflect.DeepEqual(g.CardInstances, before.CardInstances) ||
 				!reflect.DeepEqual(g.Battlefield, before.Battlefield) || !reflect.DeepEqual(g.Events, before.Events) ||

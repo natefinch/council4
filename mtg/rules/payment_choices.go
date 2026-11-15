@@ -20,15 +20,6 @@ func (e *Engine) paymentPreferencesForCost(g *game.Game, playerID game.PlayerID,
 	return e.paymentPreferencesForCostFromSource(g, playerID, manaCost, additionalCosts, xValue, 0, zone.None, agents, log, tapExclusions...)
 }
 
-// paymentPreferencesForPermanentCost is paymentPreferencesForCost for a cost
-// whose source is a permanent, which also takes the kinds removed by the
-// source's any-kind "remove a counter from this permanent" costs.
-func (e *Engine) paymentPreferencesForPermanentCost(g *game.Game, playerID game.PlayerID, source *game.Permanent, manaCost *cost.Mana, additionalCosts []cost.Additional, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog, tapExclusions ...id.ID) *payment.Preferences {
-	prefs := e.paymentPreferencesForCost(g, playerID, manaCost, additionalCosts, xValue, agents, log, tapExclusions...)
-	prefs.SourceCounterKindChoices = e.sourceCounterKindChoices(g, playerID, source, additionalCosts, xValue, agents, log)
-	return prefs
-}
-
 func (e *Engine) paymentPreferencesForCostFromSource(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, additionalCosts []cost.Additional, xValue int, sourceCardID id.ID, sourceZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog, tapExclusions ...id.ID) *payment.Preferences {
 	phyrexianLifeChoices := e.phyrexianPaymentChoices(g, playerID, manaCost, agents, log)
 	prefs := e.additionalCostPaymentPreferences(g, playerID, additionalCosts, xValue, sourceCardID, sourceZone, agents, log, tapExclusions...)
@@ -278,39 +269,6 @@ func (e *Engine) phyrexianPaymentChoices(g *game.Game, playerID game.PlayerID, m
 	return choices
 }
 
-// announcePhyrexianPayments asks how the caster will pay each Phyrexian symbol
-// of a proposed spell cost, in cost order, before its targets are chosen and
-// before any mana ability window (CR 601.2b). manaFeasible reports whether the
-// proposed cost can still be paid with the given announcements; each symbol's
-// choice defaults to mana when announcing it as mana keeps the cost payable,
-// and otherwise to 2 life, since an announced mana payment is binding.
-// withheld, when non-nil, reports whether a complete set of announcements was
-// withheld after an earlier attempt was reversed (see castAttempts); a payment
-// is offered only while some announcements including it remain open.
-func (e *Engine) announcePhyrexianPayments(g *game.Game, playerID game.PlayerID, manaCost *cost.Mana, manaFeasible, withheld func([]phyrexianAnnouncement) bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []phyrexianAnnouncement {
-	symbols := phyrexianSymbols(manaCost)
-	availableLife := playerLife(g, playerID)
-	var announced []phyrexianAnnouncement
-	for _, symbol := range symbols {
-		withMana := append(slices.Clone(announced), phyrexianAnnouncement{symbol: symbol})
-		withLife := append(slices.Clone(announced), phyrexianAnnouncement{symbol: symbol, payLife: true})
-		offer := phyrexianOffer{
-			mana: announcementsOpen(symbols, availableLife, withMana, withheld),
-			life: availableLife >= 2 && announcementsOpen(symbols, availableLife-2, withLife, withheld),
-		}
-		if !offer.mana && !offer.life {
-			offer = phyrexianOffer{mana: true, life: availableLife >= 2}
-		}
-		preferLife := manaFeasible != nil && !manaFeasible(withMana)
-		payLife := e.choosePhyrexianPaymentOf(g, playerID, symbol, offer, preferLife, agents, log)
-		if payLife {
-			availableLife -= 2
-		}
-		announced = append(announced, phyrexianAnnouncement{symbol: symbol, payLife: payLife})
-	}
-	return announced
-}
-
 // phyrexianPaymentChoicesAfter returns one payment choice per Phyrexian symbol
 // of manaCost's effective cost, in cost order, true paying 2 life, and whether
 // each must be paid with mana. announced maps cost positions to announced
@@ -504,72 +462,6 @@ func (e *Engine) additionalCostRemoveCounterAmongChoices(g *game.Game, playerID 
 		result = append(result, expanded[index])
 	}
 	return result
-}
-
-// sourceCounterKindChoices gathers, in cost order, the kind of each counter the
-// player removes from source for its any-kind "remove N counters from this
-// permanent" costs (CR 601.2h). Counters claimed by the source's kind-specific
-// removal costs are set aside first. The player is asked only when the source
-// carries more than one removable kind and more counters than the cost removes.
-func (e *Engine) sourceCounterKindChoices(g *game.Game, playerID game.PlayerID, source *game.Permanent, additionalCosts []cost.Additional, xValue int, agents [game.NumPlayers]PlayerAgent, log *TurnLog) []counter.Kind {
-	if source == nil {
-		return nil
-	}
-	amounts := make([]int, len(additionalCosts))
-	reserved := map[counter.Kind]int{}
-	for i, additionalCost := range additionalCosts {
-		amounts[i] = payment.AdditionalCostAmountFor(additionalCost, xValue)
-		if additionalCost.AmountDynamic != cost.AdditionalDynamicAmountNone {
-			amounts[i] = (&rulesPaymentState{g: g}).AdditionalDynamicAmountValue(playerID, additionalCost.AmountDynamic)
-		}
-		if additionalCost.Kind == cost.AdditionalRemoveCounter && !additionalCost.AnyCounterKind {
-			if additionalCost.RemoveAll {
-				amounts[i] = source.Counters.Get(additionalCost.CounterKind)
-			}
-			reserved[additionalCost.CounterKind] += amounts[i]
-		}
-	}
-	var choices []counter.Kind
-	for i, additionalCost := range additionalCosts {
-		amount := amounts[i]
-		if additionalCost.Kind != cost.AdditionalRemoveCounter || !additionalCost.AnyCounterKind || amount <= 0 {
-			continue
-		}
-		var expanded []counter.Kind
-		var options []game.ChoiceOption
-		kinds := 0
-		label := permanentChoiceLabel(g, source)
-		for _, kind := range payment.RemovableCounterKinds(source, additionalCost) {
-			available := source.Counters.Get(kind) - reserved[kind]
-			if available > 0 {
-				kinds++
-			}
-			for range max(available, 0) {
-				options = append(options, game.ChoiceOption{Index: len(expanded), Label: counterChoiceLabel(label, kind), Card: permanentChoiceInfo(g, source)})
-				expanded = append(expanded, kind)
-			}
-		}
-		selected := firstChoiceIndices(min(amount, len(expanded)))
-		if kinds > 1 && len(expanded) > amount {
-			selected = e.chooseChoice(g, agents, game.ChoiceRequest{
-				Kind:             game.ChoicePayment,
-				Player:           playerID,
-				Prompt:           payment.AdditionalCostText(additionalCost),
-				Options:          options,
-				MinChoices:       amount,
-				MaxChoices:       amount,
-				DefaultSelection: firstChoiceIndices(amount),
-			}, log)
-		}
-		for _, index := range selected {
-			if index < 0 || index >= len(expanded) {
-				continue
-			}
-			choices = append(choices, expanded[index])
-			reserved[expanded[index]]++
-		}
-	}
-	return choices
 }
 
 // counterChoiceLabel labels one removable counter on a permanent.

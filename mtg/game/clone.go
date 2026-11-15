@@ -103,11 +103,11 @@ func (g *Game) Clone() *Game {
 	return clone
 }
 
-// RestoreReversibleManaPayment consumes a payment checkpoint after the Engine
-// has excluded CR 733.1's irreversible actions and repaired live object pointers.
+// restoreOpaquePaymentWorld consumes the selected opaque mana checkpoint after
+// the Engine excluded CR 734.1's irreversible actions and repaired live pointers.
 // Diagnostics, scopes, ID issuance, RNG and transient Engine contexts continue;
 // this does not resume or clone a synchronous resolving call stack.
-func (g *Game) RestoreReversibleManaPayment(before *Game) {
+func (g *Game) restoreOpaquePaymentWorld(before *Game) {
 	g.DrawParticipants = before.DrawParticipants
 	g.Players = before.Players
 	g.Battlefield = before.Battlefield

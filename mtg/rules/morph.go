@@ -298,10 +298,10 @@ func (e *Engine) canCastFaceDown(g *game.Game, playerID game.PlayerID, cardID id
 
 // attemptCastFaceDownWithChoices uses the shared procedure. Only an opaque
 // payment can reverse a witnessed cast (CR 734.1).
-func (e *Engine) attemptCastFaceDownWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastFaceDownAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) actionOutcome {
+func (e *Engine) attemptCastFaceDownWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastFaceDownAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
 	defer g.OpenLibraryTopWindow()()
 	if cast.SourceZone == zone.Graveyard {
-		return e.attemptGraveyardFaceDown(g, playerID, cast, agents, log, attempts)
+		return e.attemptGraveyardFaceDown(g, playerID, cast, agents, log)
 	}
 	from := cast.SourceZone
 	if from == zone.None {
@@ -313,10 +313,10 @@ func (e *Engine) attemptCastFaceDownWithChoices(g *game.Game, playerID game.Play
 	if !e.canCastFaceDownFromZone(g, playerID, cast, from) {
 		return actionFailed
 	}
-	return e.castFaceDownSpell(g, playerID, cast, from, agents, log, attempts)
+	return e.castFaceDownSpell(g, playerID, cast, from, agents, log)
 }
 
-func (e *Engine) attemptGraveyardFaceDown(g *game.Game, player game.PlayerID, cast action.CastFaceDownAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) actionOutcome {
+func (e *Engine) attemptGraveyardFaceDown(g *game.Game, player game.PlayerID, cast action.CastFaceDownAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
 	permission := cast.Permission
 	if permission == (game.PlayPermission{}) {
 		permissions := permanentTypePlayPermissions(g, player, zone.Graveyard, faceDownSpellDef())
@@ -328,13 +328,7 @@ func (e *Engine) attemptGraveyardFaceDown(g *game.Game, player game.PlayerID, ca
 		permission == (game.PlayPermission{}) && !e.canCastFaceDownFromZone(g, player, cast, zone.Graveyard) {
 		return actionFailed
 	}
-	return e.castFaceDownSpell(g, player, cast, zone.Graveyard, agents, log, attempts)
-}
-
-// faceDownCastKey identifies the face-down cast an attempt redoes (see
-// castAttempts).
-func faceDownCastKey(cast action.CastFaceDownAction) string {
-	return fmt.Sprintf("face down|%+v", cast)
+	return e.castFaceDownSpell(g, player, cast, zone.Graveyard, agents, log)
 }
 
 func faceDownCastObject(player game.PlayerID, cast action.CastFaceDownAction, sourceZone zone.Type) *game.StackObject {
@@ -352,7 +346,7 @@ func faceDownCastObject(player game.PlayerID, cast action.CastFaceDownAction, so
 // the caster may then activate mana abilities (CR 601.2g) before paying it
 // (CR 601.2h), and only then does the spell become cast (CR 601.2i). An unpaid
 // opaque proposal is undone along with its reversible mana activations (CR 734.1).
-func (e *Engine) castFaceDownSpell(g *game.Game, player game.PlayerID, cast action.CastFaceDownAction, sourceZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) actionOutcome {
+func (e *Engine) castFaceDownSpell(g *game.Game, player game.PlayerID, cast action.CastFaceDownAction, sourceZone zone.Type, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
 	obj := faceDownCastObject(player, cast, sourceZone)
 	request := faceDownSpellRequest(player, cast.CardID, sourceZone)
 	sourceRoutes := faceDownPermissionRoutes(g, player, cast, sourceZone)

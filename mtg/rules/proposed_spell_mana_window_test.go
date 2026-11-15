@@ -12,6 +12,17 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+// manaSpent is the total mana spent from every player's pool so far.
+func manaSpent(g *game.Game) int {
+	total := 0
+	for _, player := range g.Players {
+		if player != nil {
+			total += player.ManaPool.Spent()
+		}
+	}
+	return total
+}
+
 // Source review: issue #3587. Default-registry cards checked against the
 // pinned corpus (oracle_id): Overeager Apprentice
 // 3ea71eed-e1ae-4e28-a4f5-44ff115949f4 {2}{B} "Discard a card, Sacrifice this

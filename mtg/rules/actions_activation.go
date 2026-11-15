@@ -15,17 +15,6 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-func effectiveCyclingCost(g *game.Game, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) *cost.Mana {
-	if body == nil {
-		return nil
-	}
-	return applyAbilityCostModifiers(manaCostPtr(body.ManaCost), cyclingCostModifiers(g, playerID, card, body))
-}
-
-func effectiveHandAbilityCost(g *game.Game, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) *cost.Mana {
-	return manaCostPtr(effectiveActivatedAbilityCost(g, playerID, card, body))
-}
-
 func effectiveActivatedAbilityCost(g *game.Game, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) opt.V[cost.Mana] {
 	if body == nil {
 		return opt.V[cost.Mana]{}
@@ -618,14 +607,6 @@ func graveyardAbilitySource(g *game.Game, playerID game.PlayerID, sourceID id.ID
 	return card, *body, true
 }
 
-func canActivateEquipAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
-	return canActivateEquipAbilityWithModes(g, playerID, permanent, body, abilityIndex, targets, xValue, nil)
-}
-
-func canActivateEquipAbilityWithModes(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
-	return equipActivation(g, playerID, permanent, body, abilityIndex, targets, xValue, chosenModes).payableNow(g)
-}
-
 // equipActivation is the cost of activating the equip-like ability body of
 // permanent with targets, or the zero activationCost when that isn't legal.
 func equipActivation(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) activationCost {
@@ -657,20 +638,12 @@ func equipActivation(g *game.Game, playerID game.PlayerID, permanent *game.Perma
 		return activationCost{}
 	}
 	sourceCard, _ := g.GetCardInstance(permanent.CardInstanceID)
-	return abilityRequestCost(manaCostPtr(effectiveActivatedAbilityCost(g, playerID, sourceCard, body)), payment.AbilityRequest{
+	return abilityRequestCost(payment.AbilityRequest{
 		PlayerID: playerID, Source: permanent, ManaCost: body.ManaCost,
 		CostModifiers:    activatedAbilityCostModifiers(g, playerID, sourceCard, body),
 		AdditionalCosts:  abilityAdditionalCosts(body.AdditionalCosts),
 		AlternativeCosts: body.AlternativeCosts,
 	}, permanentSource(permanent.ObjectID))
-}
-
-func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
-	return canActivateGeneralAbilityWithModes(g, playerID, permanent, body, abilityIndex, targets, xValue, nil)
-}
-
-func canActivateGeneralAbilityWithModes(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
-	return generalActivation(g, playerID, permanent, body, abilityIndex, targets, xValue, chosenModes).payableNow(g)
 }
 
 // generalActivation is the cost of activating the ability body of permanent
@@ -702,7 +675,7 @@ func generalActivation(g *game.Game, playerID game.PlayerID, permanent *game.Per
 		return activationCost{}
 	}
 	sourceCard, _ := g.GetCardInstance(permanent.CardInstanceID)
-	return abilityRequestCost(manaCostPtr(effectiveActivatedAbilityCost(g, playerID, sourceCard, body)), payment.AbilityRequest{
+	return abilityRequestCost(payment.AbilityRequest{
 		PlayerID:         playerID,
 		Source:           permanent,
 		ManaCost:         body.ManaCost,
@@ -711,10 +684,6 @@ func generalActivation(g *game.Game, playerID game.PlayerID, permanent *game.Per
 		AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
 		XValue:           xValue,
 	}, permanentSource(permanent.ObjectID))
-}
-
-func canActivateCyclingAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
-	return cyclingActivation(g, playerID, cardID, body, abilityIndex, targets, xValue).payableNow(g)
 }
 
 // cyclingActivation is the cost of cycling the card cardID, or the zero
@@ -737,19 +706,11 @@ func cyclingActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, body 
 	if !ok || !game.BodyHasKeyword(&gotAbility, game.Cycling) {
 		return activationCost{}
 	}
-	return abilityRequestCost(effectiveCyclingCost(g, playerID, card, body), payment.AbilityRequest{
+	return abilityRequestCost(payment.AbilityRequest{
 		PlayerID: playerID, SourceCardID: cardID, SourceZone: zone.Hand,
 		ManaCost: body.ManaCost, CostModifiers: activatedAbilityCostModifiers(g, playerID, card, body),
 		AdditionalCosts: abilityAdditionalCosts(body.AdditionalCosts),
 	}, cardSource(cardSourcePresent(cyclingAbilitySource, playerID, cardID, abilityIndex)))
-}
-
-func canActivateGraveyardAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
-	return canActivateGraveyardAbilityWithModes(g, playerID, cardID, body, abilityIndex, targets, xValue, nil)
-}
-
-func canActivateHandAbilityWithModes(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
-	return handActivation(g, playerID, cardID, body, abilityIndex, targets, xValue, chosenModes).payableNow(g)
 }
 
 // handActivation is the cost of activating the ability body of the card cardID
@@ -796,7 +757,7 @@ func handActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, body *ga
 		return activationCost{}
 	}
 	present := cardSourcePresent(handActivatedAbilitySource, playerID, cardID, abilityIndex)
-	return abilityRequestCost(effectiveHandAbilityCost(g, playerID, card, body), payment.AbilityRequest{
+	return abilityRequestCost(payment.AbilityRequest{
 		PlayerID:         playerID,
 		SourceCardID:     card.ID,
 		SourceZone:       zone.Hand,
@@ -806,10 +767,6 @@ func handActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, body *ga
 		AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
 		XValue:           xValue,
 	}, cardSource(present))
-}
-
-func canActivateGraveyardAbilityWithModes(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
-	return graveyardActivation(g, playerID, cardID, body, abilityIndex, targets, xValue, chosenModes).payableNow(g)
 }
 
 // graveyardActivation is the cost of activating the ability body of the card
@@ -840,7 +797,7 @@ func graveyardActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, bod
 		!bodyTargetCountsMatchX(g, playerID, def, 0, body, chosenModes, targets, xValue) {
 		return activationCost{}
 	}
-	return abilityRequestCost(manaCostPtr(body.ManaCost), payment.AbilityRequest{
+	return abilityRequestCost(payment.AbilityRequest{
 		PlayerID:         playerID,
 		SourceCardID:     cardID,
 		SourceZone:       zone.Graveyard,

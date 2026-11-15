@@ -164,7 +164,7 @@ func TestLibraryMovingManaProducerNotActivatedWhilePaying(t *testing.T) {
 				}
 				agent := &windowOptionsAgent{priorityCastWindowAgent: priorityCastWindowAgent{limit: -1, colors: route.colors}}
 
-				outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
+				outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{})
 
 				if outcome != actionApplied || agent.activated != 2 {
 					t.Fatalf("outcome = %v, activated = %d; want the lands to pay the cast", outcome, agent.activated)
@@ -211,7 +211,7 @@ func TestLibraryMovingManaProducerNotActivatedWhileActivating(t *testing.T) {
 				}
 				agent := &activationOptionsAgent{activationWindowAgent: newActivationWindowAgent(route.order, top)}
 
-				outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
+				outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{})
 
 				if outcome != actionApplied {
 					t.Fatalf("outcome = %v, want the ability activated", outcome)
