@@ -49,6 +49,9 @@ func (a *spliceScriptAgent) ChooseChoice(_ PlayerObservation, req game.ChoiceReq
 		}
 		return nil
 	case game.ChoiceTarget:
+		if req.Provisional {
+			return req.DefaultSelection
+		}
 		if a.targetIdx < len(a.targets) {
 			want := a.targets[a.targetIdx]
 			a.targetIdx++

@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"reflect"
 	"slices"
 	"strings"
@@ -18,6 +19,309 @@ import (
 	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
+
+type countedManaHistoryState struct {
+	payment.ManaState
+	forecasts        *int
+	inventories      *int
+	costPreparations *int
+}
+
+func (s countedManaHistoryState) ProjectResources(resources game.ResourceProjection) payment.State {
+	return countedManaHistoryState{
+		ManaState: s.ManaState.ProjectResources(resources).(payment.ManaState),
+		forecasts: s.forecasts, inventories: s.inventories, costPreparations: s.costPreparations,
+	}
+}
+
+func (s countedManaHistoryState) ManaActivationCandidates(player game.PlayerID) []payment.ManaActivationCandidate {
+	if s.inventories != nil {
+		*s.inventories++
+	}
+	return s.ManaState.ManaActivationCandidates(player)
+}
+
+func (s countedManaHistoryState) ForecastMana(player game.PlayerID, candidate payment.ManaActivationCandidate) ([]payment.ManaProduction, game.ResourceProjection, bool) {
+	*s.forecasts++
+	return s.ManaState.ForecastMana(player, candidate)
+}
+
+func (s countedManaHistoryState) ResourceSelectionStable(additional cost.Additional) bool {
+	state, ok := s.ManaState.(interface{ ResourceSelectionStable(cost.Additional) bool })
+	return ok && state.ResourceSelectionStable(additional)
+}
+
+func (s countedManaHistoryState) PrepareManaEvent(event game.Event) game.Event {
+	if s.costPreparations != nil && event.Kind == game.EventPermanentTapped {
+		*s.costPreparations++
+	}
+	return s.ManaState.PrepareManaEvent(event)
+}
+
+func TestManaOutputBranchesReuseOnlyIdenticalCostStates(t *testing.T) {
+	e, g := newEffectiveCascadeGame()
+	for range 2 {
+		treasure := addTreasureTokenPermanent(g, game.Player1)
+		treasure.TokenDef = testTreasureToken()
+	}
+	forecasts, preparations := 0, 0
+	state := countedManaHistoryState{
+		ManaState: &rulesPaymentState{g: g, engine: e}, forecasts: &forecasts, costPreparations: &preparations,
+	}
+	manaCost := cost.Mana{cost.U, cost.U, cost.U}
+	request := payment.ForGeneric(payment.GenericRequest{PlayerID: game.Player1, Cost: &manaCost})
+	before := g.Clone()
+	if _, ok, _ := payment.New(state).Complete(request, payment.Partial{}); ok {
+		t.Fatal("two Treasures paid for three mana")
+	}
+	// Each source's five outputs follow the same cost. Both sources and every
+	// deeper resource node still need their own independent cost-paid views.
+	t.Logf("output branches: %d forecasts, %d cost preparations", forecasts, preparations)
+	if preparations > 40 {
+		t.Fatalf("output branches used %d forecasts and %d cost preparations", forecasts, preparations)
+	}
+	if !reflect.DeepEqual(g.Clone(), before) {
+		t.Fatal("reusing cost-paid views changed the live game")
+	}
+}
+
+func TestManaOccurrenceSacrificesReserveOuterCostBeforeSearch(t *testing.T) {
+	for _, test := range []struct {
+		creatures, activations int
+		payable                bool
+	}{{3, 2, true}, {3, 3, false}, {4, 3, true}} {
+		t.Run(fmt.Sprintf("%d creatures/%d activations", test.creatures, test.activations), func(t *testing.T) {
+			e, g := newEffectiveCascadeGame()
+			altar := addCombatPermanent(g, game.Player1, registryCardDef(t, "Phyrexian Altar"))
+			island := addCombatPermanent(g, game.Player1, registryCardDef(t, "Island"))
+			var creatures []*game.Permanent
+			for range test.creatures {
+				creatures = append(creatures, addCombatPermanent(g, game.Player1, registryCardDef(t, "Grizzly Bears")))
+			}
+			manaCost := cost.Mana{cost.O(1), cost.B}
+			request := payment.ForGeneric(payment.GenericRequest{
+				PlayerID: game.Player1, Cost: &manaCost,
+				AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalSacrifice, Amount: 1, MatchPermanentType: true, PermanentType: types.Creature}},
+			})
+			partial := payment.Partial{
+				Components:      map[int]payment.ComponentChoice{0: {Objects: []id.ID{creatures[0].ObjectID}, Finished: true}},
+				ManaAbilities:   map[payment.ManaAbilityKey]bool{{Source: island.ObjectID, AbilityIndex: 0}: false},
+				ManaOccurrences: make(map[payment.ManaActivationKey]bool),
+			}
+			for occurrence := range test.activations {
+				partial.ManaOccurrences[payment.ManaActivationKey{
+					ManaAbilityKey: payment.ManaAbilityKey{Source: altar.ObjectID, AbilityIndex: 0}, Occurrence: occurrence,
+				}] = true
+			}
+			forecasts := 0
+			state := countedManaHistoryState{ManaState: &rulesPaymentState{g: g, engine: e}, forecasts: &forecasts}
+			before := g.Clone()
+			plan, ok, reason := payment.New(state).Complete(request, partial)
+			if ok != test.payable || !reflect.DeepEqual(g.Clone(), before) {
+				t.Fatalf("Complete=%t (%s), want %t without changing the game", ok, reason, test.payable)
+			}
+			if !ok {
+				if forecasts != 0 {
+					t.Fatalf("an impossible consuming reservation explored %d mana forecasts", forecasts)
+				}
+				return
+			}
+			if len(plan.Mana().Activations) != test.activations {
+				t.Fatal("a strategic occurrence disappeared from the witness")
+			}
+			if _, applied, reason := e.PaymentPlanner(g).Apply(plan); !applied {
+				t.Fatal(reason)
+			}
+			if island.Tapped || g.Players[game.Player1].Graveyard.Size() != test.activations+1 ||
+				g.Players[game.Player1].ManaPool.Total() != test.activations-2 {
+				t.Fatal("mana sacrifices reused the reserved outer subject or lost an optional occurrence")
+			}
+		})
+	}
+}
+
+func TestManaOccurrenceSacrificeDomainMayGrowAfterManaEffect(t *testing.T) {
+	e, g := newEffectiveCascadeGame()
+	body := game.TapManaAbility(mana.C)
+	body.Content.Modes[0].Sequence = append(body.Content.Modes[0].Sequence,
+		game.Instruction{Primitive: game.AddCounter{Object: game.SourcePermanentReference(), CounterKind: counter.Charge, Amount: game.Fixed(1)}})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Awakening mana artifact", Types: []types.Card{types.Artifact}, ManaAbilities: []game.ManaAbility{body},
+		StaticAbilities: []game.StaticAbility{{
+			Condition: opt.Val(game.Condition{SourceCounterKindKnown: true, SourceCounterKind: counter.Charge, SourceCountersAtLeast: 1}),
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer: game.LayerType, AffectedSource: true, AddTypes: []types.Card{types.Creature},
+			}},
+		}},
+	}})
+	altar := addCombatPermanent(g, game.Player1, registryCardDef(t, "Phyrexian Altar"))
+	manaCost := cost.Mana{cost.C, cost.B}
+	request := payment.ForGeneric(payment.GenericRequest{PlayerID: game.Player1, Cost: &manaCost})
+	partial := payment.Partial{ManaAbilities: map[payment.ManaAbilityKey]bool{{Source: altar.ObjectID, AbilityIndex: 0}: true}}
+	before := g.Clone()
+	plan, ok, reason := e.PaymentPlanner(g).Complete(request, partial)
+	if !ok {
+		t.Fatal("the current empty sacrifice domain was treated as a permanent impossibility:", reason)
+	}
+	if !reflect.DeepEqual(g.Clone(), before) || permanentHasType(g, source, types.Creature) {
+		t.Fatal("the projected type change escaped into the live game")
+	}
+	if _, applied, reason := e.PaymentPlanner(g).Apply(plan); !applied {
+		t.Fatal(reason)
+	}
+	if g.Players[game.Player1].ManaPool.Total() != 0 || !g.Players[game.Player1].Graveyard.Contains(source.CardInstanceID) {
+		t.Fatal("the enabling counter/type effect and subsequent sacrifice were not applied")
+	}
+}
+
+func TestManaHistoryPresentResourcesNeedNoActivationSearch(t *testing.T) {
+	e, g := newEffectiveCascadeGame()
+	addChosenTypePermanent(t, g, game.Player1, "Arcane Adaptation", types.Warrior)
+	island := addCombatPermanent(g, game.Player1, registryCardDef(t, "Island"))
+	g.Players[game.Player1].ManaPool.Add(mana.U, 1)
+	forecasts, inventories := 0, 0
+	state := countedManaHistoryState{ManaState: &rulesPaymentState{g: g, engine: e}, forecasts: &forecasts, inventories: &inventories}
+	manaCost := cost.Mana{cost.U}
+	request := payment.ForGeneric(payment.GenericRequest{PlayerID: game.Player1, Cost: &manaCost})
+	plan, ok, reason := payment.New(state).Complete(request, payment.Partial{})
+	if !ok {
+		t.Fatal(reason)
+	}
+	if _, ok, reason := payment.New(state).Apply(plan); !ok {
+		t.Fatal(reason)
+	}
+	if len(plan.Mana().Activations) != 0 || forecasts != 0 || inventories != 0 ||
+		island.Tapped || g.Players[game.Player1].ManaPool.Total() != 0 {
+		t.Fatal("a witnessed pool-only payment searched or activated unrelated mana sources")
+	}
+}
+
+func TestManaHistoryUsesDirectWitnessWithoutSubsetSearch(t *testing.T) {
+	for _, sources := range []int{4, 6, 8} {
+		t.Run(fmt.Sprint(sources), func(t *testing.T) {
+			e, g := newEffectiveCascadeGame()
+			addChosenTypePermanent(t, g, game.Player1, "Arcane Adaptation", types.Warrior)
+			addChosenTypePermanent(t, g, game.Player2, "Arcane Adaptation", types.Elf)
+			var islands []*game.Permanent
+			for range sources {
+				islands = append(islands, addCombatPermanent(g, game.Player1, registryCardDef(t, "Island")))
+			}
+			forecasts := 0
+			state := countedManaHistoryState{ManaState: &rulesPaymentState{g: g, engine: e}, forecasts: &forecasts}
+			if state.OrdinaryManaOnly(game.Player1) {
+				t.Fatal("the continuous-effect fixture did not exercise the canonical history search")
+			}
+			manaCost := cost.Mana{cost.O(sources - 2), cost.U, cost.U}
+			request := payment.ForGeneric(payment.GenericRequest{PlayerID: game.Player1, Cost: &manaCost})
+			before := g.Clone()
+			plan, ok, reason := payment.New(state).Complete(request, payment.Partial{})
+			if !ok {
+				t.Fatal(reason)
+			}
+			if len(plan.Mana().Activations) != sources || forecasts > sources {
+				t.Fatalf("%d sources needed %d forecasts for %d activations, want one witnessed history",
+					sources, forecasts, len(plan.Mana().Activations))
+			}
+			if !reflect.DeepEqual(g.Clone(), before) {
+				t.Fatal("planning the direct history changed live game state")
+			}
+			if _, ok, reason := payment.New(state).Apply(plan); !ok {
+				t.Fatal(reason)
+			}
+			if forecasts > 2*sources || g.Players[game.Player1].ManaPool.Total() != 0 {
+				t.Fatalf("fixed-allocation revalidation used %d forecasts or left unpaid mana", forecasts)
+			}
+			for _, island := range islands {
+				if !island.Tapped {
+					t.Fatal("the exact history did not activate all selected Islands")
+				}
+			}
+		})
+	}
+}
+
+func TestManaHistoryStopsAfterReachableResourcesAreExhausted(t *testing.T) {
+	e, g := newEffectiveCascadeGame()
+	for range 2 {
+		treasure := addTreasureTokenPermanent(g, game.Player1)
+		treasure.TokenDef = testTreasureToken()
+	}
+	forecasts := 0
+	state := countedManaHistoryState{ManaState: &rulesPaymentState{g: g, engine: e}, forecasts: &forecasts}
+	manaCost := cost.Mana{cost.U, cost.U, cost.U}
+	request := payment.ForGeneric(payment.GenericRequest{PlayerID: game.Player1, Cost: &manaCost})
+	before := g.Clone()
+	if _, ok, _ := payment.New(state).Complete(request, payment.Partial{}); ok {
+		t.Fatal("two Treasures paid for three mana")
+	}
+	// Five output choices per Treasure do not permit ten activations. Once
+	// every two-activation history is exhausted, deeper limits add no work.
+	if forecasts > 150 {
+		t.Fatalf("the finite two-activation graph was repeatedly searched: %d forecasts", forecasts)
+	}
+	if !reflect.DeepEqual(g.Clone(), before) {
+		t.Fatal("exhausting the resource graph changed the live game")
+	}
+}
+
+func TestManaHistoryRejectedDirectWitnessStillFindsCompletion(t *testing.T) {
+	e, g := newEffectiveCascadeGame()
+	island := addCombatPermanent(g, game.Player1, registryCardDef(t, "Island"))
+	myr := addCombatPermanent(g, game.Player1, registryCardDef(t, "Silver Myr"))
+	addOptionalTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event: game.EventManaProduced, Controller: game.TriggerControllerYou, RequireManaProducedByLand: true,
+	}, []game.Instruction{{Primitive: game.AddMana{ManaColor: mana.U, Amount: game.Fixed(1)}}}, nil)
+	manaCost := cost.Mana{cost.U}
+	request := payment.ForGeneric(payment.GenericRequest{PlayerID: game.Player1, Cost: &manaCost})
+	before := g.Clone()
+	plan, ok, reason := e.PaymentPlanner(g).Complete(request, payment.Partial{})
+	if !ok {
+		t.Fatal(reason)
+	}
+	if !reflect.DeepEqual(g.Clone(), before) {
+		t.Fatal("the rejected land forecast changed the live game")
+	}
+	if activations := plan.Mana().Activations; len(activations) != 1 || activations[0].Source != myr.ObjectID {
+		t.Fatal("an opaque direct history was accepted or prevented the alternate complete witness")
+	}
+	if _, ok, reason := e.PaymentPlanner(g).Apply(plan); !ok {
+		t.Fatal(reason)
+	}
+	if island.Tapped || !myr.Tapped || g.Players[game.Player1].ManaPool.Total() != 0 {
+		t.Fatal("the exact alternate witness was not applied")
+	}
+}
+
+func TestPaymentReadFramesEndBeforeWorldChanges(t *testing.T) {
+	e, g := newEffectiveCascadeGame()
+	card := addCardToHand(g, game.Player1, registryCardDef(t, "Sol Ring"))
+	g.Players[game.Player1].ManaPool.Add(mana.C, 1)
+	request := payment.ForSpell(payment.SpellRequest{
+		PlayerID: game.Player1, CardID: card, Card: registryCardDef(t, "Sol Ring"), SourceZone: zone.Hand,
+	})
+	planner := e.PaymentPlanner(g)
+	if _, ok, reason := planner.Complete(request, payment.Partial{}); !ok {
+		t.Fatal(reason)
+	}
+	addCombatPermanent(g, game.Player2, registryCardDef(t, "Thalia, Guardian of Thraben"))
+	if _, ok, _ := planner.Complete(request, payment.Partial{}); ok {
+		t.Fatal("a completed query's cached rules hid the new spell-cost increase")
+	}
+	g.Players[game.Player1].ManaPool.Add(mana.C, 1)
+	options := planner.Options(request, payment.Partial{}, payment.Step{Kind: payment.StepCostOption})
+	if len(options) != 1 {
+		t.Fatal("the new exact payment was not offered after the world changed")
+	}
+	if g.InStaticSourceFrame() {
+		t.Fatal("a pure payment query retained its read frame")
+	}
+	if _, ok, reason := planner.Apply(options[0].Plan); !ok {
+		t.Fatal(reason)
+	}
+	if g.InStaticSourceFrame() || g.Players[game.Player1].ManaPool.Total() != 0 {
+		t.Fatal("payment application reused an announcement's stale read frame")
+	}
+}
 
 // Official CR effective 2026-11-06: 605.1a/b, 605.3a/b, 605.4,
 // 106.12, 118.3c, 601.2g/h. City of Brass's ordinary tap trigger is not a

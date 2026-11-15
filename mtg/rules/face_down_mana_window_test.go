@@ -161,14 +161,16 @@ func TestFaceDownHandCastPaysWithPaymentTimeManaAbility(t *testing.T) {
 				agent := &faceDownWindowAgent{paymentManaAgent: paymentManaAgent{ability: "no such ability"}, cardID: cardID}
 				var attempts castAttempts
 				outcome, _ := engine.attemptActionWithChoices(clone, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, &attempts)
-				if outcome != actionReversed {
-					t.Fatalf("outcome = %v, want the unpaid face-down cast reversed", outcome)
+				// CR 601.2g/h: declining a required source isn't a completable
+				// option; the offered default pays the whole locked total.
+				if outcome != actionApplied {
+					t.Fatalf("outcome = %v, want a completed face-down cast", outcome)
 				}
-				requireNoFaceDownCast(t, clone, cardID)
-				if agent.windows != 1 || !clone.Players[game.Player1].Hand.Contains(cardID) ||
-					reboundPermanentNamed(t, clone, "Waterlogged Grove").Tapped ||
-					clone.Players[game.Player1].Life != life || clone.Players[game.Player1].ManaPool.Total() != 2 {
-					t.Fatalf("windows=%d in hand=%t life=%d pool=%d, want the proposal reversed without payment",
+				requireFaceDownSpell(t, clone, cardID, tc.kind, zone.Hand, 3)
+				if agent.windows != 1 || clone.Players[game.Player1].Hand.Contains(cardID) ||
+					!reboundPermanentNamed(t, clone, "Waterlogged Grove").Tapped ||
+					clone.Players[game.Player1].Life != life-1 || clone.Players[game.Player1].ManaPool.Total() != 0 {
+					t.Fatalf("windows=%d in hand=%t life=%d pool=%d, want the witness paid",
 						agent.windows, clone.Players[game.Player1].Hand.Contains(cardID),
 						clone.Players[game.Player1].Life, clone.Players[game.Player1].ManaPool.Total())
 				}
@@ -191,13 +193,12 @@ func TestFaceDownCastReversalsInPriorityLoop(t *testing.T) {
 
 	engine.runPriorityLoop(g, reboundKickerAgents(agent), &TurnLog{})
 
-	if agent.casts < 2 || agent.windows != agent.casts-1 {
-		t.Fatalf("casts=%d windows=%d, want repeated reversed attempts and then exhaustion", agent.casts, agent.windows)
+	if agent.casts != 1 || agent.windows != 1 {
+		t.Fatalf("casts=%d windows=%d, want one completed cast (CR 601.2h)", agent.casts, agent.windows)
 	}
-	requireNoFaceDownCast(t, g, cardID)
-	if !g.Players[game.Player1].Hand.Contains(cardID) || g.Players[game.Player1].Life != life ||
-		g.Players[game.Player1].ManaPool.Total() != 2 || reboundPermanentNamed(t, g, "Waterlogged Grove").Tapped {
-		t.Fatal("reversed face-down casts left a payment behind")
+	if permanentByCardID(g, cardID) == nil || g.Players[game.Player1].Life != life-1 ||
+		g.Players[game.Player1].ManaPool.Total() != 0 || !reboundPermanentNamed(t, g, "Waterlogged Grove").Tapped {
+		t.Fatal("the completed cast did not pay and resolve")
 	}
 }
 
@@ -262,7 +263,6 @@ func TestFaceDownGraveyardCastPaysWithPaymentTimeManaAbility(t *testing.T) {
 	g, e, source := muldrothaGame(t)
 	cardID := addCardToGraveyard(g, game.Player1, productionChoiceCard(t, "War Behemoth"))
 	addCardToGraveyard(g, game.Player1, productionChoiceCard(t, "Grizzly Bears"))
-	graveyard := g.Players[game.Player1].Graveyard.All()
 	addCombatPermanent(g, game.Player1, productionChoiceCard(t, "Waterlogged Grove"))
 	g.Players[game.Player1].ManaPool.Add(mana.C, 2)
 	permission := muldrothaPermission(source, types.Creature)
@@ -290,17 +290,14 @@ func TestFaceDownGraveyardCastPaysWithPaymentTimeManaAbility(t *testing.T) {
 	t.Run("window declined", func(t *testing.T) {
 		clone := g.Clone()
 		agent := &faceDownWindowAgent{paymentManaAgent: paymentManaAgent{ability: "no such ability"}, cardID: cardID}
-		if e.applyActionWithChoices(clone, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}) {
-			t.Fatal("unpaid graveyard face-down cast succeeded")
+		if !e.applyActionWithChoices(clone, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}) {
+			t.Fatal("completable graveyard face-down cast failed")
 		}
-		requireNoFaceDownCast(t, clone, cardID)
-		if agent.windows != 1 || !clone.Players[game.Player1].Graveyard.Contains(cardID) ||
-			clone.Players[game.Player1].Life != life || clone.Players[game.Player1].ManaPool.Total() != 2 ||
-			reboundPermanentNamed(t, clone, "Waterlogged Grove").Tapped || clone.PermanentTypePlayUsesThisTurn[use] {
-			t.Fatal("reversed graveyard face-down cast left the card, a payment or the permission use behind")
-		}
-		if got := clone.Players[game.Player1].Graveyard.All(); !slices.Equal(got, graveyard) {
-			t.Fatalf("graveyard after reversal = %v, want its order %v kept (CR 404.2)", got, graveyard)
+		requireFaceDownSpell(t, clone, cardID, game.FaceDownMorph, zone.Graveyard, 3)
+		if agent.windows != 1 || clone.Players[game.Player1].Graveyard.Contains(cardID) ||
+			clone.Players[game.Player1].Life != life-1 || clone.Players[game.Player1].ManaPool.Total() != 0 ||
+			!reboundPermanentNamed(t, clone, "Waterlogged Grove").Tapped || !clone.PermanentTypePlayUsesThisTurn[use] {
+			t.Fatal("the completed cast did not pay and spend its permission (CR 601.2h/i)")
 		}
 	})
 }

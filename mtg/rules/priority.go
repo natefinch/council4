@@ -27,10 +27,6 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 	e.setReplacementChoiceContext(g, agents, log)
 	defer g.SetChoiceContext(previous)
 	consecutivePasses := 0
-	// attempts covers the casts reversed while the current player holds
-	// priority (CR 733.2); see castAttempts.
-	var attempts castAttempts
-
 	for {
 		// CR 117.5 / CR 603.3b: before a player gets priority, perform all
 		// state-based actions (repeating until none apply), then put any waiting
@@ -64,16 +60,11 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 		}
 
 		legal := e.legalActions(g, playerID)
-		legal = slices.DeleteFunc(legal, attempts.actionExhausted)
 		if len(legal) == 0 {
 			legal = []action.Action{actionBuild.pass()}
 		}
 
 		chosen := e.chooseAction(g, agents, playerID, legal, actionBuild.pass())
-		if attempts.actionExhausted(chosen) {
-			g.Execution.InvalidActions++
-			chosen = actionBuild.pass()
-		}
 
 		actionLog := &ActionLog{
 			Player:        playerID,
@@ -85,19 +76,18 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 		entryIndex := lastEntryIndex(log)
 		eventsBefore := len(g.Events)
 
-		outcome, taken := e.attemptActionWithChoices(g, playerID, chosen, agents, log, &attempts)
+		outcome, taken := e.attemptActionWithChoices(g, playerID, chosen, agents, log, nil)
 		switch outcome {
 		case actionFailed:
 			panic("applyAction failed for validated action")
 		case actionReversed:
-			// CR 733.1-2: the cast or activation was reversed, so it isn't
+			// CR 734.1-2: an opaque payment was reversed, so it isn't
 			// logged as taken, and the player keeps priority to take another
 			// action or pass.
 			log.removeAction(entryIndex)
 			continue
 		case actionApplied:
 		}
-		attempts = castAttempts{}
 		// CR 601.2c: a cast's targets may be chosen while casting it, so the
 		// log and observers see the action as taken, with its chosen targets.
 		chosen = taken
@@ -141,7 +131,7 @@ const (
 	actionFailed actionOutcome = iota
 	actionApplied
 	// actionReversed: the player started the action but couldn't legally
-	// complete it, so it was reversed (CR 733.1).
+	// complete it, so it was reversed (CR 734.1).
 	actionReversed
 )
 

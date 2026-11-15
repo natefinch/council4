@@ -119,6 +119,7 @@ type Partial struct {
 	Option        opt.V[int]
 	X             opt.V[int]
 	Phyrexian     map[int]bool
+	ColorLife     map[int]bool
 	Components    map[int]ComponentChoice
 	Groups        map[uint8]int
 	Convoke       opt.V[[]id.ID]
@@ -126,10 +127,12 @@ type Partial struct {
 	Delve         opt.V[[]id.ID]
 	Allocation    *ManaAllocation
 	ManaAbilities map[ManaAbilityKey]bool
-	ManaPayments  map[ManaActivationKey]Partial
-	ManaChoices   map[ManaActivationKey]map[game.ChoiceKey]game.ResolutionChoiceResult
-	joint         bool
-	poolOnly      bool
+	// ManaOccurrences fixes use/avoid of a particular activation, not its source.
+	ManaOccurrences map[ManaActivationKey]bool
+	ManaPayments    map[ManaActivationKey]Partial
+	ManaChoices     map[ManaActivationKey]map[game.ChoiceKey]game.ResolutionChoiceResult
+	joint           bool
+	poolOnly        bool
 }
 
 type ManaAbilityKey struct {
@@ -186,6 +189,8 @@ type Plan struct {
 	allocation   ManaAllocation
 	cardVersions map[id.ID]uint64
 	valid        bool
+	phyrexian    map[int]bool
+	colorLife    map[int]bool
 }
 
 // CostOption returns the selected cost option's stable index.
@@ -274,6 +279,9 @@ func (p Planner) CanForecastMana(player game.PlayerID, key ManaAbilityKey) bool 
 }
 
 func (p Planner) complete(request Request, partial Partial) (Plan, completion, bool) {
+	if state, ok := p.s.(interface{ BeginPaymentRead() func() }); ok {
+		defer state.BeginPaymentRead()()
+	}
 	partial.joint = true
 	var plan Plan
 	var result completion
@@ -436,6 +444,7 @@ func (p Planner) complete(request Request, partial Partial) (Plan, completion, b
 				counts := manaOccurrenceCounts(prefix)
 				tail.ManaPayments = remainingManaOccurrences(partial.ManaPayments, counts)
 				tail.ManaChoices = remainingManaOccurrences(partial.ManaChoices, counts)
+				tail.ManaOccurrences = remainingManaOccurrences(partial.ManaOccurrences, counts)
 			}
 			selected, ok := completeAdditional(state, player, option.additionalCosts, x, prefs, currentSource, cardID, sourceZone, castingID, partial.Components, partial.Groups, nil, func(witness additionalWitness) bool {
 				sawAdditional = true
@@ -544,7 +553,9 @@ func (p Planner) complete(request Request, partial Partial) (Plan, completion, b
 				recordVersion(activation.Source)
 			}
 		}
-		return Plan{request: request, option: option.index, x: x, components: witness.components, groups: witness.groups, allocation: freezeMana(result.mana), cardVersions: versions, valid: true}, result, true
+		return Plan{request: request, option: option.index, x: x, components: witness.components, groups: witness.groups,
+			allocation: freezeMana(result.mana), cardVersions: versions, valid: true,
+			phyrexian: maps.Clone(partial.Phyrexian), colorLife: maps.Clone(partial.ColorLife)}, result, true
 	}
 	return plan, result, false
 }
@@ -585,6 +596,7 @@ func (p Planner) Apply(plan Plan) (ApplyResult, bool, string) {
 	}
 	allocation := plan.Mana()
 	partial := Partial{Option: opt.Val(plan.option), X: opt.Val(plan.x), Components: plan.Components(), Groups: cloneGroups(plan.groups), Allocation: &allocation}
+	partial.Phyrexian, partial.ColorLife = maps.Clone(plan.phyrexian), maps.Clone(plan.colorLife)
 	_, current, ok := p.complete(plan.request, partial)
 	if !ok {
 		return ApplyResult{}, false, "payment plan is stale"
@@ -716,6 +728,12 @@ func (p Partial) acceptsMana(plan paymentPlan) bool {
 			return false
 		}
 	}
+	for key, use := range p.ManaOccurrences {
+		_, exists := manaActivationOccurrence(allocation.Activations, key)
+		if exists != use {
+			return false
+		}
+	}
 	for key, choices := range p.ManaChoices {
 		activation, exists := manaActivationOccurrence(allocation.Activations, key)
 		if !exists || !maps.Equal(activation.Choices, choices) {
@@ -748,6 +766,7 @@ const (
 	StepCostGroup
 	StepManaAbility
 	StepManaOutput
+	StepManaLife
 )
 
 // Step specifies a decision. Index is the symbol/component/group index.
@@ -758,8 +777,8 @@ type Step struct {
 	Index  int
 	Values []int
 	Source id.ID
-	// ManaActivation redirects a component/Phyrexian/output step to one
-	// activation occurrence, retaining a witness for the whole action.
+	// ManaActivation binds source-use, component, Phyrexian and output steps
+	// to one activation occurrence, retaining a witness for the whole action.
 	ManaActivation opt.V[ManaActivationKey]
 }
 
@@ -776,7 +795,7 @@ type Choice struct {
 
 // With returns a partial with one additional choice fixed, leaving p untouched.
 func (p Partial) With(step Step, choice Choice) Partial {
-	if step.ManaActivation.Exists && step.Kind != StepManaOutput {
+	if step.ManaActivation.Exists && step.Kind != StepManaOutput && step.Kind != StepManaAbility {
 		key := step.ManaActivation.Val
 		p.ManaPayments = maps.Clone(p.ManaPayments)
 		if p.ManaPayments == nil {
@@ -793,7 +812,9 @@ func (p Partial) With(step Step, choice Choice) Partial {
 		phyrexian[index] = value
 	}
 	p.Phyrexian = phyrexian
+	p.ColorLife = maps.Clone(p.ColorLife)
 	p.ManaAbilities = maps.Clone(p.ManaAbilities)
+	p.ManaOccurrences = maps.Clone(p.ManaOccurrences)
 	if p.ManaAbilities == nil {
 		p.ManaAbilities = make(map[ManaAbilityKey]bool)
 	}
@@ -804,12 +825,24 @@ func (p Partial) With(step Step, choice Choice) Partial {
 		p.X = opt.Val(choice.Value)
 	case StepPhyrexian:
 		p.Phyrexian[step.Index] = choice.PayLife
+	case StepManaLife:
+		if p.ColorLife == nil {
+			p.ColorLife = make(map[int]bool)
+		}
+		p.ColorLife[step.Index] = choice.PayLife
 	case StepComponent:
 		p.Components[step.Index] = cloneComponent(choice.Component)
 	case StepCostGroup:
 		p.Groups[uint8(step.Index)] = choice.Value
 	case StepManaAbility:
-		p.ManaAbilities[ManaAbilityKey{Source: step.Source, AbilityIndex: step.Index}] = choice.UseManaAbility
+		if step.ManaActivation.Exists {
+			if p.ManaOccurrences == nil {
+				p.ManaOccurrences = make(map[ManaActivationKey]bool)
+			}
+			p.ManaOccurrences[step.ManaActivation.Val] = choice.UseManaAbility
+		} else {
+			p.ManaAbilities[ManaAbilityKey{Source: step.Source, AbilityIndex: step.Index}] = choice.UseManaAbility
+		}
 	case StepManaOutput:
 		p.ManaChoices = maps.Clone(p.ManaChoices)
 		if p.ManaChoices == nil {
@@ -824,6 +857,9 @@ func (p Partial) With(step Step, choice Choice) Partial {
 
 // Options offers only choices with a witness completion.
 func (p Planner) Options(request Request, partial Partial, step Step) []Choice {
+	if state, ok := p.s.(interface{ BeginPaymentRead() func() }); ok {
+		defer state.BeginPaymentRead()()
+	}
 	var choices []Choice
 	add := func(choice Choice) {
 		plan, ok, _ := p.Complete(request, partial.With(step, choice))
@@ -832,7 +868,7 @@ func (p Planner) Options(request Request, partial Partial, step Step) []Choice {
 			choices = append(choices, choice)
 		}
 	}
-	if step.ManaActivation.Exists {
+	if step.ManaActivation.Exists && step.Kind != StepManaAbility {
 		key := step.ManaActivation.Val
 		plan, current, ok := p.complete(request, partial)
 		if !ok {
@@ -892,8 +928,12 @@ func (p Planner) Options(request Request, partial Partial, step Step) []Choice {
 		return nil
 	case StepManaAbility:
 		label := "mana ability"
+		source, index := step.Source, step.Index
+		if step.ManaActivation.Exists {
+			source, index = step.ManaActivation.Val.Source, step.ManaActivation.Val.AbilityIndex
+		}
 		if state, ok := p.s.(ManaState); ok {
-			label = state.ManaAbilityLabel(step.Source, step.Index)
+			label = state.ManaAbilityLabel(source, index)
 		}
 
 		add(Choice{UseManaAbility: false, Label: "Do not use " + label})
@@ -903,6 +943,22 @@ func (p Planner) Options(request Request, partial Partial, step Step) []Choice {
 			add(Choice{Value: value})
 		}
 	case StepPhyrexian:
+		add(Choice{PayLife: false})
+		add(Choice{PayLife: true})
+	case StepManaLife:
+		plan, current, ok := p.complete(request, partial)
+		if !ok {
+			return nil
+		}
+		manaCost := plan.Costs().ManaCost
+		if manaCost == nil || step.Index < 0 || step.Index >= len(*manaCost) {
+			return nil
+		}
+		symbol := (*manaCost)[step.Index]
+		if !p.s.PayLifeForManaColor(current.player, symbol.Color) ||
+			(symbol.Kind != cost.ColoredSymbol && symbol.Kind != cost.PhyrexianSymbol) {
+			return nil
+		}
 		add(Choice{PayLife: false})
 		add(Choice{PayLife: true})
 	case StepCostOption:

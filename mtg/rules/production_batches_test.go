@@ -73,7 +73,7 @@ func runProductionBatchScenario(tb testing.TB, registry *cards.Registry, scenari
 		g.Players[game.Player2].ManaPool.Add(mana.R, 1)
 		g.Players[game.Player2].ManaPool.Add(mana.G, 1)
 		setMainPhasePriority(g, game.Player2)
-		if !engine.applyAction(g, game.Player2, action.CastSpell(subjectCard, subjectTargets, 0, nil)) {
+		if !engine.applyActionWithChoices(g, game.Player2, action.CastSpell(subjectCard, subjectTargets, 0, nil), policies, &TurnLog{}) {
 			tb.Fatal("real legacy counter subject did not cast")
 		}
 		subject, _ := g.Stack.Peek()

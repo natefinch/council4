@@ -21,6 +21,8 @@ import (
 // rules engine. It exposes the game queries and mutations that involve
 // rules-specific logic (continuous effects, event emission, zone transitions).
 // Implementations in mtg/rules wrap *game.Game and the relevant rules helpers.
+// An adapter may implement BeginPaymentRead() func() to scope derived read
+// caches to Complete/Options. Its closer runs before Apply mutates the world.
 type State interface {
 	stateQueries
 	statePermanentQueries

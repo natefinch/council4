@@ -46,6 +46,12 @@ type targetChoiceResult struct {
 type targetChoiceOptions struct {
 	limit  int
 	xValue opt.V[int]
+	// A witnessed target prefix constrains generation, rather than filtering
+	// exponentially many unrelated combinations after they are generated.
+	requiredSpec  int
+	required      []game.Target
+	requiredCount opt.V[int]
+	external      bool
 	// visit, when set, receives each choice of targets and its counts in
 	// place of the result slices, which are left unchanged; enumeration stops
 	// once it returns false. The slices passed to it may be reused.
@@ -190,7 +196,30 @@ func visitTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *g
 		return true
 	}
 	if targetSpecUsesExternalChooser(&spec) {
-		if len(choosingOpponentsForTargetSpec(g, controller, source, sourceObjectID, &spec)) == 0 {
+		opponents := choosingOpponentsForTargetSpec(g, controller, source, sourceObjectID, &spec)
+		if len(opponents) == 0 {
+			return true
+		}
+		if choices.external {
+			var seen []game.Target
+			for _, opponent := range opponents {
+				candidates := targetCandidatesForSpecChosenBy(g, controller, opponent, source, sourceObjectID, triggerEvent, &spec)
+				candidates = filterAnnouncedManaValueTargets(g, spec, candidates, choices.xValue)
+				if spec.DistinctFromPriorTargets {
+					candidates = filterTargetsDistinctFrom(candidates, prefix)
+				}
+				for _, target := range candidates {
+					if targetsContainAll(seen, []game.Target{target}) ||
+						choices.requiredCount.Exists && specIndex == choices.requiredSpec && !targetsContainAll([]game.Target{target}, choices.required) {
+						continue
+					}
+					seen = append(seen, target)
+					if !visitTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, specIndex+1,
+						append(slices.Clone(prefix), target), append(slices.Clone(countPrefix), 1), result, targetCounts, choices) {
+						return false
+					}
+				}
+			}
 			return true
 		}
 		next := append(append([]game.Target(nil), prefix...), game.DeferredTarget())
@@ -203,8 +232,21 @@ func visitTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *g
 		candidates = filterTargetsDistinctFrom(candidates, prefix)
 	}
 	maxTargets := min(spec.MaxTargets, len(candidates))
-	for _, count := range targetCountsForChoices(spec.MinTargets, maxTargets) {
-		for combination := range targetCombinations(candidates, count) {
+	counts := targetCountsForChoices(spec.MinTargets, maxTargets)
+	var required []game.Target
+	if choices.requiredCount.Exists && specIndex == choices.requiredSpec {
+		count := choices.requiredCount.Val
+		if count < spec.MinTargets || count > maxTargets || len(choices.required) > count ||
+			!targetsContainAll(candidates, choices.required) {
+			return true
+		}
+		counts = []int{count}
+		required = choices.required
+		candidates = filterTargetsDistinctFrom(candidates, required)
+	}
+	for _, count := range counts {
+		for rest := range targetCombinations(candidates, count-len(required)) {
+			combination := append(slices.Clone(required), rest...)
 			if !targetsSatisfySameGraveyard(g, &spec, combination) {
 				continue
 			}

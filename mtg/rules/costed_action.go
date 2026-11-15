@@ -19,10 +19,13 @@ import (
 // an ability supplies an object, and a special action supplies neither.
 type costedAction struct {
 	cost          activationCost
+	available     func(*game.Game) bool
 	object        *game.StackObject
+	spellSource   *costedSpellSource
 	usesStack     bool
 	disclose      func(*game.Game)
 	announcements func(*game.Game, [game.NumPlayers]PlayerAgent, *TurnLog) bool
+	proposal      func(*game.Game, [game.NumPlayers]PlayerAgent, *TurnLog) (payment.Request, payment.Partial, bool)
 	targets       func(*game.Game, [game.NumPlayers]PlayerAgent, *TurnLog) bool
 	lock          func(*game.Game) payment.Request
 	beforePayment func(*game.Game, payment.Plan)
@@ -30,7 +33,11 @@ type costedAction struct {
 }
 
 func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor costedAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
-	if !e.costedActionAvailable(g, player, descriptor.cost) {
+	available := descriptor.available
+	if available == nil {
+		available = func(g *game.Game) bool { return e.costedActionAvailable(g, player, descriptor.cost) }
+	}
+	if !available(g) {
 		return actionFailed
 	}
 	defer g.OpenLibraryTopWindow()()
@@ -51,12 +58,18 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 		if descriptor.usesStack {
 			g.Stack.RemoveByID(descriptor.object.ID)
 		}
+		if descriptor.spellSource != nil {
+			descriptor.spellSource.cancel(g)
+		}
 		if restoreIDs {
 			g.IDGen.Restore(ids)
 		}
 	}
 	if descriptor.disclose != nil {
 		descriptor.disclose(g)
+	}
+	if descriptor.spellSource != nil && !descriptor.spellSource.move(g) {
+		return actionFailed
 	}
 	if descriptor.object != nil {
 		descriptor.object.ID = g.IDGen.Next()
@@ -78,25 +91,33 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 	request := descriptor.cost.request
 	partial := payment.Partial{}
 	planner := e.PaymentPlanner(g, log)
-	choice, ok := e.choosePaymentStep(g, player, planner, request, partial, payment.Step{Kind: payment.StepCostOption}, "Choose ability cost", agents, log)
-	if !ok {
-		return failProposal()
-	}
-	partial = partial.With(payment.Step{Kind: payment.StepCostOption}, choice)
-	costs := choice.Plan.Costs()
-	if costs.ManaCost != nil {
-		phyrexian := 0
-		for _, symbol := range *costs.ManaCost {
-			if !isPhyrexianSymbol(symbol) {
-				continue
+	if descriptor.proposal != nil {
+		var ok bool
+		request, partial, ok = descriptor.proposal(g, agents, log)
+		if !ok {
+			return failProposal()
+		}
+	} else {
+		choice, ok := e.choosePaymentStep(g, player, planner, request, partial, payment.Step{Kind: payment.StepCostOption}, "Choose ability cost", agents, log)
+		if !ok {
+			return failProposal()
+		}
+		partial = partial.With(payment.Step{Kind: payment.StepCostOption}, choice)
+		costs := choice.Plan.Costs()
+		if costs.ManaCost != nil {
+			phyrexian := 0
+			for _, symbol := range *costs.ManaCost {
+				if !isPhyrexianSymbol(symbol) {
+					continue
+				}
+				step := payment.Step{Kind: payment.StepPhyrexian, Index: phyrexian}
+				choice, ok := e.choosePaymentStep(g, player, planner, request, partial, step, "Choose Phyrexian payment", agents, log)
+				if !ok {
+					return failProposal()
+				}
+				partial = partial.With(step, choice)
+				phyrexian++
 			}
-			step := payment.Step{Kind: payment.StepPhyrexian, Index: phyrexian}
-			choice, ok := e.choosePaymentStep(g, player, planner, request, partial, step, "Choose Phyrexian payment", agents, log)
-			if !ok {
-				return failProposal()
-			}
-			partial = partial.With(step, choice)
-			phyrexian++
 		}
 	}
 	if descriptor.targets != nil && !descriptor.targets(g, agents, log) {
@@ -110,7 +131,7 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 		return failProposal()
 	}
 	// Only the total is locked. Resource choices remain open (CR 601.2f–h).
-	request, costs = plan.Request(), plan.Costs()
+	request, costs := plan.Request(), plan.Costs()
 	for index, additional := range costs.AdditionalCosts {
 		if additional.ChoiceGroup != 0 {
 			group := int(additional.ChoiceGroup)
@@ -211,18 +232,37 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 				break
 			}
 			options := make([]game.ChoiceOption, len(choices))
+			var manaActions []action.Action
+			for _, step := range steps {
+				if step.Source != 0 {
+					manaActions = append(manaActions, action.ActivateAbility(step.Source, step.Index, nil, 0))
+				}
+			}
+			sourceOptions := paymentManaAbilityOptions(g, player, manaActions)[1:]
+			sourceIndex := 0
 			for index, choice := range choices {
 				options[index] = game.ChoiceOption{Index: index, Label: choice.Label}
+				if steps[index].Source != 0 {
+					options[index] = sourceOptions[sourceIndex]
+					options[index].Index = index
+					if opaque[index].Kind == action.ActionActivateAbility {
+						options[index].Label += " (opaque)"
+					}
+					sourceIndex++
+				}
 			}
 			fallback := 0
 			if steps[0].Source != 0 {
+				occurrences := make(map[payment.ManaAbilityKey]int)
 				for _, activation := range plan.Mana().Activations {
 					key := payment.ManaAbilityKey{Source: activation.Source, AbilityIndex: activation.AbilityIndex}
-					if _, fixed := partial.ManaAbilities[key]; fixed {
+					occurrence := payment.ManaActivationKey{ManaAbilityKey: key, Occurrence: occurrences[key]}
+					occurrences[key]++
+					if partial.ManaOccurrences[occurrence] {
 						continue
 					}
 					for index, step := range steps {
-						if step.Source == key.Source && step.Index == key.AbilityIndex {
+						if step.ManaActivation.Exists && step.ManaActivation.Val == occurrence {
 							fallback = index
 							break
 						}
@@ -235,9 +275,10 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 				Options: options, MinChoices: 1, MaxChoices: 1, DefaultSelection: []int{fallback}, Private: true,
 			}, log)[0]
 			if steps[selected].Source == 0 {
-				for index, step := range steps {
-					if step.Source != 0 && opaque[index].Kind != action.ActionActivateAbility {
-						partial = partial.With(step, payment.Choice{UseManaAbility: false})
+				for _, candidate := range (&rulesPaymentState{g: g, engine: e}).ManaActivationCandidates(player) {
+					if !candidate.Automatic {
+						key := payment.ManaAbilityKey{Source: candidate.Source, AbilityIndex: candidate.AbilityIndex}
+						partial = partial.With(nextCostedManaStep(partial, key), payment.Choice{UseManaAbility: false})
 					}
 				}
 				break
@@ -282,6 +323,23 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 		}
 	}
 	planner = e.PaymentPlanner(g, log)
+	if costs.ManaCost != nil {
+		for index, symbol := range *costs.ManaCost {
+			if announcedLife[index] || !payLifeForManaColorActive(g, player, symbol.Color) ||
+				(symbol.Kind != cost.ColoredSymbol && symbol.Kind != cost.PhyrexianSymbol) {
+				continue
+			}
+			step := payment.Step{Kind: payment.StepManaLife, Index: index}
+			choice, valid := e.choosePaymentStep(g, player, planner, request, partial, step, "Pay "+(cost.Mana{symbol}).String(), agents, log)
+			if !valid {
+				if checkpoint != nil || inheritedOpaque && opaqueSelected {
+					return reverse()
+				}
+				panic("color-life payment lost its witness")
+			}
+			partial = partial.With(step, choice)
+		}
+	}
 	plan, ok, _ = planner.Complete(request, partial)
 	if !ok || !descriptor.cost.present(g) {
 		return reverse()
@@ -308,7 +366,11 @@ func (e *Engine) choosePlannedManaPayment(g *game.Game, player game.PlayerID, re
 	defer g.OpenLibraryTopWindow()()
 	planner := e.PaymentPlanner(g)
 	ability := payment.ManaAbilityKey{Source: selected.Source, AbilityIndex: selected.Index}
-	for occurrence := 0; ; occurrence++ {
+	firstOccurrence := 0
+	if selected.ManaActivation.Exists {
+		firstOccurrence = selected.ManaActivation.Val.Occurrence
+	}
+	for occurrence := firstOccurrence; ; occurrence++ {
 		plan, ok, _ := planner.Complete(request, partial)
 		if !ok {
 			return partial, false
@@ -362,7 +424,18 @@ func (e *Engine) choosePlannedManaPayment(g *game.Game, player game.PlayerID, re
 			}
 			partial = partial.With(output, choice)
 		}
+		if selected.ManaActivation.Exists {
+			return partial, true
+		}
 	}
+}
+
+func nextCostedManaStep(partial payment.Partial, ability payment.ManaAbilityKey) payment.Step {
+	key := payment.ManaActivationKey{ManaAbilityKey: ability}
+	for partial.ManaOccurrences[key] {
+		key.Occurrence++
+	}
+	return payment.Step{Kind: payment.StepManaAbility, Source: ability.Source, Index: ability.AbilityIndex, ManaActivation: opt.Val(key)}
 }
 
 func (e *Engine) choosePaymentStep(g *game.Game, player game.PlayerID, planner payment.Planner, request payment.Request, partial payment.Partial, step payment.Step, prompt string, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (payment.Choice, bool) {
@@ -377,7 +450,7 @@ func (e *Engine) choosePaymentStep(g *game.Game, player game.PlayerID, planner p
 		if label == "" {
 			label = fmt.Sprint(choice.Value)
 		}
-		if step.Kind == payment.StepPhyrexian {
+		if step.Kind == payment.StepPhyrexian || step.Kind == payment.StepManaLife {
 			label = "Pay with mana"
 			if choice.PayLife {
 				label = "Pay 2 life"
@@ -406,8 +479,12 @@ func (e *Engine) choosePaymentStep(g *game.Game, player game.PlayerID, planner p
 	}
 	selected := 0
 	if len(choices) > 1 {
+		kind := game.ChoicePayment
+		if step.Kind == payment.StepManaOutput {
+			kind = game.ChoiceResolution
+		}
 		selected = e.chooseChoice(g, agents, game.ChoiceRequest{
-			Kind: game.ChoicePayment, Player: player, Prompt: prompt, Options: options,
+			Kind: kind, Player: player, Prompt: prompt, Options: options,
 			MinChoices: 1, MaxChoices: 1, DefaultSelection: []int{0}, Private: private,
 		}, log)[0]
 	}
@@ -417,6 +494,8 @@ func (e *Engine) choosePaymentStep(g *game.Game, player game.PlayerID, planner p
 // costedManaOptions preserves each strategic source choice with a witness.
 // Opaque activations alone are intentionally outside the planner's contract.
 func (e *Engine) costedManaOptions(g *game.Game, player game.PlayerID, request payment.Request, partial payment.Partial) ([]payment.Step, []payment.Choice, []action.Action) {
+	g.BeginStaticSourceFrame()
+	defer g.EndStaticSourceFrame()
 	planner := e.PaymentPlanner(g)
 	state := &rulesPaymentState{g: g, engine: e}
 	var steps []payment.Step
@@ -430,10 +509,7 @@ func (e *Engine) costedManaOptions(g *game.Game, player game.PlayerID, request p
 			continue
 		}
 		key := payment.ManaAbilityKey{Source: candidate.Source, AbilityIndex: candidate.AbilityIndex}
-		if _, fixed := partial.ManaAbilities[key]; !fixed {
-			step := payment.Step{Kind: payment.StepManaAbility, Source: key.Source, Index: key.AbilityIndex}
-			finish = finish.With(step, payment.Choice{UseManaAbility: false})
-		}
+		finish = finish.With(nextCostedManaStep(partial, key), payment.Choice{UseManaAbility: false})
 	}
 	if plan, ok, _ := planner.Complete(request, finish); ok {
 		steps = append(steps, payment.Step{})
@@ -449,14 +525,14 @@ func (e *Engine) costedManaOptions(g *game.Game, player game.PlayerID, request p
 			continue
 		}
 		seen[key] = true
-		if _, fixed := partial.ManaAbilities[key]; fixed {
+		step := nextCostedManaStep(partial, key)
+		if step.ManaActivation.Val.Occurrence > 0 && !candidate.Reusable {
 			continue
 		}
-		step := payment.Step{Kind: payment.StepManaAbility, Source: key.Source, Index: key.AbilityIndex}
-		for _, choice := range planner.Options(request, partial, step) {
-			if choice.UseManaAbility {
-				steps, choices, opaque = append(steps, step), append(choices, choice), append(opaque, action.Action{})
-			}
+		choice := payment.Choice{UseManaAbility: true}
+		if plan, ok, _ := planner.Complete(request, partial.With(step, choice)); ok {
+			choice.Plan = plan
+			steps, choices, opaque = append(steps, step), append(choices, choice), append(opaque, action.Action{})
 		}
 	}
 	for _, act := range e.costedPaymentManaActions(g, player) {

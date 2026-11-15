@@ -115,6 +115,8 @@ func forecastTriggeredMana(g *game.Game, events []game.Event, payer game.PlayerI
 	paths := make([]map[string]bool, len(events))
 	for index := 0; index < len(events); index++ {
 		view := g.ResourceView(game.ResourceProjection{SpentDelayed: spent})
+		view.BeginStaticSourceFrame()
+		defer view.EndStaticSourceFrame()
 		triggers := manaEventTriggers(view, events[index])
 		if len(triggers) == 0 {
 			continue
