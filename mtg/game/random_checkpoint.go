@@ -69,10 +69,11 @@ func (g *Game) OpaquePaymentActive() bool {
 
 // RestoreOpaquePayment consumes a whole-world snapshot while preserving live
 // synchronous scopes and contexts. The caller repairs live object references
-// and finishes the random bookmark; IDGen's atomic value is never copied.
+// and finishes the random bookmark (CR 734.1–2); IDGen's atomic value is never
+// copied.
 // Execution diagnostics intentionally continue, so retries consume work budget.
 func (g *Game) RestoreOpaquePayment(before *Game) {
-	g.RestoreReversibleManaPayment(before)
+	g.restoreOpaquePaymentWorld(before)
 	g.Mode = before.Mode
 	g.IDGen.Restore(before.IDGen.Current())
 }

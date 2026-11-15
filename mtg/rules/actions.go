@@ -479,14 +479,14 @@ func (e *Engine) applyAction(g *game.Game, playerID game.PlayerID, act action.Ac
 }
 
 func (e *Engine) applyActionWithChoices(g *game.Game, playerID game.PlayerID, act action.Action, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	outcome, _ := e.attemptActionWithChoices(g, playerID, act, agents, log, nil)
+	outcome, _ := e.attemptActionWithChoices(g, playerID, act, agents, log)
 	return outcome == actionApplied
 }
 
 // attemptActionWithChoices takes act for playerID and returns the action taken:
 // act, with a cast's targets as finally chosen (CR 601.2c). A cast or
 // activation can be reversed after an opaque payment fails (CR 734.1).
-func (e *Engine) attemptActionWithChoices(g *game.Game, playerID game.PlayerID, act action.Action, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) (actionOutcome, action.Action) {
+func (e *Engine) attemptActionWithChoices(g *game.Game, playerID game.PlayerID, act action.Action, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (actionOutcome, action.Action) {
 	if synchronousSearchOrPayment(g) {
 		return actionFailed, act
 	}
@@ -504,7 +504,7 @@ func (e *Engine) attemptActionWithChoices(g *game.Game, playerID game.PlayerID, 
 		if !ok {
 			return actionFailed, act
 		}
-		outcome, targets := e.attemptCastSpellWithChoices(g, playerID, cast, agents, log, attempts)
+		outcome, targets := e.attemptCastSpellWithChoices(g, playerID, cast, agents, log)
 		if outcome == actionApplied {
 			cast.Targets = targets
 			if cast.Mutate && len(targets) == 1 {
@@ -515,7 +515,7 @@ func (e *Engine) attemptActionWithChoices(g *game.Game, playerID game.PlayerID, 
 		return outcome, act
 	}
 	if faceDown, ok := act.CastFaceDownPayload(); ok {
-		return e.attemptCastFaceDownWithChoices(g, playerID, faceDown, agents, log, attempts), act
+		return e.attemptCastFaceDownWithChoices(g, playerID, faceDown, agents, log), act
 	}
 	if activate, ok := act.ActivateAbilityPayload(); ok {
 		outcome := e.attemptActivateAbilityWithChoices(g, playerID, activate, agents, log)
@@ -552,7 +552,7 @@ func (e *Engine) applyNonCastAction(g *game.Game, playerID game.PlayerID, act ac
 		return outcome == actionApplied
 	case action.ActionCastFaceDown:
 		faceDown, ok := act.CastFaceDownPayload()
-		return ok && e.attemptCastFaceDownWithChoices(g, playerID, faceDown, agents, log, nil) == actionApplied
+		return ok && e.attemptCastFaceDownWithChoices(g, playerID, faceDown, agents, log) == actionApplied
 	case action.ActionDeclareAttackers:
 		attackers, ok := act.DeclareAttackersPayload()
 		return ok && combatEngine{e}.applyAttackersWithChoices(g, playerID, attackers, agents, log)

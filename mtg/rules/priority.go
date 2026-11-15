@@ -76,7 +76,7 @@ func (e *Engine) runPriorityLoop(g *game.Game, agents [game.NumPlayers]PlayerAge
 		entryIndex := lastEntryIndex(log)
 		eventsBefore := len(g.Events)
 
-		outcome, taken := e.attemptActionWithChoices(g, playerID, chosen, agents, log, nil)
+		outcome, taken := e.attemptActionWithChoices(g, playerID, chosen, agents, log)
 		switch outcome {
 		case actionFailed:
 			panic("applyAction failed for validated action")

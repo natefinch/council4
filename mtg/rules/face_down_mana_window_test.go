@@ -159,8 +159,7 @@ func TestFaceDownHandCastPaysWithPaymentTimeManaAbility(t *testing.T) {
 			t.Run("window declined", func(t *testing.T) {
 				clone := g.Clone()
 				agent := &faceDownWindowAgent{paymentManaAgent: paymentManaAgent{ability: "no such ability"}, cardID: cardID}
-				var attempts castAttempts
-				outcome, _ := engine.attemptActionWithChoices(clone, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, &attempts)
+				outcome, _ := engine.attemptActionWithChoices(clone, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{})
 				// CR 601.2g/h: declining a required source isn't a completable
 				// option; the offered default pays the whole locked total.
 				if outcome != actionApplied {
@@ -413,7 +412,7 @@ func TestFaceDownCastNotOfferedWhenManaAbilitiesFallShort(t *testing.T) {
 			}
 
 			agent := &manaSequenceAgent{abilities: []string{"Pay 1 life", "Sacrifice a creature"}}
-			outcome, _ := engine.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, nil)
+			outcome, _ := engine.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{})
 			if outcome != actionFailed || len(agent.activated) != 0 {
 				t.Fatalf("outcome=%v activated=%v, want the illegal face-down cast to fail before any payment", outcome, agent.activated)
 			}
@@ -485,7 +484,7 @@ func TestFaceDownCastOfferDoesNotRevealLibrary(t *testing.T) {
 				return
 			}
 			cast := actionBuild.castFaceDown(cardID, game.FaceFront, game.FaceDownMorph)
-			if outcome, _ := engine.attemptActionWithChoices(g, game.Player1, cast, agents, &TurnLog{}, nil); outcome != actionApplied || len(agent.activated) != 1 {
+			if outcome, _ := engine.attemptActionWithChoices(g, game.Player1, cast, agents, &TurnLog{}); outcome != actionApplied || len(agent.activated) != 1 {
 				t.Fatalf("outcome=%v activated=%v, want the Ritualist to pay the rest of {3}", outcome, agent.activated)
 			}
 			requireFaceDownSpell(t, g, cardID, game.FaceDownMorph, zone.Hand, 3)
@@ -521,7 +520,7 @@ func TestFaceDownGraveyardCastProbesWithCardOnStack(t *testing.T) {
 				t.Fatal("checking whether the face-down cast is payable changed the game")
 			}
 			agent := &manaSequenceAgent{abilities: []string{"number of creature cards"}}
-			outcome, _ := engine.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, nil)
+			outcome, _ := engine.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{})
 			if !withBears {
 				if outcome != actionFailed || len(agent.activated) != 0 || !slices.Equal(g.Players[game.Player1].Graveyard.All(), graveyard) {
 					t.Fatalf("outcome=%v activated=%v, want the illegal cast to fail untouched", outcome, agent.activated)

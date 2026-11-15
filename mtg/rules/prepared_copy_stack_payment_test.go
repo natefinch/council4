@@ -130,7 +130,7 @@ func TestPreparedCopyOnStackWhilePaying(t *testing.T) {
 	cast := action.CastSpellFaceFromZone(cardID, zone.Battlefield, game.FaceAlternate, nil, 0, nil)
 	agent := &preparedStackWindowAgent{priorityCastWindowAgent: &priorityCastWindowAgent{limit: -1}, g: g, permanent: permanent}
 
-	outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, nil)
+	outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{})
 
 	if outcome != actionApplied || agent.activated != 2 {
 		t.Fatalf("outcome = %v, activated = %d; want the cast applied with both lands", outcome, agent.activated)
@@ -175,7 +175,7 @@ func TestPreparedCopyDefaultsRetainCompletion(t *testing.T) {
 			life := g.Players[game.Player1].Life
 			cast := action.CastSpellFaceFromZone(cardID, zone.Battlefield, game.FaceAlternate, nil, 0, nil)
 			agent := &preparedStackWindowAgent{priorityCastWindowAgent: &priorityCastWindowAgent{limit: limit}, g: g, permanent: permanent}
-			outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, nil)
+			outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{})
 			if outcome != actionApplied {
 				t.Fatalf("outcome = %v; want both required sources to complete the cast (CR 601.2h)", outcome)
 			}
@@ -243,7 +243,7 @@ func TestPreparedCopyPhyrexianAnnouncementOnStackWhilePaying(t *testing.T) {
 	cast := action.CastSpellAction{CardID: token.ObjectID, SourceZone: zone.Battlefield, Face: game.FaceAlternate,
 		Targets: []game.Target{game.PlayerTarget(game.Player2)}}
 
-	outcome, _ := e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, nil)
+	outcome, _ := e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{})
 
 	if outcome != actionApplied || agent.activated != 1 ||
 		!slices.Equal(agent.steps, []string{"phyrexian", "target", "window"}) {
@@ -274,7 +274,7 @@ func TestPreparedCopyManaIntentionUsesRequiredSource(t *testing.T) {
 		Targets: []game.Target{game.PlayerTarget(game.Player2)}}
 	agent := &preparedPhyrexianWindowAgent{phyrexianWindowAgent: &phyrexianWindowAgent{payMana: true}, g: g, token: token}
 
-	outcome, _ := e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, nil)
+	outcome, _ := e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{})
 
 	if outcome != actionApplied ||
 		!slices.Equal(agent.steps, []string{"phyrexian", "target", "window"}) {
@@ -338,7 +338,7 @@ func TestPreparedCopyNotItsOwnTarget(t *testing.T) {
 	cast := action.CastSpellAction{CardID: token.ObjectID, SourceZone: zone.Battlefield, Face: game.FaceAlternate,
 		Targets: []game.Target{game.StackObjectTarget(bolt.ID)}}
 
-	outcome, _ := e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, nil)
+	outcome, _ := e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{})
 
 	if outcome != actionApplied || !slices.Equal(agent.steps, []string{"phyrexian", "target"}) {
 		t.Fatalf("outcome = %v, steps = %v; want 2 life announced before the target", outcome, agent.steps)

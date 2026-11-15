@@ -182,7 +182,7 @@ func TestPriorityPhyrexianAnnouncedBeforeTargets(t *testing.T) {
 
 			outcome, _ := e.attemptCastSpellWithChoices(g, game.Player1, action.CastSpellAction{
 				CardID: cardID, SourceZone: zone.Hand, Targets: []game.Target{game.PlayerTarget(game.Player2)},
-			}, reboundKickerAgents(agent), &TurnLog{}, nil)
+			}, reboundKickerAgents(agent), &TurnLog{})
 			ok := outcome == actionApplied
 			if !ok && outcome != actionReversed {
 				t.Fatalf("outcome=%v, want the cast applied or reversed", outcome)
@@ -315,7 +315,7 @@ func TestPhyrexianTargetsOfferedOnlyWithPayableCost(t *testing.T) {
 				life := g.Players[game.Player1].Life
 				agent := &announcedTargetAgent{phyrexianWindowAgent: &phyrexianWindowAgent{payLife: true}, target: opt.Val(targets["Scion"])}
 
-				outcome, taken := e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, nil)
+				outcome, taken := e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{})
 
 				offered := func(target game.Target) bool {
 					return slices.ContainsFunc(agent.offered, func(option []game.Target) bool {
@@ -378,9 +378,7 @@ func TestPreparedCopyPhyrexianAnnouncedBeforeTargets(t *testing.T) {
 		agent := &phyrexianWindowAgent{payMana: true}
 		cast := action.CastSpellAction{CardID: token.ObjectID, SourceZone: zone.Battlefield, Face: game.FaceAlternate,
 			Targets: []game.Target{game.PlayerTarget(game.Player2)}}
-		var attempts castAttempts
-
-		outcome, _ := e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, &attempts)
+		outcome, _ := e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{})
 		// Only the completable life announcement is offered (CR 601.2b/f/h).
 		if outcome != actionApplied || token.Prepared || g.Stack.Size() != 1 || g.Players[game.Player1].Life != life-2 ||
 			g.Execution.InvalidChoices != 0 {

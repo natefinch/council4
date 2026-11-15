@@ -218,48 +218,6 @@ func abilityCostSource(req AbilityRequest) (id.ID, zone.Type) {
 	return req.SourceCardID, req.SourceZone
 }
 
-// buildAbilityNonManaCostPlan plans the components of req's cost other than
-// its mana cost: the source's {T} and the additional costs.
-func buildAbilityNonManaCostPlan(s State, req AbilityRequest, tapSource bool, sourceCardID id.ID, sourceZone zone.Type) (additionalCostPlan, bool) {
-	if tapSource && (req.Source == nil || !canTapForAbility(s, req.Source)) {
-		return additionalCostPlan{}, false
-	}
-	return buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, clonePreferences(req.Prefs), req.Source, sourceCardID, sourceZone, 0)
-}
-
-// canPayAbilityNonManaCosts reports whether the components of req's cost other
-// than its mana cost can be paid from current resources.
-func canPayAbilityNonManaCosts(s State, req AbilityRequest) bool {
-	if req.Source == nil && req.SourceCardID == 0 {
-		return false
-	}
-	if req.XValue != 0 && !costHasVariableMana(manaCostPtr(req.ManaCost)) && !additionalCostsUseX(req.AdditionalCosts) {
-		return false
-	}
-	sourceCardID, sourceZone := abilityCostSource(req)
-	_, ok := buildAbilityNonManaCostPlan(s, req, hasTapCostOf(req.AdditionalCosts), sourceCardID, sourceZone)
-	return ok
-}
-
-func retryAbilityCostPlanAvoidingManaTapConflict(s State, req AbilityRequest, sourceCardID id.ID, sourceZone zone.Type, tapSource bool, previous additionalCostPlan) (additionalCostPlan, paymentPlan, bool) {
-	if len(previous.permanentsToTap) == 0 {
-		return additionalCostPlan{}, paymentPlan{}, false
-	}
-	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, manaCostPtr(req.ManaCost), req.XValue, abilityManaRestrictions(previous, tapSource, req.Source, false), spendContext{abilitySource: req.Source}, clonePreferences(req.Prefs))
-	if !ok {
-		return additionalCostPlan{}, paymentPlan{}, false
-	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, tapRetryPreferences(req.Prefs), req.Source, sourceCardID, sourceZone, 0, paymentPlanTappedPermanents(manaPlan)...)
-	if !ok {
-		return additionalCostPlan{}, paymentPlan{}, false
-	}
-	manaPlan, ok = buildPaymentPlanWithPreferences(s, req.PlayerID, manaCostPtr(req.ManaCost), req.XValue, abilityManaRestrictions(additional, tapSource, req.Source, true), spendContext{abilitySource: req.Source}, clonePreferences(req.Prefs))
-	if !ok {
-		return additionalCostPlan{}, paymentPlan{}, false
-	}
-	return additional, manaPlan, true
-}
-
 func additionalCostsUseX(costs []cost.Additional) bool {
 	for _, additional := range costs {
 		if additional.AmountFromX {
@@ -313,24 +271,6 @@ func additionalManaRestrictions(base map[id.ID]bool, additional additionalCostPl
 	}
 	reserveStunForAdditionalCosts(&restrictions, additional)
 	return restrictions
-}
-
-func tapRetryPreferences(prefs *Preferences) *Preferences {
-	cloned := clonePreferences(prefs)
-	if cloned != nil {
-		cloned.TapChoices = nil
-	}
-	return cloned
-}
-
-func paymentPlanTappedPermanents(plan paymentPlan) []*game.Permanent {
-	permanents := make([]*game.Permanent, 0, len(plan.manaTaps)+len(plan.convokeTaps)+len(plan.improviseTaps))
-	for _, tap := range plan.manaTaps {
-		permanents = append(permanents, tap.permanent)
-	}
-	permanents = append(permanents, plan.convokeTaps...)
-	permanents = append(permanents, plan.improviseTaps...)
-	return permanents
 }
 
 // AbilityCostPayment carries the results of paying an ability's activation cost:
@@ -479,25 +419,6 @@ func buildGenericCostPlan(s State, req GenericRequest) (spellCostPlan, bool) {
 	return plan, true
 }
 
-func retryGenericCostPlanAvoidingManaTapConflict(s State, req GenericRequest, previous additionalCostPlan) (additionalCostPlan, paymentPlan, bool) {
-	if len(previous.permanentsToTap) == 0 {
-		return additionalCostPlan{}, paymentPlan{}, false
-	}
-	manaPlan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, additionalManaRestrictions(req.Exclude, previous, false), spendContext{spell: req.Spell}, clonePreferences(req.Prefs))
-	if !ok {
-		return additionalCostPlan{}, paymentPlan{}, false
-	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, req.PlayerID, req.AdditionalCosts, req.XValue, tapRetryPreferences(req.Prefs), req.Source, req.SourceCardID, zone.None, 0, paymentPlanTappedPermanents(manaPlan)...)
-	if !ok {
-		return additionalCostPlan{}, paymentPlan{}, false
-	}
-	manaPlan, ok = buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, additionalManaRestrictions(req.Exclude, additional, true), spendContext{spell: req.Spell}, clonePreferences(req.Prefs))
-	if !ok {
-		return additionalCostPlan{}, paymentPlan{}, false
-	}
-	return additional, manaPlan, true
-}
-
 func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, targets []game.Target, bestowed bool, prefs *Preferences) (spellCostPlan, bool) {
 	plan := spellCostPlan{option: option}
 	if xValue < 0 || !option.locked &&
@@ -525,25 +446,6 @@ func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, 
 	}
 	plan.additional = witness.plan
 	return plan, true
-}
-
-func retrySpellCostPlanAvoidingManaTapConflict(s State, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, option spellCostOption, xValue int, prefs *Preferences, previous additionalCostPlan) (additionalCostPlan, paymentPlan, bool) {
-	if len(previous.permanentsToTap) == 0 {
-		return additionalCostPlan{}, paymentPlan{}, false
-	}
-	manaPlan, ok := buildSpellManaPlanForOption(s, playerID, cardID, sourceZone, option, xValue, additionalManaRestrictions(nil, previous, false), clonePreferences(prefs))
-	if !ok {
-		return additionalCostPlan{}, paymentPlan{}, false
-	}
-	additional, ok := buildAdditionalCostPlanForCosts(s, playerID, option.additionalCosts, xValue, tapRetryPreferences(prefs), nil, cardID, sourceZone, cardID, paymentPlanTappedPermanents(manaPlan)...)
-	if !ok {
-		return additionalCostPlan{}, paymentPlan{}, false
-	}
-	manaPlan, ok = buildSpellManaPlanForOption(s, playerID, cardID, sourceZone, option, xValue, additionalManaRestrictions(nil, additional, true), clonePreferences(prefs))
-	if !ok {
-		return additionalCostPlan{}, paymentPlan{}, false
-	}
-	return additional, manaPlan, true
 }
 
 // buildSpellManaPlanForOption pays option's mana cost, with mana alone when it

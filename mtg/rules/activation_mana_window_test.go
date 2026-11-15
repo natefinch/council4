@@ -235,7 +235,7 @@ func TestActivationPaysWithPaymentTimeManaAbilities(t *testing.T) {
 			life := g.Players[game.Player1].Life
 			agent := newActivationWindowAgent(route.order, top)
 
-			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
+			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{})
 
 			if outcome != actionApplied {
 				t.Fatalf("outcome = %v, want the ability activated", outcome)
@@ -287,7 +287,7 @@ func TestOptionalActivationManaWindow(t *testing.T) {
 			}
 			agent := newActivationWindowAgent(order, top)
 
-			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
+			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{})
 
 			if outcome != actionApplied {
 				t.Fatalf("outcome = %v, want Spellbomb's draw ability activated", outcome)
@@ -331,7 +331,7 @@ func TestActivationRetainsCompletionWhenManaChoicesDeclined(t *testing.T) {
 			}
 			life := g.Players[game.Player1].Life
 			agent := newActivationWindowAgent(route.order[:len(route.order)-1], top)
-			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
+			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{})
 			if outcome != actionApplied {
 				t.Fatalf("outcome = %v, want the retained completion applied", outcome)
 			}

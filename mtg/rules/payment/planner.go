@@ -97,44 +97,11 @@ func (p Planner) PrepareSpellCosts(req SpellRequest) []PreparedSpellCost {
 	return result
 }
 
-// CanPayPreparedNonManaCosts reports whether the non-mana components of
-// req.PreparedCost (sacrifices, discards, life and the other additional costs)
-// can be paid from current resources. Mana abilities activated while paying
-// (CR 601.2g) only add mana, so a total whose non-mana costs fail this check
-// cannot become payable by activating them.
-func (p Planner) CanPayPreparedNonManaCosts(req SpellRequest) bool {
-	if req.PreparedCost == nil {
-		return false
-	}
-	option := req.PreparedCost.option
-	_, ok := buildAdditionalCostPlanForCosts(p.s, req.PlayerID, option.additionalCosts, req.XValue, nil, nil, req.CardID, req.SourceZone, req.CardID)
-	return ok
-}
-
-// CanPaySpellCostsAsPreferred reports whether the player can currently pay req
-// as req.Prefs directs, honoring its cost option and its Phyrexian life and
-// mana choices, without applying the payment. With nil Prefs it is
-// CanPaySpellCosts.
-func (p Planner) CanPaySpellCostsAsPreferred(req SpellRequest) bool {
-	_, ok := buildSpellCostPlan(p.s, req)
-	return ok
-}
-
 // BuildAbilityCostPlan reports whether a payment plan can be built for the
 // activated ability described by req without applying it.
 func (p Planner) BuildAbilityCostPlan(req AbilityRequest) bool {
 	_, ok := buildAbilityCostPlan(p.s, req)
 	return ok
-}
-
-// CanPayAbilityNonManaCosts reports whether the components of the ability cost
-// req describes other than its mana cost (the source's {T}, sacrifices,
-// discards, life and the other additional costs) can be paid from current
-// resources. Mana abilities activated while paying (CR 602.2b, 601.2g) only
-// add mana, so a cost failing this check can't become payable by activating
-// them.
-func (p Planner) CanPayAbilityNonManaCosts(req AbilityRequest) bool {
-	return canPayAbilityNonManaCosts(p.s, req)
 }
 
 // PayAbilityCosts pays all costs for the activated ability described by req. It
