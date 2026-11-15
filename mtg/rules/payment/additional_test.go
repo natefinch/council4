@@ -215,8 +215,8 @@ func TestPreferredReturnPermanentsRejectsInvalidPreference(t *testing.T) {
 }
 
 // TestAdditionalCostPlanAssignsCompatiblePermanents plans a multi-permanent
-// sacrifice before a tap cost only one permanent can pay: the sacrifice leaves
-// that permanent for the tap cost even though it comes first on the
+// sacrifice before a return cost only one permanent can pay: the sacrifice leaves
+// that permanent for the return cost even though it comes first on the
 // battlefield (CR 601.2h), and three distinct permanents are still required.
 func TestAdditionalCostPlanAssignsCompatiblePermanents(t *testing.T) {
 	black := &game.Permanent{ObjectID: 1, Controller: game.Player1}
@@ -224,20 +224,20 @@ func TestAdditionalCostPlanAssignsCompatiblePermanents(t *testing.T) {
 	other := &game.Permanent{ObjectID: 3, Controller: game.Player1}
 	costs := []cost.Additional{
 		{Kind: cost.AdditionalSacrifice, Amount: 2},
-		{Kind: cost.AdditionalTapPermanents, Amount: 1, MatchCardColor: true, CardColor: color.Black},
+		{Kind: cost.AdditionalReturnToHand, Amount: 1, MatchCardColor: true, CardColor: color.Black},
 	}
 	colors := map[id.ID][]color.Color{1: {color.Black}, 2: {color.White}, 3: {color.White}}
 
 	state := colorMatchState{fakePaymentState: fakePaymentState{battlefield: []*game.Permanent{black, white, other}}, colors: colors}
 	plan, ok := buildAdditionalCostPlanForCosts(state, game.Player1, costs, 0, nil, nil, 0, zone.None, 0)
 	if !ok {
-		t.Fatal("payable sacrifice and tap costs were rejected")
+		t.Fatal("payable sacrifice and return costs were rejected")
 	}
 	if len(plan.sacrifices) != 2 || plan.sacrifices[0] != white || plan.sacrifices[1] != other {
 		t.Fatalf("sacrifices = %v, want the two white permanents", plan.sacrifices)
 	}
-	if len(plan.permanentsToTap) != 1 || plan.permanentsToTap[0] != black {
-		t.Fatalf("taps = %v, want the black permanent", plan.permanentsToTap)
+	if len(plan.returnsToHand) != 1 || plan.returnsToHand[0].permanent != black {
+		t.Fatalf("returns = %v, want the black permanent", plan.returnsToHand)
 	}
 
 	short := colorMatchState{fakePaymentState: fakePaymentState{battlefield: []*game.Permanent{black, white}}, colors: colors}

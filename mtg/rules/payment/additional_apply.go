@@ -11,6 +11,9 @@ import (
 )
 
 func additionalCostPlanStillValid(s State, player *game.Player, plan additionalCostPlan) bool {
+	if !additionalLibraryReservationsValid(s, plan) || !additionalResourcesDisjoint(plan) {
+		return false
+	}
 	if plan.untapSource != nil {
 		current, ok := s.PermanentByObjectID(plan.untapSource.ObjectID)
 		if !ok ||
@@ -136,7 +139,7 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) []game.PaidCostSu
 			// legal payment that removes nothing (CR 118.3, 602.2b).
 			amount = removal.source.Counters.Get(removal.kind)
 		}
-		if (!removal.all || amount > 0) && !s.RemoveCounters(plan.player, removal.source, removal.kind, amount) {
+		if amount > 0 && !s.RemoveCounters(plan.player, removal.source, removal.kind, amount) {
 			panic("additional cost plan became invalid while removing counters")
 		}
 		if removal.key != "" {
@@ -157,8 +160,13 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) []game.PaidCostSu
 			panic("additional cost plan became invalid while placing counters")
 		}
 	}
-	if plan.millAmount > 0 {
-		s.MillCards(plan.player, plan.millAmount)
+	for _, reveal := range plan.reveals {
+		s.EmitCardReveal(plan.player, plan.sourceCardID, reveal.cardID, reveal.zone)
+	}
+	// A permanent can be tapped and then sacrificed/returned for distinct
+	// costs, but it cannot leave the battlefield twice (CR 601.2h).
+	for _, permanentToTap := range plan.permanentsToTap {
+		s.SetTapped(permanentToTap, true)
 	}
 	for _, sacrifice := range plan.sacrifices {
 		key := plan.sacrificeSubjectKey(sacrifice.ObjectID)
@@ -171,9 +179,6 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) []game.PaidCostSu
 		} else if !s.SacrificePermanent(sacrifice) {
 			panic("additional cost plan became invalid while sacrificing permanents")
 		}
-	}
-	for _, permanentToTap := range plan.permanentsToTap {
-		s.SetTapped(permanentToTap, true)
 	}
 	for _, returned := range plan.returnsToHand {
 		if !s.MovePermanentToZone(returned.permanent, zone.Hand) {
@@ -199,26 +204,13 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) []game.PaidCostSu
 		}
 		subjects = append(subjects, paid...)
 	}
-	if plan.randomDiscardAmount > 0 {
-		keys := plan.randomDiscardSubjectKeys()
-		bound := slices.ContainsFunc(keys, func(key string) bool { return key != "" })
-		if bound {
-			paid, ok := s.PayRandomDiscardSubjects(plan.player, keys)
-			if !ok {
-				panic("additional cost plan became invalid while capturing random discarded subjects")
-			}
-			subjects = append(subjects, paid...)
-		} else if !s.DiscardAtRandom(plan.player, plan.randomDiscardAmount) {
-			panic("additional cost plan became invalid while discarding cards at random")
-		}
-	}
 	for _, exile := range plan.exiles {
+		if exile.zone == zone.Library {
+			continue
+		}
 		if !s.MoveCard(plan.player, exile.cardID, exile.zone, zone.Exile) {
 			panic("additional cost plan became invalid while exiling cards")
 		}
-	}
-	for _, reveal := range plan.reveals {
-		s.EmitCardReveal(plan.player, plan.sourceCardID, reveal.cardID, reveal.zone)
 	}
 	for _, evidence := range plan.evidence {
 		for _, card := range evidence.cards {
@@ -238,6 +230,27 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) []game.PaidCostSu
 		if !s.SetPlayerEnergyCounters(plan.player, player.EnergyCounters-plan.energyPaid) {
 			panic("additional cost plan failed to set energy counters")
 		}
+	}
+	// Random costs and library-to-public-zone costs are paid last (CR 601.2h).
+	for _, keys := range plan.randomDiscardBatches {
+		bound := slices.ContainsFunc(keys, func(key string) bool { return key != "" })
+		if bound {
+			paid, ok := s.PayRandomDiscardSubjects(plan.player, keys)
+			if !ok {
+				panic("additional cost plan became invalid while capturing random discarded subjects")
+			}
+			subjects = append(subjects, paid...)
+		} else if !s.DiscardAtRandom(plan.player, len(keys)) {
+			panic("additional cost plan became invalid while discarding cards at random")
+		}
+	}
+	for _, exile := range plan.exiles {
+		if exile.zone == zone.Library && !s.MoveCard(plan.player, exile.cardID, zone.Library, zone.Exile) {
+			panic("additional cost plan became invalid while exiling library cards")
+		}
+	}
+	if plan.millAmount > 0 {
+		s.MillCards(plan.player, plan.millAmount)
 	}
 	return subjects
 }

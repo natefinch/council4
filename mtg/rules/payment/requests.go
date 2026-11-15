@@ -174,13 +174,17 @@ type Preferences struct {
 	AlternativeIndex     int
 	PhyrexianLifeChoices []bool
 	phyrexianIndex       int
-	SacrificeChoices     []id.ID
-	TapChoices           []id.ID
-	ReturnChoices        []id.ID
-	DiscardChoices       []id.ID
-	ExileChoices         []id.ID
-	RevealChoices        []id.ID
-	EvidenceChoices      []id.ID
+	// Threshold component lengths keep flattened selections exact at application.
+	tapComponentCounts      []int
+	exileComponentCounts    []int
+	evidenceComponentCounts []int
+	SacrificeChoices        []id.ID
+	TapChoices              []id.ID
+	ReturnChoices           []id.ID
+	DiscardChoices          []id.ID
+	ExileChoices            []id.ID
+	RevealChoices           []id.ID
+	EvidenceChoices         []id.ID
 	// RemoveCounterChoices lists the counters chosen for an
 	// AdditionalRemoveCounterAmong cost, one entry per counter removed, each
 	// naming both the permanent and the counter kind. The same permanent and
@@ -312,6 +316,9 @@ func clonePreferences(prefs *Preferences) *Preferences {
 		PhyrexianLifeChoices:     append([]bool(nil), prefs.PhyrexianLifeChoices...),
 		PhyrexianManaOnly:        append([]bool(nil), prefs.PhyrexianManaOnly...),
 		phyrexianIndex:           prefs.phyrexianIndex,
+		tapComponentCounts:       append([]int(nil), prefs.tapComponentCounts...),
+		exileComponentCounts:     append([]int(nil), prefs.exileComponentCounts...),
+		evidenceComponentCounts:  append([]int(nil), prefs.evidenceComponentCounts...),
 		SacrificeChoices:         append([]id.ID(nil), prefs.SacrificeChoices...),
 		TapChoices:               append([]id.ID(nil), prefs.TapChoices...),
 		ReturnChoices:            append([]id.ID(nil), prefs.ReturnChoices...),

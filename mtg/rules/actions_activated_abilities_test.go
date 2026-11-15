@@ -669,8 +669,8 @@ func TestActivatedAbilityMillsCardsAsCost(t *testing.T) {
 	source := addCombatPermanent(g, game.Player1, activatedAbilityPermanent(&game.ActivatedAbility{
 		AdditionalCosts: []cost.Additional{{
 			Kind:   cost.AdditionalMill,
-			Text:   "Mill four cards",
-			Amount: 4,
+			Text:   "Mill two cards",
+			Amount: 2,
 		}},
 		Content: game.Mode{
 			Sequence: []game.Instruction{{Primitive: game.GainLife{
