@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"fmt"
 	"reflect"
 	"slices"
 	"strings"
@@ -18,6 +19,146 @@ import (
 	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
+
+type countedManaHistoryState struct {
+	payment.ManaState
+	forecasts   *int
+	inventories *int
+}
+
+func (s countedManaHistoryState) ProjectResources(resources game.ResourceProjection) payment.State {
+	return countedManaHistoryState{ManaState: s.ManaState.ProjectResources(resources).(payment.ManaState), forecasts: s.forecasts, inventories: s.inventories}
+}
+
+func (s countedManaHistoryState) ManaActivationCandidates(player game.PlayerID) []payment.ManaActivationCandidate {
+	if s.inventories != nil {
+		*s.inventories++
+	}
+	return s.ManaState.ManaActivationCandidates(player)
+}
+
+func (s countedManaHistoryState) ForecastMana(player game.PlayerID, candidate payment.ManaActivationCandidate) ([]payment.ManaProduction, game.ResourceProjection, bool) {
+	*s.forecasts++
+	return s.ManaState.ForecastMana(player, candidate)
+}
+
+func TestManaHistoryPresentResourcesNeedNoActivationSearch(t *testing.T) {
+	e, g := newEffectiveCascadeGame()
+	addChosenTypePermanent(t, g, game.Player1, "Arcane Adaptation", types.Warrior)
+	island := addCombatPermanent(g, game.Player1, registryCardDef(t, "Island"))
+	g.Players[game.Player1].ManaPool.Add(mana.U, 1)
+	forecasts, inventories := 0, 0
+	state := countedManaHistoryState{ManaState: &rulesPaymentState{g: g, engine: e}, forecasts: &forecasts, inventories: &inventories}
+	manaCost := cost.Mana{cost.U}
+	request := payment.ForGeneric(payment.GenericRequest{PlayerID: game.Player1, Cost: &manaCost})
+	plan, ok, reason := payment.New(state).Complete(request, payment.Partial{})
+	if !ok {
+		t.Fatal(reason)
+	}
+	if _, ok, reason := payment.New(state).Apply(plan); !ok {
+		t.Fatal(reason)
+	}
+	if len(plan.Mana().Activations) != 0 || forecasts != 0 || inventories != 0 ||
+		island.Tapped || g.Players[game.Player1].ManaPool.Total() != 0 {
+		t.Fatal("a witnessed pool-only payment searched or activated unrelated mana sources")
+	}
+}
+
+func TestManaHistoryUsesDirectWitnessWithoutSubsetSearch(t *testing.T) {
+	for _, sources := range []int{4, 6, 8} {
+		t.Run(fmt.Sprint(sources), func(t *testing.T) {
+			e, g := newEffectiveCascadeGame()
+			addChosenTypePermanent(t, g, game.Player1, "Arcane Adaptation", types.Warrior)
+			addChosenTypePermanent(t, g, game.Player2, "Arcane Adaptation", types.Elf)
+			var islands []*game.Permanent
+			for range sources {
+				islands = append(islands, addCombatPermanent(g, game.Player1, registryCardDef(t, "Island")))
+			}
+			forecasts := 0
+			state := countedManaHistoryState{ManaState: &rulesPaymentState{g: g, engine: e}, forecasts: &forecasts}
+			if state.OrdinaryManaOnly(game.Player1) {
+				t.Fatal("the continuous-effect fixture did not exercise the canonical history search")
+			}
+			manaCost := cost.Mana{cost.O(sources - 2), cost.U, cost.U}
+			request := payment.ForGeneric(payment.GenericRequest{PlayerID: game.Player1, Cost: &manaCost})
+			before := g.Clone()
+			plan, ok, reason := payment.New(state).Complete(request, payment.Partial{})
+			if !ok {
+				t.Fatal(reason)
+			}
+			if len(plan.Mana().Activations) != sources || forecasts > sources {
+				t.Fatalf("%d sources needed %d forecasts for %d activations, want one witnessed history",
+					sources, forecasts, len(plan.Mana().Activations))
+			}
+			if !reflect.DeepEqual(g.Clone(), before) {
+				t.Fatal("planning the direct history changed live game state")
+			}
+			if _, ok, reason := payment.New(state).Apply(plan); !ok {
+				t.Fatal(reason)
+			}
+			if forecasts > 2*sources || g.Players[game.Player1].ManaPool.Total() != 0 {
+				t.Fatalf("fixed-allocation revalidation used %d forecasts or left unpaid mana", forecasts)
+			}
+			for _, island := range islands {
+				if !island.Tapped {
+					t.Fatal("the exact history did not activate all selected Islands")
+				}
+			}
+		})
+	}
+}
+
+func TestManaHistoryStopsAfterReachableResourcesAreExhausted(t *testing.T) {
+	e, g := newEffectiveCascadeGame()
+	for range 2 {
+		treasure := addTreasureTokenPermanent(g, game.Player1)
+		treasure.TokenDef = testTreasureToken()
+	}
+	forecasts := 0
+	state := countedManaHistoryState{ManaState: &rulesPaymentState{g: g, engine: e}, forecasts: &forecasts}
+	manaCost := cost.Mana{cost.U, cost.U, cost.U}
+	request := payment.ForGeneric(payment.GenericRequest{PlayerID: game.Player1, Cost: &manaCost})
+	before := g.Clone()
+	if _, ok, _ := payment.New(state).Complete(request, payment.Partial{}); ok {
+		t.Fatal("two Treasures paid for three mana")
+	}
+	// Five output choices per Treasure do not permit ten activations. Once
+	// every two-activation history is exhausted, deeper limits add no work.
+	if forecasts > 150 {
+		t.Fatalf("the finite two-activation graph was repeatedly searched: %d forecasts", forecasts)
+	}
+	if !reflect.DeepEqual(g.Clone(), before) {
+		t.Fatal("exhausting the resource graph changed the live game")
+	}
+}
+
+func TestManaHistoryRejectedDirectWitnessStillFindsCompletion(t *testing.T) {
+	e, g := newEffectiveCascadeGame()
+	island := addCombatPermanent(g, game.Player1, registryCardDef(t, "Island"))
+	myr := addCombatPermanent(g, game.Player1, registryCardDef(t, "Silver Myr"))
+	addOptionalTriggeredPermanent(g, game.Player1, &game.TriggerPattern{
+		Event: game.EventManaProduced, Controller: game.TriggerControllerYou, RequireManaProducedByLand: true,
+	}, []game.Instruction{{Primitive: game.AddMana{ManaColor: mana.U, Amount: game.Fixed(1)}}}, nil)
+	manaCost := cost.Mana{cost.U}
+	request := payment.ForGeneric(payment.GenericRequest{PlayerID: game.Player1, Cost: &manaCost})
+	before := g.Clone()
+	plan, ok, reason := e.PaymentPlanner(g).Complete(request, payment.Partial{})
+	if !ok {
+		t.Fatal(reason)
+	}
+	if !reflect.DeepEqual(g.Clone(), before) {
+		t.Fatal("the rejected land forecast changed the live game")
+	}
+	if activations := plan.Mana().Activations; len(activations) != 1 || activations[0].Source != myr.ObjectID {
+		t.Fatal("an opaque direct history was accepted or prevented the alternate complete witness")
+	}
+	if _, ok, reason := e.PaymentPlanner(g).Apply(plan); !ok {
+		t.Fatal(reason)
+	}
+	if island.Tapped || !myr.Tapped || g.Players[game.Player1].ManaPool.Total() != 0 {
+		t.Fatal("the exact alternate witness was not applied")
+	}
+}
 
 // Official CR effective 2026-11-06: 605.1a/b, 605.3a/b, 605.4,
 // 106.12, 118.3c, 601.2g/h. City of Brass's ordinary tap trigger is not a

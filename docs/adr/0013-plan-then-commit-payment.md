@@ -86,6 +86,19 @@ Engine. Planning uses structural activation schemas and a resource-only
 copy-on-write evaluation view, not `Game.Clone` or speculative activation.
 The view resets transient evaluation/choice frames; the payment adapter
 rejects mutations and translates permanent references by ObjectID.
+An exact payment from present resources is checked before enumerating mana
+abilities at all. When contextual effects rule out the ordinary-only fast path, a direct
+automatic-source allocation can still supply a candidate history. The search
+revalidates every cost, production and effect through the canonical resource
+forecast before accepting that history. A rejected candidate falls through to
+the complete search; it never proves unpayability. Exact allocation receipts
+are revalidated only at their fixed activation count, not after enumerating
+shorter histories that cannot match the receipt. Iterative deepening also stops
+when no branch reaches its depth: the reachable resource graph is then fully
+exhausted, independent of the conservative maximum activation count.
+This avoids subset enumeration
+for ordinary land payments under unrelated continuous effects while preserving
+strategic sources, occurrence choices and opaque-context rejection.
 
 Plans retain exact activation costs, bounded choices, production units and
 spend riders. The shared canonical production, life, counter-replacement and
