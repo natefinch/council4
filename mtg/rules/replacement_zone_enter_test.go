@@ -475,6 +475,28 @@ func TestEntersTappedUnlessPaidFixedManaCostUnchanged(t *testing.T) {
 	}
 }
 
+func TestEntersTappedUnlessPaidPlansGroveWhileEntrantIsPending(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	grove := addCombatPermanent(g, game.Player1, registryCardDef(t, "Waterlogged Grove"))
+	def := etbManaPaymentCard(game.ResolutionPayment{ManaCost: opt.Val(cost.Mana{cost.G})})
+	cardID := addCardToHand(g, game.Player1, def)
+	windows := 0
+	agent := &costedObservationAgent{t: t, choose: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+		if permanentByCardID(g, cardID) != nil {
+			t.Fatal("entry payment exposed the entrant as a battlefield resource")
+		}
+		if req.Prompt == "Activate a mana ability while paying?" {
+			windows++
+		}
+		return req.DefaultSelection
+	}}
+	permanent, ok := createCardPermanentWithChoices(engine, g, g.CardInstances[cardID], game.Player1, zone.Hand, reboundKickerAgents(agent), &TurnLog{})
+	if !ok || permanent.Tapped || !grove.Tapped || g.Players[game.Player1].Life != 39 || windows != 1 {
+		t.Fatal("pending-entry payment did not share the planned Grove activation")
+	}
+}
+
 func TestEntersTappedUnlessPaidUnsupportedDynamicContextFailsClosed(t *testing.T) {
 	multiplier := game.DynamicAmount{
 		Kind:   game.DynamicAmountObjectPower,

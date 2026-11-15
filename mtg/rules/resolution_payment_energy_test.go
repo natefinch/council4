@@ -8,6 +8,43 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+func TestResolutionPaymentPlansSideEffectingManaBeforeDraw(t *testing.T) {
+	for _, decline := range []bool{false, true} {
+		t.Run(map[bool]string{false: "pay", true: "decline"}[decline], func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			grove := addCombatPermanent(g, game.Player1, registryCardDef(t, "Waterlogged Grove"))
+			drawn := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+			addInstructionSpellToStack(g, []game.Instruction{
+				{Primitive: game.Pay{Payment: game.ResolutionPayment{ManaCost: opt.Val(cost.Mana{cost.G})}}, PublishResult: "paid"},
+				{Primitive: game.Draw{Amount: game.Fixed(1), Player: game.ControllerReference()},
+					ResultGate: opt.Val(game.InstructionResultGate{Key: "paid", Succeeded: game.TriTrue})},
+			})
+			windows := 0
+			agent := &costedObservationAgent{t: t, choose: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+				if req.Kind == game.ChoiceMay && decline {
+					return []int{0}
+				}
+				if req.Prompt == "Activate a mana ability while paying?" {
+					windows++
+					if grove.Tapped || g.Players[game.Player1].Life != 40 {
+						t.Fatal("planning applied the Grove's tap/life cost before the payment choice")
+					}
+				}
+				return req.DefaultSelection
+			}}
+			engine.resolveTopOfStackWithChoices(g, reboundKickerAgents(agent), &TurnLog{})
+			if decline {
+				if windows != 0 || grove.Tapped || g.Players[game.Player1].Life != 40 || g.Players[game.Player1].Hand.Contains(drawn) {
+					t.Fatal("declined payment activated Grove or drew a card")
+				}
+			} else if windows != 1 || !grove.Tapped || g.Players[game.Player1].Life != 39 || !g.Players[game.Player1].Hand.Contains(drawn) {
+				t.Fatal("planned Grove did not pay the resolution cost and enable its result")
+			}
+		})
+	}
+}
+
 // TestResolutionPaymentEnergyAdditionalCost proves a "you may pay {E}{E}. If you
 // do, ..." resolution payment spends the controller's energy counters and gates
 // the consequence on the payment, backing the Kaladesh energy cycle's attack and

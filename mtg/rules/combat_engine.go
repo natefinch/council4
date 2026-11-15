@@ -157,23 +157,31 @@ func (ce combatEngine) runPriority(g *game.Game, agents [game.NumPlayers]PlayerA
 // requirements (CR 508.1b-d).
 func (ce combatEngine) declareAttackers(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	playerID := g.Turn.ActivePlayer
-	legal := ce.legalAttackers(g, playerID)
-	if len(legal) == 0 {
+	for {
+		legal := ce.legalAttackers(g, playerID)
+		if len(legal) == 0 {
+			return
+		}
+
+		chosen := ce.e.chooseAction(g, agents, playerID, legal, legal[len(legal)-1], action.ActionDeclareAttackers)
+		chosen = ce.completeDeclaration(g, playerID, chosen, agents, log)
+
+		actionLog := combatActionLog(g, playerID, chosen)
+		actionLog.DecisionMaker = g.DecisionMaker(playerID, game.DecisionRules)
+		log.addAction(&actionLog)
+
+		attackers, ok := chosen.DeclareAttackersPayload()
+		if !ok {
+			panic("invalid attacker declaration")
+		}
+		if !ce.applyAttackersWithChoices(g, playerID, attackers, agents, log) {
+			// Only an opaque mana activation can lose the validated payment
+			// witness. The shared procedure reversed it; declare again.
+			continue
+		}
+		ce.e.notifyActionObservers(g, agents, playerID, chosen)
 		return
 	}
-
-	chosen := ce.e.chooseAction(g, agents, playerID, legal, legal[len(legal)-1], action.ActionDeclareAttackers)
-	chosen = ce.completeDeclaration(g, playerID, chosen, agents, log)
-
-	actionLog := combatActionLog(g, playerID, chosen)
-	actionLog.DecisionMaker = g.DecisionMaker(playerID, game.DecisionRules)
-	log.addAction(&actionLog)
-
-	attackers, ok := chosen.DeclareAttackersPayload()
-	if !ok || !ce.applyAttackersWithChoices(g, playerID, attackers, agents, log) {
-		panic("applyAttackers failed for validated action")
-	}
-	ce.e.notifyActionObservers(g, agents, playerID, chosen)
 }
 
 // declareBlockers runs the declare-blockers turn-based action for each defending
@@ -641,7 +649,7 @@ func (ce combatEngine) attackersLegal(g *game.Game, playerID game.PlayerID, decl
 // applyAttackersWithChoices applies a declaration and then offers the
 // attackers' optional enlist costs (CR 508.1j) to the attacking player.
 func (ce combatEngine) applyAttackersWithChoices(g *game.Game, playerID game.PlayerID, declare action.DeclareAttackersAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	if !ce.applyAttackers(g, playerID, declare) {
+	if !ce.applyAttackersWithPayment(g, playerID, declare, agents, log) {
 		return false
 	}
 	ce.payEnlistCosts(g, playerID, declare.Attackers, agents, log)
@@ -650,12 +658,16 @@ func (ce combatEngine) applyAttackersWithChoices(g *game.Game, playerID game.Pla
 
 // applyAttackers validates, pays attack taxes, taps and emits declaration events.
 func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, declare action.DeclareAttackersAction) bool {
+	return ce.applyAttackersWithPayment(g, playerID, declare, [game.NumPlayers]PlayerAgent{}, nil)
+}
+
+func (ce combatEngine) applyAttackersWithPayment(g *game.Game, playerID game.PlayerID, declare action.DeclareAttackersAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	if !ce.attackersLegal(g, playerID, declare) {
 		return false
 	}
 	eligibleByID := permanentMapByObjectID(eligibleAttackers(g, playerID))
 	if tax, ok := ce.attackTaxCost(g, declare.Attackers); ok {
-		if !ce.payAttackTax(g, playerID, declare.Attackers, tax) {
+		if !ce.payAttackTax(g, playerID, declare.Attackers, tax, agents, log) {
 			return false
 		}
 	}
@@ -984,8 +996,18 @@ func (ce combatEngine) canPayAttackTax(g *game.Game, playerID game.PlayerID, dec
 }
 
 // payAttackTax pays the attack tax for the given attack declarations.
-func (ce combatEngine) payAttackTax(g *game.Game, playerID game.PlayerID, declarations []game.AttackDeclaration, manaCost *cost.Mana) bool {
-	return paymentOrch.payGenericCost(g, payment.GenericRequest{PlayerID: playerID, Cost: manaCost, Exclude: ce.attackingPermanentExclusions(declarations)})
+func (ce combatEngine) payAttackTax(g *game.Game, playerID game.PlayerID, declarations []game.AttackDeclaration, manaCost *cost.Mana, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+	request := payment.GenericRequest{PlayerID: playerID, Cost: manaCost, Exclude: ce.attackingPermanentExclusions(declarations)}
+	present := func(g *game.Game) bool {
+		for _, declaration := range declarations {
+			attacker, ok := permanentByObjectID(g, declaration.Attacker)
+			if !ok || attacker.Tapped || attacker.PhasedOut || effectiveController(g, attacker) != playerID {
+				return false
+			}
+		}
+		return true
+	}
+	return ce.e.costedAction(g, playerID, costedAction{cost: genericRequestCost(request, present)}, agents, log) == actionApplied
 }
 
 // attackTaxCost computes the total attack-tax cost for the given declarations.

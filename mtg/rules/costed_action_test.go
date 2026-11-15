@@ -442,6 +442,63 @@ func TestCostedActionContextualOpaqueAutomaticSource(t *testing.T) {
 	}
 }
 
+func TestCostedGenericPaymentUsesSharedOpaqueFallback(t *testing.T) {
+	for _, contextual := range []bool{false, true} {
+		t.Run(map[bool]string{false: "structural", true: "contextual"}[contextual], func(t *testing.T) {
+			g, e, _, _ := costedOpaqueFixture(t, rand.New(&costedOpaqueSource{word: 37}), "battlefield")
+			if contextual {
+				for _, permanent := range g.Battlefield {
+					if permanentChoiceLabel(g, permanent) != "Opaque source" {
+						continue
+					}
+					card, _ := g.GetCardInstance(permanent.CardInstanceID)
+					card.Def.ManaAbilities = []game.ManaAbility{game.TapManaAbility(mana.C)}
+					card.Def.TriggeredAbilities = []game.TriggeredAbility{{
+						Optional: true,
+						Trigger:  game.TriggerCondition{Type: game.TriggerWhen, Pattern: game.TriggerPattern{Event: game.EventAbilityActivated, Source: game.TriggerSourceSelf}},
+						Content: game.Mode{Sequence: []game.Instruction{
+							{Primitive: game.Tap{Group: game.BattlefieldGroup(game.Selection{RequiredTypes: []types.Card{types.Land}, Controller: game.ControllerYou})}},
+							{Primitive: game.AddMana{Amount: game.Fixed(1), ManaColor: mana.C}},
+						}}.Ability(),
+					}}
+				}
+			}
+			before := g.Clone()
+			opaque := 0
+			agent := &costedObservationAgent{t: t, choose: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+				for _, option := range req.Options {
+					if strings.Contains(option.Label, "(opaque)") {
+						opaque++
+						return []int{option.Index}
+					}
+				}
+				return req.DefaultSelection
+			}}
+			manaCost := cost.Mana{cost.U}
+			req := payment.GenericRequest{PlayerID: game.Player1, Cost: &manaCost}
+			log := &TurnLog{}
+			if _, accepted, paid := e.genericPayment(g, req, "Pay {U}?", reboundKickerAgents(agent), log); !accepted || paid || opaque != 1 ||
+				!reflect.DeepEqual(g.Battlefield, before.Battlefield) || !reflect.DeepEqual(g.Players, before.Players) ||
+				!reflect.DeepEqual(g.Events, before.Events) || g.IDGen.Current() != before.IDGen.Current() || !g.Stack.IsEmpty() {
+				t.Fatal("generic payment did not use the single shared opaque reversal")
+			}
+			if len(log.Choices) != 1 || log.Choices[0].Request.Prompt != "Pay {U}?" {
+				t.Fatal("opaque payment reversal lost consent or retained failed payment choices")
+			}
+			reference := rand.New(&costedOpaqueSource{word: 37})
+			for range 3 {
+				if g.RNG.Uint64() != reference.Uint64() {
+					t.Fatal("generic opaque payment consumed the upstream random stream")
+				}
+			}
+			if _, accepted, paid := e.genericPayment(g, req, "Pay {U}?", [game.NumPlayers]PlayerAgent{}, &TurnLog{}); !accepted || !paid ||
+				g.Players[game.Player1].Life != 39 || g.Players[game.Player1].ManaPool.Total() != 0 {
+				t.Fatal("legal generic payment after reversal was withheld or paid incorrectly")
+			}
+		})
+	}
+}
+
 func TestCostedActionNestedOpaquePaymentSharesCheckpoint(t *testing.T) {
 	g, e, act, _ := costedOpaqueFixture(t, rand.New(&costedOpaqueSource{word: 37}), "battlefield")
 	var outer *game.Permanent
