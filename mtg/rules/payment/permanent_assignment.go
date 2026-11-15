@@ -84,6 +84,21 @@ func permanentCostSlots(s State, playerID game.PlayerID, costs []cost.Additional
 // distinct unreserved permanents. It is a bipartite matching of slot units to
 // permanents, found with augmenting paths, so it is exact and polynomial.
 func permanentSlotsAssignable(slots []permanentCostSlot, reserved map[id.ID]bool) bool {
+	resources := make([]resourceCostSlot, 0, len(slots))
+	for _, slot := range slots {
+		resources = append(resources, resourceCostSlot{candidates: permanentIDs(slot.candidates), amount: slot.amount})
+	}
+	return resourceSlotsAssignable(resources, reserved)
+}
+
+type resourceCostSlot struct {
+	candidates []id.ID
+	amount     int
+}
+
+// resourceSlotsAssignable is the shared capacitated-cost matching for permanent
+// and card IDs. A resource can be assigned to at most one consuming cost.
+func resourceSlotsAssignable(slots []resourceCostSlot, reserved map[id.ID]bool) bool {
 	var units []int
 	for i, slot := range slots {
 		for range slot.amount {
@@ -93,8 +108,7 @@ func permanentSlotsAssignable(slots []permanentCostSlot, reserved map[id.ID]bool
 	owner := make(map[id.ID]int, len(units))
 	var augment func(unit int, visited map[id.ID]bool) bool
 	augment = func(unit int, visited map[id.ID]bool) bool {
-		for _, permanent := range slots[units[unit]].candidates {
-			objectID := permanent.ObjectID
+		for _, objectID := range slots[units[unit]].candidates {
 			if reserved[objectID] || visited[objectID] {
 				continue
 			}

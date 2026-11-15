@@ -297,7 +297,8 @@ func TestCastSpellTapPermanentsCostRetriesAroundManaSource(t *testing.T) {
 	}
 }
 
-func TestCastSpellCannotReusePermanentForTapAndSacrificeCosts(t *testing.T) {
+// CR 601.2h permits paying the tap cost before sacrificing the same creature.
+func TestCastSpellCanTapThenSacrificeTheSamePermanent(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	spell := &game.CardDef{CardFace: game.CardFace{Name: "Double Offering",
@@ -309,7 +310,7 @@ func TestCastSpellCannotReusePermanentForTapAndSacrificeCosts(t *testing.T) {
 		SpellAbility: opt.Val(game.AbilityContent{})},
 	}
 	spellID := addCardToHand(g, game.Player1, spell)
-	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Only Creature",
+	onlyCreature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Only Creature",
 		Types:     []types.Card{types.Creature},
 		Power:     opt.Val(game.PT{Value: 1}),
 		Toughness: opt.Val(game.PT{Value: 1}),
@@ -317,44 +318,15 @@ func TestCastSpellCannotReusePermanentForTapAndSacrificeCosts(t *testing.T) {
 	setSorcerySpeedTurn(g, game.Player1)
 	act := action.CastSpell(spellID, nil, 0, nil)
 
-	if containsAction(engine.legalActions(g, game.Player1), act) {
-		t.Fatal("spell was legal by reusing one creature for tap and sacrifice costs")
-	}
-	if engine.applyAction(g, game.Player1, act) {
-		t.Fatal("applyAction(cast with one tap-and-sacrifice creature) = true, want false")
-	}
-
-	g = game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	engine = NewEngine(nil)
-	spellID = addCardToHand(g, game.Player1, spell)
-	onlyCreature := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Only Creature",
-		Types:     []types.Card{types.Creature},
-		Power:     opt.Val(game.PT{Value: 1}),
-		Toughness: opt.Val(game.PT{Value: 1}),
-	}})
-	second := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second Creature",
-		Types:     []types.Card{types.Creature},
-		Power:     opt.Val(game.PT{Value: 1}),
-		Toughness: opt.Val(game.PT{Value: 1}),
-	}})
-	setSorcerySpeedTurn(g, game.Player1)
-	act = action.CastSpell(spellID, nil, 0, nil)
 	if !containsAction(engine.legalActions(g, game.Player1), act) {
-		t.Fatal("spell with separate tap and sacrifice creatures was not legal")
+		t.Fatal("legal tap-then-sacrifice payment was not offered")
 	}
 	if !engine.applyAction(g, game.Player1, act) {
-		t.Fatal("applyAction(cast with separate tap and sacrifice creatures) = false, want true")
+		t.Fatal("legal tap-then-sacrifice payment was rejected")
 	}
-	_, firstStillPresent := permanentByObjectID(g, onlyCreature.ObjectID)
-	_, secondStillPresent := permanentByObjectID(g, second.ObjectID)
-	if firstStillPresent == secondStillPresent {
-		t.Fatalf("battlefield presence first/second = %v/%v, want one sacrificed and one tapped", firstStillPresent, secondStillPresent)
-	}
-	if firstStillPresent && !onlyCreature.Tapped {
-		t.Fatal("remaining first creature was not tapped")
-	}
-	if secondStillPresent && !second.Tapped {
-		t.Fatal("remaining second creature was not tapped")
+	if !onlyCreature.Tapped || permanentForCard(g, onlyCreature.CardInstanceID) != nil ||
+		!g.Players[game.Player1].Graveyard.Contains(onlyCreature.CardInstanceID) {
+		t.Fatal("the creature was not tapped before being sacrificed")
 	}
 }
 
@@ -486,8 +458,8 @@ func TestPaymentChoiceSelectsSacrificeAdditionalCost(t *testing.T) {
 // whose "Sacrifice a creature" cost comes before "Tap an untapped artifact you
 // control" while the only artifact is a creature first on the battlefield: the
 // sacrifice takes the other creature so the tap cost stays payable with a
-// distinct permanent (CR 602.2b, 601.2h), and with no other creature the
-// ability cannot be activated (#3917).
+// distinct permanent when available. With no other creature, tapping the Golem
+// before sacrificing it is legal (CR 602.2b, 601.2h).
 func TestActivatedAbilityPlansCompatibleSacrificeAndTapCosts(t *testing.T) {
 	for _, withOther := range []bool{true, false} {
 		g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -519,15 +491,15 @@ func TestActivatedAbilityPlansCompatibleSacrificeAndTapCosts(t *testing.T) {
 		g.Turn.Step = game.StepNone
 		act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
 
-		if got := containsAction(engine.legalActions(g, game.Player1), act); got != withOther {
+		if got := containsAction(engine.legalActions(g, game.Player1), act); !got {
 			t.Fatalf("with another creature = %v: ability legal = %v", withOther, got)
 		}
-		if got := engine.applyAction(g, game.Player1, act); got != withOther {
+		if got := engine.applyAction(g, game.Player1, act); !got {
 			t.Fatalf("with another creature = %v: applyAction = %v", withOther, got)
 		}
 		if !withOther {
-			if golem.Tapped || permanentForCard(g, golem.CardInstanceID) == nil {
-				t.Fatal("an unpayable activation paid part of its cost")
+			if !golem.Tapped || permanentForCard(g, golem.CardInstanceID) != nil {
+				t.Fatal("legal tap-then-sacrifice activation was not paid")
 			}
 			continue
 		}
