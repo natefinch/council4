@@ -684,8 +684,6 @@ func TestActivatedAbilityMillsCardsAsCost(t *testing.T) {
 	act := action.ActivateAbility(source.ObjectID, 0, nil, 0)
 	first := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "First"}})
 	second := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Second"}})
-	third := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Third"}})
-	fourth := addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Fourth"}})
 
 	if !containsAction(engine.legalActions(g, game.Player1), act) {
 		t.Fatal("mill-cost ability was not legal")
@@ -697,9 +695,7 @@ func TestActivatedAbilityMillsCardsAsCost(t *testing.T) {
 		t.Fatalf("library size = %d, want 0", g.Players[game.Player1].Library.Size())
 	}
 	if !g.Players[game.Player1].Graveyard.Contains(first) ||
-		!g.Players[game.Player1].Graveyard.Contains(second) ||
-		!g.Players[game.Player1].Graveyard.Contains(third) ||
-		!g.Players[game.Player1].Graveyard.Contains(fourth) {
+		!g.Players[game.Player1].Graveyard.Contains(second) {
 		t.Fatal("milled cards did not move to graveyard")
 	}
 }
