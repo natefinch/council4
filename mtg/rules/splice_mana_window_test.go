@@ -425,13 +425,9 @@ func TestFreeCastSpliceOfferedWithPaymentTimeManaAbility(t *testing.T) {
 	}
 }
 
-// TestUnpaidFreeCastSpliceReversesCast chooses the splice on a free cast but
-// leaves Waterlogged Grove unused while paying. The locked total can't be
-// partly paid (CR 601.2h), so the cast is reversed (CR 733.1): the host returns
-// to hand with the Grove, life and pool untouched. As on the other free routes
-// whose cost has no Phyrexian payment to revise (such as rebound), the
-// reversed free cast isn't offered again.
-func TestUnpaidFreeCastSpliceReversesCast(t *testing.T) {
+// The selected splice keeps a complete payment witness: finishing without the
+// required Grove is not offered (CR 601.2h, 2026-11-06).
+func TestFreeCastSpliceCompletesRequiredPayment(t *testing.T) {
 	t.Parallel()
 	e, g := newEffectiveCascadeGame()
 	hostID := addCardToHand(g, game.Player1, cardd.DesperateRitual())
@@ -442,18 +438,18 @@ func TestUnpaidFreeCastSpliceReversesCast(t *testing.T) {
 	p.ManaPool.Add(mana.R, 1)
 	agent := &spliceManaAgent{splices: []string{"Desperate Ritual"}}
 
-	if e.chooseAndCastFreeSpellFromSource(g, p, game.Player1, hostID, zone.Hand, game.Selection{}, opt.V[int]{}, false, spliceManaAgents(agent), &TurnLog{}) {
-		t.Fatal("the free cast completed without paying the splice cost")
+	if !e.chooseAndCastFreeSpellFromSource(g, p, game.Player1, hostID, zone.Hand, game.Selection{}, opt.V[int]{}, false, spliceManaAgents(agent), &TurnLog{}) {
+		t.Fatal("the free cast failed to complete its selected splice payment")
 	}
 	if len(agent.offered) != 1 {
 		t.Fatalf("splice offers = %v, want the splice offered once", agent.offered)
 	}
-	if g.Stack.Size() != 0 || !p.Hand.Contains(hostID) || !p.Hand.Contains(spliceID) {
-		t.Fatalf("stack = %d, host in hand = %t; want the cast undone", g.Stack.Size(), p.Hand.Contains(hostID))
+	if g.Stack.Size() != 1 || p.Hand.Contains(hostID) || !p.Hand.Contains(spliceID) {
+		t.Fatalf("stack = %d, host in hand = %t; want the cast completed", g.Stack.Size(), p.Hand.Contains(hostID))
 	}
-	requireLandsUnused(t, g, life, "Waterlogged Grove")
-	if p.ManaPool.Amount(mana.R) != 1 || p.ManaPool.Total() != 1 {
-		t.Fatalf("pool = %d, want {R} restored", p.ManaPool.Total())
+	requireSplicedHost(t, g, hostID, 1)
+	if !reboundPermanentNamed(t, g, "Waterlogged Grove").Tapped || p.Life != life-1 || p.ManaPool.Total() != 0 {
+		t.Fatal("splice cost was not fully paid")
 	}
 }
 

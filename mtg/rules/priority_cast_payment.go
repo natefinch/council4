@@ -44,10 +44,13 @@ func (s *costedSpellSource) cancel(g *game.Game) {
 
 // Availability reads the same CR 601.2a state as execution, without a Clone,
 // speculative mana activation, ID allocation or mutation of the live graph.
-func priorityCastView(g *game.Game, object *game.StackObject) *game.Game {
+func priorityCastView(g *game.Game, object *game.StackObject, sourcePlayer ...game.PlayerID) *game.Game {
 	view := g.ResourceView(game.ResourceProjection{})
 	if !object.Copy {
 		holder := castSourcePlayer(g, g.Players[object.Controller], object.SourceID, object.SourceZone)
+		if len(sourcePlayer) > 0 {
+			holder = g.Players[sourcePlayer[0]]
+		}
 		player := *holder
 		source := castSourceZone(&player, object.SourceZone)
 		if source == nil {

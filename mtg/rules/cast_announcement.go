@@ -20,7 +20,12 @@ func (e *Engine) chooseCastNumbers(g *game.Game, player game.PlayerID, def *game
 
 // chooseCastAnnouncements takes the caster's X, multikicker and mode choices
 // for cast (CR 601.2b).
-func (e *Engine) chooseCastAnnouncements(g *game.Game, player game.PlayerID, def *game.CardDef, cast action.CastSpellAction, free bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (action.CastSpellAction, bool) {
+func (e *Engine) chooseCastAnnouncements(g *game.Game, player game.PlayerID, def *game.CardDef, cast action.CastSpellAction, free bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog, announced ...func(action.CastSpellAction)) (action.CastSpellAction, bool) {
+	publish := func() {
+		for _, update := range announced {
+			update(cast)
+		}
+	}
 	private := cast.SourceZone == zone.Hand || cast.SourceZone == zone.Library
 	manaX := costHasVariableMana(manaCostPtr(def.ManaCost))
 	if free && manaX {
@@ -32,10 +37,12 @@ func (e *Engine) chooseCastAnnouncements(g *game.Game, player game.PlayerID, def
 		}
 		cast.XValue = e.chooseAnnouncementNumber(g, player, "Choose X.", minimum, max(minimum, cast.XValue), private, agents, log)
 	}
+	publish()
 	if spellHasMultikicker(def) {
 		cast.KickerCount = e.chooseAnnouncementNumber(g, player, "Choose how many times to pay multikicker.", 0,
 			effectiveKickerCount(cast.KickerPaid, cast.KickerCount), private, agents, log)
 		cast.KickerPaid = cast.KickerCount > 0
+		publish()
 	}
 	branch := castBranchForCast(cast)
 	if !modesValidForSpellAtBranch(g, player, def, cast.ChosenModes, branch) {
@@ -52,6 +59,7 @@ func (e *Engine) chooseCastAnnouncements(g *game.Game, player game.PlayerID, def
 			MinChoices: 1, MaxChoices: 1, DefaultSelection: []int{0}, Private: private,
 		}, log)
 		cast.ChosenModes = slices.Clone(modes[selected[0]])
+		publish()
 	}
 	return cast, true
 }

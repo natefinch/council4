@@ -34,6 +34,7 @@ func cloneProjection(p game.ResourceProjection) game.ResourceProjection {
 	}
 	p.LastKnown = maps.Clone(p.LastKnown)
 	p.SpentDelayed = maps.Clone(p.SpentDelayed)
+	p.CardMoves = slices.Clone(p.CardMoves)
 	return p
 }
 
@@ -65,6 +66,7 @@ func mergeProjection(base, delta game.ResourceProjection) game.ResourceProjectio
 	maps.Copy(p.LastKnown, delta.LastKnown)
 	maps.Copy(p.SpentDelayed, delta.SpentDelayed)
 	p.Events = append(p.Events, delta.Events...)
+	p.CardMoves = append(p.CardMoves, delta.CardMoves...)
 	return p
 }
 
@@ -122,7 +124,19 @@ func projectActivationCosts(s ManaState, playerID game.PlayerID, witness additio
 		p.Players[playerID] = resources
 		p.Events = append(p.Events, s.ProjectResources(p).(ManaState).PrepareManaEvent(game.Event{Kind: game.EventLifeLost, Player: playerID, Amount: lost}))
 	}
+	for _, discarded := range witness.plan.discards {
+		delta, ok := s.ProjectResources(p).(ManaState).ForecastCardCost(playerID, discarded, zone.Hand, zone.Graveyard, true)
+		if !ok {
+			return game.ResourceProjection{}, false
+		}
+		p = mergeProjection(p, delta)
+	}
 	for _, exile := range witness.plan.exiles {
+		delta, ok := s.ProjectResources(p).(ManaState).ForecastCardCost(playerID, exile.cardID, exile.zone, zone.Exile, false)
+		if !ok {
+			return game.ResourceProjection{}, false
+		}
+		p = mergeProjection(p, delta)
 		p.UnavailableCards[exile.cardID] = true
 	}
 	return p, true
@@ -313,7 +327,7 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 		}
 		reachedDepth = reachedDepth || len(activations) == depth
 		counts := manaOccurrenceCounts(activations)
-		key := fmt.Sprint(depth-len(activations), player.Life, player.EnergyCounters, player.ManaPool.Units(), player.ManaRiders, projection.Permanents, projection.Used, projection.UnavailableCards, projection.SpentDelayed)
+		key := fmt.Sprint(depth-len(activations), player.Life, player.EnergyCounters, player.ManaPool.Units(), player.ManaRiders, projection.Permanents, projection.Used, projection.UnavailableCards, projection.SpentDelayed, projection.CardMoves)
 		if historySensitive {
 			events := make(map[string]int)
 			for _, event := range projection.Events {
@@ -642,6 +656,8 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 					source, _ := s.PermanentByObjectID(candidate.Source)
 					limit += len(CandidatePermanentsForCost(s, playerID, additional, source)) / amount
 				}
+			case cost.AdditionalDiscard, cost.AdditionalExile:
+				limit += player.Hand.Size() + player.Graveyard.Size()
 			}
 		}
 	}

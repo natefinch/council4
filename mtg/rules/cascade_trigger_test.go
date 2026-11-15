@@ -627,8 +627,8 @@ func TestCascadeDeclineOfferedForTargetedHit(t *testing.T) {
 			}
 			request := agent.requests[0]
 			castOptions := len(request.Options) - 1
-			if castOptions < 2 || !strings.HasPrefix(request.Options[castOptions].Label, "Don't cast") {
-				t.Fatalf("options = %+v, want several Lightning Bolt targets followed by the decline", request.Options)
+			if castOptions != 1 || len(request.Options[0].Targets) != 0 || !strings.HasPrefix(request.Options[castOptions].Label, "Don't cast") {
+				t.Fatalf("options = %+v, want consent without bundled targets (601.2a-c)", request.Options)
 			}
 			objects := g.Stack.Objects()
 			if decline {
@@ -637,7 +637,7 @@ func TestCascadeDeclineOfferedForTargetedHit(t *testing.T) {
 				}
 				return
 			}
-			want := request.Options[0].Targets
+			want := []game.Target{game.PlayerTarget(game.Player1)}
 			if len(objects) != 2 || objects[1].SourceID != boltID || len(objects[1].Targets) != 1 ||
 				len(want) != 1 || objects[1].Targets[0] != want[0] {
 				t.Fatalf("stack = %+v, want Lightning Bolt cast at %v above Bloodbraid Elf", objects, want)

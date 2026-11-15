@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 func TestResourceViewIsolatesProjectedRecordsAndTransientFrames(t *testing.T) {
@@ -35,5 +36,29 @@ func TestResourceViewIsolatesProjectedRecordsAndTransientFrames(t *testing.T) {
 	if p.Tapped || p.Counters.Get(counter.Charge) != 1 || g.Players[0].Life != 40 || g.Players[0].ManaPool.Total() != 0 ||
 		len(g.Battlefield) != 2 || len(g.Events) != 0 || len(g.ActivatedAbilitiesThisTurn) != 0 {
 		t.Fatal("projected resource storage leaked into the original game")
+	}
+}
+
+func TestResourceViewProjectsSuccessiveCardCostsWithoutMovingLiveCards(t *testing.T) {
+	g := NewGame([NumPlayers]PlayerConfig{})
+	card := id.ID(1)
+	g.CardInstances[card] = &CardInstance{ID: card, Owner: Player1, ZoneVersion: 4}
+	g.Players[Player1].Hand.Add(card)
+	ids := g.IDGen.Current()
+	view := g.ResourceView(ResourceProjection{CardMoves: []ResourceCardMove{
+		{Player: Player1, Card: card, From: zone.Hand, To: zone.Graveyard},
+		{Player: Player1, Card: card, From: zone.Graveyard, To: zone.Exile},
+	}})
+	if view.Players[Player1].Hand.Contains(card) || view.Players[Player1].Graveyard.Contains(card) ||
+		!view.Players[Player1].Exile.Contains(card) || view.CardInstances[card].ZoneVersion != 6 {
+		t.Fatalf("successive cost moves: hand=%v grave=%v exile=%v version=%d", view.Players[Player1].Hand.All(),
+			view.Players[Player1].Graveyard.All(), view.Players[Player1].Exile.All(), view.CardInstances[card].ZoneVersion)
+	}
+	view.Players[Player1].Exile.Remove(card)
+	view.CardInstances[card].ZoneVersion++
+	if !g.Players[Player1].Hand.Contains(card) || g.Players[Player1].Graveyard.Contains(card) ||
+		g.Players[Player1].Exile.Contains(card) || g.CardInstances[card].ZoneVersion != 4 ||
+		g.IDGen.Current() != ids || len(g.Events) != 0 {
+		t.Fatal("resource cost projection mutated live zones, identity or events")
 	}
 }
