@@ -124,8 +124,12 @@ func triggerMatchesEvent(g *game.Game, source *game.Permanent, pattern *game.Tri
 func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sourceController game.PlayerID, pattern *game.TriggerPattern, event game.Event) bool {
 	// Legacy tapped-for-a-color declarations observe actual production, when the
 	// color is known, not the earlier tap paid as an activation cost.
+	if pattern.Event == game.EventPermanentTapped && pattern.RequireTappedForMana &&
+		event.Kind == game.EventPermanentTapped && len(event.ProducedManaColors) == 0 {
+		return false
+	}
 	if pattern.Event == game.EventPermanentTapped && event.Kind == game.EventManaProduced && event.TappedForMana &&
-		(pattern.RequireProducedManaColor != "" || pattern.RequireProducedManaColorFromEntryChoice) {
+		(pattern.RequireTappedForMana || pattern.RequireProducedManaColor != "" || pattern.RequireProducedManaColorFromEntryChoice) {
 		event.Kind = game.EventPermanentTapped
 	}
 	if pattern.Event == game.EventUnknown || !patternMatchesEventKind(pattern, event.Kind) {

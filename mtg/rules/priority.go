@@ -168,7 +168,11 @@ func recordActionSource(g *game.Game, playerID game.PlayerID, actionLog *ActionL
 	if !ok {
 		return
 	}
-	actionLog.addPermanentSnapshot(g, payload.SourceID)
+	if card, _, ok := handManaAbilitySource(g, playerID, payload.SourceID, payload.AbilityIndex); ok {
+		actionLog.PermanentSources = map[id.ID]id.ID{payload.SourceID: card.ID}
+	} else {
+		actionLog.addPermanentSnapshot(g, payload.SourceID)
+	}
 	actionLog.ManaAbility = isManaAbilityActivation(g, playerID, payload)
 	actionLog.AbilityText = activatedAbilityText(g, playerID, payload)
 	actionLog.AbilityEffectSummary = activatedAbilityEffectSummary(g, playerID, payload)
@@ -220,6 +224,16 @@ func activatedAbilityEffectSummary(g *game.Game, playerID game.PlayerID, activat
 // identified (printedAbilityParagraphs), and otherwise to the source's full
 // oracle text. It returns "" when no text is available.
 func activatedAbilityText(g *game.Game, playerID game.PlayerID, activate action.ActivateAbilityAction) string {
+	if card, body, ok := handManaAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
+		if text := strings.TrimSpace(body.Text); text != "" {
+			return text
+		}
+		def := cardFaceOrDefault(card, game.FaceFront)
+		if text := printedAbilityParagraph(&def.CardFace, def.OracleText, activate.AbilityIndex); text != "" {
+			return text
+		}
+		return strings.TrimSpace(def.OracleText)
+	}
 	if _, body, ok := activatedAbilitySource(g, playerID, activate.SourceID, activate.AbilityIndex); ok {
 		if text := strings.TrimSpace(game.BodyText(body)); text != "" {
 			return text

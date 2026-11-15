@@ -16,18 +16,22 @@ import (
 // and adds one green mana when the controller taps their own creature for mana.
 func TestLeylineOfAbundanceAddsGreenWhenControllerTapsCreatureForMana(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.TurnNumber = 2
 	engine := NewEngine(nil)
 	addCombatPermanent(g, game.Player1, cards.LeylineOfAbundance())
-	creature := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	def := cards.LlanowarElves()
+	creature := addCombatPermanent(g, game.Player1, def)
 
-	setPermanentTappedForMana(g, creature)
-	if !engine.putTriggeredAbilitiesOnStack(g) {
-		t.Fatal("tap-for-mana trigger did not fire for the controller's creature")
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(creature.ObjectID, def.ManaAbilityIndex(0), nil, 0)) {
+		t.Fatal("creature mana ability did not activate")
+	}
+	if engine.putTriggeredAbilitiesOnStack(g) || g.Stack.Size() != 0 {
+		t.Fatal("CR 605.4a mana trigger did not resolve immediately")
 	}
 	engine.resolveTopOfStack(g, nil)
 
-	if got := g.Players[game.Player1].ManaPool.Amount(mana.G); got != 1 {
-		t.Fatalf("green mana added = %d, want 1", got)
+	if got := g.Players[game.Player1].ManaPool.Amount(mana.G); got != 2 {
+		t.Fatalf("green mana added = %d, want 2 (creature plus Leyline)", got)
 	}
 }
 
@@ -36,11 +40,16 @@ func TestLeylineOfAbundanceAddsGreenWhenControllerTapsCreatureForMana(t *testing
 // the controller's Leyline of Abundance.
 func TestLeylineOfAbundanceDoesNotTriggerForOpponentCreature(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	g.Turn.TurnNumber = 2
+	g.Turn.PriorityPlayer = game.Player2
 	engine := NewEngine(nil)
 	addCombatPermanent(g, game.Player1, cards.LeylineOfAbundance())
-	opponentCreature := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	def := cards.LlanowarElves()
+	opponentCreature := addCombatPermanent(g, game.Player2, def)
 
-	setPermanentTappedForMana(g, opponentCreature)
+	if !engine.applyAction(g, game.Player2, action.ActivateAbility(opponentCreature.ObjectID, def.ManaAbilityIndex(0), nil, 0)) {
+		t.Fatal("opponent creature mana ability did not activate")
+	}
 	if engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("tap-for-mana trigger fired for an opponent-controlled creature")
 	}
@@ -54,7 +63,9 @@ func TestLeylineOfAbundanceDoesNotTriggerForNoncreatureMana(t *testing.T) {
 	addCombatPermanent(g, game.Player1, cards.LeylineOfAbundance())
 	land := addBasicLandPermanent(g, game.Player1, types.Forest)
 
-	setPermanentTappedForMana(g, land)
+	if !engine.applyAction(g, game.Player1, action.ActivateAbility(land.ObjectID, 0, nil, 0)) {
+		t.Fatal("land mana ability did not activate")
+	}
 	if engine.putTriggeredAbilitiesOnStack(g) {
 		t.Fatal("tap-for-mana trigger fired for a noncreature (land) tapped for mana")
 	}

@@ -48,9 +48,17 @@ payments compete with all other life and mana costs. Random-discard components
 remain separate batches; random and library-to-public-zone costs are paid last.
 
 This implements the planner slice of [#3719](https://github.com/natefinch/council4/issues/3719).
-Deterministic side-effecting mana schemas and rules-route migration are the
-subsequent slices of [#3718](https://github.com/natefinch/council4/issues/3718);
-this API does not itself remove their existing payment windows or rewind paths.
+Deterministic side-effecting mana schemas are implemented by
+[#3720](https://github.com/natefinch/council4/issues/3720).
+`Engine.PaymentPlanner` binds the planner to canonical resource evaluators and
+mana activation operations. Resource projections are read-only; no ability is
+speculatively executed. Unsupported effect, condition, replacement or trigger
+contexts are explicitly opaque. `StepManaAbility` and `Partial.ManaAbilities`
+offer completion-preserving source choices. `ApplyResult.ManaBefore` records
+the pool after planned production and before the final spend, for exact rider
+accounting. Rules-route migration remains the subsequent slices of
+[#3718](https://github.com/natefinch/council4/issues/3718); existing payment
+windows and reversal paths are not yet removed.
 
 The `State` interface is the seam between the planner and the rules engine. It
 provides game queries and mutations that require rules knowledge, such as

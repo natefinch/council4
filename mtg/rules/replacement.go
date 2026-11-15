@@ -516,10 +516,7 @@ func replacementPermanentCounterPlacementAmount(g *game.Game, placementControlle
 			replacement = selectedReplacementEffect(matches, decision)
 		}
 		applied[replacement.ID] = true
-		if replacement.CounterMultiplier > 1 {
-			amount *= replacement.CounterMultiplier
-		}
-		amount += replacement.CounterAddend
+		amount = counterReplacementAmount(replacement, amount)
 	}
 }
 

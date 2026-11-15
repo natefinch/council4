@@ -527,6 +527,13 @@ func drainReadyEventDelayedTriggers(g *game.Game, events []game.Event) []pending
 		seenOneOrMoreBatch := make(map[triggerBatchKey]bool)
 		for j := range matchEvents {
 			matchEvent := matchEvents[j]
+			if matchEvent.ManaTriggersResolved {
+				body := trigger.Ability
+				body.Trigger.Pattern = trigger.EventPattern.Val
+				if triggeredManaAbility(&body, matchEvent) {
+					continue
+				}
+			}
 			// A "one or more ... this turn" delayed trigger fires once per
 			// simultaneous batch, not once per event (CR 603.3e), mirroring how
 			// ordinary triggered abilities coalesce OneOrMore pendings sharing a

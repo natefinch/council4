@@ -302,6 +302,12 @@ func unconditionalPaymentInstruction(instruction *game.Instruction) bool {
 		!instruction.ResultGate.Exists &&
 		!instruction.Optional &&
 		!instruction.OptionalActor.Exists &&
+		!instruction.OptionalActorGroup.Exists &&
+		!instruction.ForEachPlayerGroup.Exists &&
+		instruction.OptionalDecisionGate == "" &&
+		instruction.PublishOptionalDecision == "" &&
+		!instruction.TemptingOffer &&
+		len(instruction.TemptingOfferBody) == 0 &&
 		instruction.PublishResult == ""
 }
 

@@ -17,6 +17,8 @@ import (
 // player and source needed to build the StackObject, the triggering event, and
 // the mode/target choices made during preparation (CR 603.3c-d).
 type pendingTriggeredAbility struct {
+	manaDelayedID                id.ID
+	manaDelayedOneShot           bool
 	triggerOrigin                game.TriggerOrigin
 	controller                   game.PlayerID
 	sourceID                     id.ID
@@ -1007,6 +1009,9 @@ func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.Event
 func pendingTriggeredAbilitiesFromEvent(event game.Event) []pendingTriggeredAbility {
 	pending := make([]pendingTriggeredAbility, 0, len(event.TriggeredAbilities))
 	for _, captured := range event.TriggeredAbilities {
+		if event.ManaTriggersResolved && triggeredManaAbility(captured.Ability, event) {
+			continue
+		}
 		var wardTargetID id.ID
 		if event.Kind == game.EventObjectBecameTarget && captured.Ability != nil &&
 			game.BodyHasKeyword(captured.Ability, game.Ward) {
