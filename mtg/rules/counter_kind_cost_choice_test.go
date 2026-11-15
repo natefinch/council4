@@ -74,7 +74,12 @@ func (a *counterLabelAgent) ChooseChoice(_ PlayerObservation, request game.Choic
 		return request.DefaultSelection
 	}
 	want := a.picks[a.next]
-	a.next++
+	if request.MaxChoices == 1 && len(want) > 1 {
+		a.picks[a.next] = want[1:]
+		want = want[:1]
+	} else {
+		a.next++
+	}
 	var selected []int
 	for _, label := range want {
 		for _, option := range request.Options {
@@ -196,7 +201,7 @@ func TestKindSpecificAmongCostOffersOnlyThatKind(t *testing.T) {
 	if !e.applyActionWithChoices(g, game.Player1, activate, counterKindCostAgents(agent), &TurnLog{}) {
 		t.Fatal("registered Hopeful Initiate activation rejected")
 	}
-	wantLabels := [][]string{{"Hopeful Initiate: +1/+1 counter", "Counter Bear: +1/+1 counter", "Counter Bear: +1/+1 counter"}}
+	wantLabels := [][]string{{"Hopeful Initiate: +1/+1 counter", "Counter Bear: +1/+1 counter"}}
 	if got := agent.paymentLabels(); !slices.EqualFunc(got, wantLabels, slices.Equal[[]string]) {
 		t.Fatalf("payment prompts = %q, want %q", got, wantLabels)
 	}
@@ -278,8 +283,8 @@ func TestGnarlbarkElmRemovesTwoChosenCounters(t *testing.T) {
 	if !e.applyActionWithChoices(g, game.Player1, activate, counterKindCostAgents(agent), &TurnLog{}) {
 		t.Fatal("registered Gnarlbark Elm activation rejected")
 	}
-	if len(agent.paymentLabels()) != 1 || len(agent.paymentLabels()[0]) != 3 {
-		t.Fatalf("payment prompts = %q, want one prompt offering all three counters", agent.paymentLabels())
+	if len(agent.paymentLabels()) != 1 || len(agent.paymentLabels()[0]) != 2 {
+		t.Fatalf("payment prompts = %q, want a next-counter choice followed by the forced completion", agent.paymentLabels())
 	}
 	if elm.Counters.Get(counter.MinusOneMinusOne) != 1 || elm.Counters.Get(counter.Charge) != 0 {
 		t.Fatalf("counters = %v, want the charge counter and one -1/-1 counter removed", elm.Counters)

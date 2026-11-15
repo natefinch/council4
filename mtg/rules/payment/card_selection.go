@@ -18,6 +18,7 @@ import (
 // reveal vs collect-evidence) stays distinct because those have different
 // authoritative rules behavior. It is the card-zone analogue of objectCostChoice.
 type cardCostChoice struct {
+	requireSource bool
 	// selection is the canonical characteristic predicate the cost imposes,
 	// converted once via SelectionForAdditionalCost (the #1730 matcher).
 	selection game.Selection
@@ -58,6 +59,7 @@ func cardCostChoiceForCost(additional cost.Additional, sourceCardID id.ID) (card
 		selection:     sel,
 		domain:        cardCostZone(additional),
 		excludeSource: additional.ExcludeSource,
+		requireSource: additional.RequireSource,
 		sourceCardID:  sourceCardID,
 	}, true
 }
@@ -67,6 +69,9 @@ func cardCostChoiceForCost(additional cost.Additional, sourceCardID id.ID) (card
 // canonical selection. It is the single per-card gate shared by candidate
 // enumeration, the deterministic backtrackers, and preference fallback.
 func cardSatisfiesObjectCost(s State, cardID id.ID, choice cardCostChoice) bool {
+	if choice.requireSource && cardID != choice.sourceCardID {
+		return false
+	}
 	if choice.excludeSource && cardID == choice.sourceCardID {
 		return false
 	}

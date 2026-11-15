@@ -205,10 +205,13 @@ func TestTriggerPatternActivatedAbilityMatchesActorSourceAndManaFilter(t *testin
 	}
 	unrestricted := *pattern
 	unrestricted.ExcludeManaAbility = false
-	if triggerMatchesEvent(g, source, &unrestricted, event) {
-		t.Fatal("unrestricted ability-activated pattern matched an incomplete runtime event stream")
+	if !triggerMatchesEvent(g, source, &unrestricted, event) {
+		t.Fatal("unrestricted ability-activated pattern did not match the complete activation event stream")
 	}
 	event.ManaAbility = true
+	if !triggerMatchesEvent(g, source, &unrestricted, event) {
+		t.Fatal("unrestricted pattern did not match a mana activation (CR 605.1b)")
+	}
 	if triggerMatchesEvent(g, source, pattern, event) {
 		t.Fatal("mana ability matched nonmana ability pattern")
 	}

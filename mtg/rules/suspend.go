@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
+	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -32,7 +33,7 @@ func suspendCostForCard(card *game.CardDef) (cost.Mana, int, bool) {
 // payable now or with payment-time mana abilities (CR 605.3a).
 func (e *Engine) canSuspendCard(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
 	c, _, _ := suspendCost(g, playerID, cardID)
-	return e.activationFeasible(g, playerID, c)
+	return e.costedActionAvailable(g, playerID, c)
 }
 
 // suspendCost is the cost of suspending the hand card cardID with its suspend
@@ -55,35 +56,32 @@ func suspendCost(g *game.Game, playerID game.PlayerID, cardID id.ID) (activation
 	if !ok || !canCastAtCurrentTiming(g, playerID, spellDef) {
 		return activationCost{}, nil, 0
 	}
-	return specialActionCost(playerID, &manaCost, handCardPresent(playerID, cardID)), manaCost, counters
+	return handSpecialActionCost(playerID, cardID, &manaCost), manaCost, counters
 }
 
 // applySuspendCard resolves a suspend special action: the player pays the
 // suspend cost, activating mana abilities while paying if they choose
 // (CR 605.3a), and exiles the card with its time counters (CR 702.62a).
 func (e *Engine) applySuspendCard(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
-	defer g.OpenLibraryTopWindow()()
-	c, manaCost, counters := suspendCost(g, playerID, cardID)
-	if !e.activationFeasible(g, playerID, c) {
+	c, _, counters := suspendCost(g, playerID, cardID)
+	if !e.costedActionAvailable(g, playerID, c) {
 		return actionFailed
 	}
 	card, _ := g.GetCardInstance(cardID)
-	if outcome := e.paySpecialActionCost(g, playerID, c, &manaCost, agents, log); outcome != actionApplied {
-		return outcome
-	}
-	destination, moved := moveCardBetweenZonesWithEvent(g, game.Event{
-		Controller: playerID, Player: card.Owner, CardID: cardID,
-		FromZone: zone.Hand, ToZone: zone.Exile,
-	}, zoneMoveOptions{})
-	if !moved {
-		return actionFailed
-	}
-	if destination == zone.Exile {
-		change := newExileCardCounterChange(g, playerID)
-		change.add(cardID, counter.Time, counters)
-		change.publish()
-	}
-	return actionApplied
+	return e.costedAction(g, playerID, costedAction{cost: c, commit: func(g *game.Game, _ payment.ApplyResult, _ [game.NumPlayers]PlayerAgent, _ *TurnLog, _ int) {
+		destination, moved := moveCardBetweenZonesWithEvent(g, game.Event{
+			Controller: playerID, Player: card.Owner, CardID: cardID,
+			FromZone: zone.Hand, ToZone: zone.Exile,
+		}, zoneMoveOptions{})
+		if !moved {
+			panic("completed suspend source disappeared")
+		}
+		if destination == zone.Exile {
+			change := newExileCardCounterChange(g, playerID)
+			change.add(cardID, counter.Time, counters)
+			change.publish()
+		}
+	}}, agents, log)
 }
 
 func (e *Engine) legalSuspendActions(g *game.Game, playerID game.PlayerID) []action.Action {

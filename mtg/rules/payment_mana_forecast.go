@@ -37,6 +37,97 @@ func (s *rulesPaymentState) assertWritable() {
 
 func (s *rulesPaymentState) ResourceReadOnly() bool { return s.readOnly }
 
+// A tapped {T} source without a possible plannable untap cannot satisfy a
+// required-source choice. Do not exhaust every unrelated mana history for it.
+func (s *rulesPaymentState) ManaAbilityUnreachable(key payment.ManaAbilityKey) bool {
+	source, ok := permanentByObjectID(s.g, key.Source)
+	if !ok || !source.Tapped {
+		return false
+	}
+	abilities := permanentEffectiveAbilitiesView(s.g, source)
+	if key.AbilityIndex < 0 || key.AbilityIndex >= len(abilities) {
+		return false
+	}
+	body, ok := abilities[key.AbilityIndex].(*game.ManaAbility)
+	if !ok || !hasTapCostOf(body.AdditionalCosts) {
+		return false
+	}
+	canUntap := func(ability game.Ability) bool {
+		body, ok := ability.(*game.ManaAbility)
+		if !ok || !slices.ContainsFunc(body.AdditionalCosts, func(c cost.Additional) bool { return c.Kind == cost.AdditionalUntap }) {
+			return false
+		}
+		_, class := payment.ClassifyManaAbility(body)
+		return class == payment.PlannableManaAbility
+	}
+	if slices.ContainsFunc(abilities, canUntap) {
+		return false
+	}
+	for _, effect := range s.g.ContinuousEffects {
+		if slices.ContainsFunc(effect.AddAbilities, canUntap) {
+			return false
+		}
+	}
+	for _, permanent := range s.g.Battlefield {
+		for _, ability := range permanentEffectiveAbilitiesView(s.g, permanent) {
+			if static, ok := ability.(*game.StaticAbility); ok {
+				for _, effect := range static.ContinuousEffects {
+					if slices.ContainsFunc(effect.AddAbilities, canUntap) {
+						return false
+					}
+				}
+			}
+		}
+	}
+	return true
+}
+
+// ResourceSelectionStable avoids enumerating irrelevant mana/color histories
+// just to rediscover an unchanged object-choice domain. Unknown type/control
+// effects and counter-producing schemas keep the conservative discovery path.
+func (s *rulesPaymentState) ResourceSelectionStable(additional cost.Additional) bool {
+	if additional.RequireTapped || additional.RequireUntapped {
+		return false
+	}
+	counterChoice := additional.Kind == cost.AdditionalRemoveCounter || additional.Kind == cost.AdditionalRemoveCounterAmong
+	powerChoice := additional.TotalPowerAtLeast > 0
+	material := func(effect game.ContinuousEffect) bool {
+		return effect.Layer == game.LayerControl || effect.Layer == game.LayerType || effect.Layer == game.LayerColor ||
+			powerChoice && effect.Layer >= game.LayerPowerToughnessSet
+	}
+	for _, effect := range s.g.ContinuousEffects {
+		if material(effect) {
+			return false
+		}
+	}
+	for _, permanent := range s.g.Battlefield {
+		for _, ability := range permanentEffectiveAbilitiesView(s.g, permanent) {
+			if static, ok := ability.(*game.StaticAbility); ok {
+				for _, effect := range static.ContinuousEffects {
+					if material(effect) {
+						return false
+					}
+				}
+			}
+			if body, ok := ability.(*game.ManaAbility); ok && (counterChoice || powerChoice) {
+				for _, component := range body.AdditionalCosts {
+					if component.Kind == cost.AdditionalPutCounter {
+						return false
+					}
+				}
+				for _, mode := range body.Content.Modes {
+					for _, instruction := range mode.Sequence {
+						if instruction.Primitive != nil && instruction.Primitive.Kind() == game.PrimitiveAddCounter {
+							return false
+						}
+					}
+				}
+			}
+		}
+	}
+	return true
+}
+
 func (s *rulesPaymentState) ManaSourceSnapshot(object id.ID) game.ObjectSnapshot {
 	permanent, _ := permanentByObjectID(s.g, object)
 	return snapshotPermanent(s.g, permanent, zone.Battlefield)
@@ -222,6 +313,9 @@ func (s *rulesPaymentState) ManaActivationCandidates(playerID game.PlayerID) []p
 			continue
 		}
 		def := cardFaceOrDefault(card, game.FaceFront)
+		if def == nil {
+			continue
+		}
 		for index := range def.ManaAbilities {
 			add(cardID, cardID, zone.Hand, nil, def.ManaAbilityIndex(index), &def.ManaAbilities[index])
 		}

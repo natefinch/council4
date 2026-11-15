@@ -66,9 +66,9 @@ func (e *Engine) announcementLegal(g *game.Game, player game.PlayerID, announcem
 			return false
 		}
 		if body, general := ability.(*game.ActivatedAbility); general {
-			return e.activationFeasible(g, player, equipActivation(g, player, permanent, body, activate.AbilityIndex,
+			return e.costedActionAvailable(g, player, equipActivation(g, player, permanent, body, activate.AbilityIndex,
 				activate.Targets, activate.XValue, activate.ChosenModes)) ||
-				e.activationFeasible(g, player, generalActivation(g, player, permanent, body, activate.AbilityIndex,
+				e.costedActionAvailable(g, player, generalActivation(g, player, permanent, body, activate.AbilityIndex,
 					activate.Targets, activate.XValue, activate.ChosenModes))
 		}
 		return false
@@ -78,7 +78,7 @@ func (e *Engine) announcementLegal(g *game.Game, player game.PlayerID, announcem
 			activate.ChosenModes, activate.TargetCounts, activate.Targets, activate.XValue); !valid {
 			return false
 		}
-		return e.activationFeasible(g, player, handActivation(g, player, activate.SourceID, &body, activate.AbilityIndex,
+		return e.costedActionAvailable(g, player, handActivation(g, player, activate.SourceID, &body, activate.AbilityIndex,
 			activate.Targets, activate.XValue, activate.ChosenModes))
 	}
 	if card, body, present := graveyardAbilitySource(g, player, activate.SourceID, activate.AbilityIndex); present {
@@ -86,7 +86,7 @@ func (e *Engine) announcementLegal(g *game.Game, player game.PlayerID, announcem
 			activate.ChosenModes, activate.TargetCounts, activate.Targets, activate.XValue); !valid {
 			return false
 		}
-		return e.activationFeasible(g, player, graveyardActivation(g, player, activate.SourceID, &body, activate.AbilityIndex,
+		return e.costedActionAvailable(g, player, graveyardActivation(g, player, activate.SourceID, &body, activate.AbilityIndex,
 			activate.Targets, activate.XValue, activate.ChosenModes))
 	}
 	return false

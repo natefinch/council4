@@ -3,6 +3,7 @@ package payment
 import (
 	"fmt"
 	"maps"
+	"reflect"
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -175,8 +176,77 @@ func translateAdditionalPlan(s State, p additionalCostPlan) additionalCostPlan {
 	}
 	return p
 }
+func manaOccurrenceCounts(activations []ManaActivation) map[ManaAbilityKey]int {
+	counts := make(map[ManaAbilityKey]int)
+	for _, activation := range activations {
+		counts[ManaAbilityKey{Source: activation.Source, AbilityIndex: activation.AbilityIndex}]++
+	}
+	return counts
+}
+
+func manaActivationOccurrence(activations []ManaActivation, key ManaActivationKey) (ManaActivation, bool) {
+	occurrence := 0
+	for _, activation := range activations {
+		if activation.Source != key.Source || activation.AbilityIndex != key.AbilityIndex {
+			continue
+		}
+		if occurrence == key.Occurrence {
+			return activation, true
+		}
+		occurrence++
+	}
+	return ManaActivation{}, false
+}
+
+func remainingManaOccurrences[V any](fixed map[ManaActivationKey]V, counts map[ManaAbilityKey]int) map[ManaActivationKey]V {
+	if fixed == nil {
+		return nil
+	}
+	remaining := make(map[ManaActivationKey]V)
+	for key, value := range fixed {
+		if key.Occurrence < counts[key.ManaAbilityKey] {
+			continue
+		}
+		key.Occurrence -= counts[key.ManaAbilityKey]
+		remaining[key] = value
+	}
+	return remaining
+}
+
+func bindManaCostOccurrence(partial Partial, plan Plan) (Partial, bool) {
+	for index, fixed := range partial.Components {
+		component, exists := plan.components[index]
+		if !exists || len(fixed.Objects) > len(component.Objects) || len(fixed.Counters) > len(component.Counters) ||
+			!slices.Equal(fixed.Objects, component.Objects[:len(fixed.Objects)]) ||
+			!slices.Equal(fixed.Counters, component.Counters[:len(fixed.Counters)]) ||
+			fixed.Finished && (len(fixed.Objects) != len(component.Objects) || len(fixed.Counters) != len(component.Counters)) {
+			return partial, false
+		}
+	}
+	for group, selected := range partial.Groups {
+		if actual, exists := plan.groups[group]; !exists || actual != selected {
+			return partial, false
+		}
+	}
+	allocation := plan.Mana()
+	if partial.Allocation != nil && !reflect.DeepEqual(*partial.Allocation, allocation) {
+		return partial, false
+	}
+	partial.Components, partial.Groups = plan.Components(), cloneGroups(plan.groups)
+	partial.Allocation = &allocation
+	return partial, true
+}
+
 func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost.Mana, x int, restrictions manaSourceRestrictions, ctx spendContext, prefs *Preferences, lifeReserved int, spell *spellCostOption, cardID id.ID, sourceZone zone.Type, partial Partial) (paymentPlan, bool) {
-	if restrictions.resourceCompletion == nil && len(partial.ManaAbilities) == 0 && s.OrdinaryManaOnly(playerID) {
+	if view, ok := s.(interface{ ManaAbilityUnreachable(ManaAbilityKey) bool }); ok {
+		for key, use := range partial.ManaAbilities {
+			if use && view.ManaAbilityUnreachable(key) {
+				return paymentPlan{}, false
+			}
+		}
+	}
+	schemaAllocation := partial.Allocation != nil && slices.ContainsFunc(partial.Allocation.Activations, func(a ManaActivation) bool { return a.Effects.Players != nil })
+	if restrictions.resourceCompletion == nil && len(partial.ManaAbilities) == 0 && !schemaAllocation && s.OrdinaryManaOnly(playerID) {
 		return completeOrdinaryMana(s, playerID, manaCost, x, restrictions, ctx, prefs, lifeReserved, spell, cardID, sourceZone, partial)
 	}
 	failed := make(map[string]bool)
@@ -204,6 +274,7 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 		if !ok {
 			return false
 		}
+		counts := manaOccurrenceCounts(activations)
 		key := fmt.Sprint(depth-len(activations), player.Life, player.EnergyCounters, player.ManaPool.Units(), player.ManaRiders, projection.Permanents, projection.Used, projection.UnavailableCards, projection.SpentDelayed)
 		if historySensitive {
 			events := make(map[string]int)
@@ -217,6 +288,14 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 				key += fmt.Sprint(choice, slices.ContainsFunc(activations, func(a ManaActivation) bool { return a.Source == choice.Source && a.AbilityIndex == choice.AbilityIndex }))
 			}
 		}
+		seenOccurrences := make(map[ManaActivationKey]int)
+		for occurrence := range partial.ManaPayments {
+			seenOccurrences[occurrence] = min(counts[occurrence.ManaAbilityKey], occurrence.Occurrence+1)
+		}
+		for occurrence := range partial.ManaChoices {
+			seenOccurrences[occurrence] = min(counts[occurrence.ManaAbilityKey], occurrence.Occurrence+1)
+		}
+		key += fmt.Sprint(seenOccurrences)
 		if failed[key] {
 			return false
 		}
@@ -238,6 +317,8 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 		fixed.poolOnly = true
 		fixed.Allocation = nil
 		fixed.ManaAbilities = nil
+		fixed.ManaPayments = nil
+		fixed.ManaChoices = nil
 		var plan paymentPlan
 		payable := false
 		if restrictions.resourceCompletion == nil {
@@ -246,7 +327,7 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 		if payable {
 			plan.activations = slices.Clone(activations)
 			plan.projection = projection
-			if partial.acceptsMana(plan) && jointPaymentReady(s, playerID, plan, reservedAdditional(restrictions, playerID)) {
+			if partial.acceptsMana(plan) && (restrictions.resourceValid == nil || restrictions.resourceValid(current)) && jointPaymentReady(s, playerID, plan, reservedAdditional(restrictions, playerID)) {
 				result = plan
 				return true
 			}
@@ -266,10 +347,14 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 		})
 		for _, candidate := range candidates {
 			abilityKey := ManaAbilityKey{Source: candidate.Source, AbilityIndex: candidate.AbilityIndex}
+			activationKey := ManaActivationKey{ManaAbilityKey: abilityKey, Occurrence: counts[abilityKey]}
 			if use, fixed := partial.ManaAbilities[abilityKey]; fixed && !use ||
 				restrictions.excluded[candidate.Source] ||
 				restrictions.nonSacrificingOnly[candidate.Source] && candidate.Sacrifice ||
 				projection.UnavailableCards[candidate.Source] {
+				continue
+			}
+			if choices, fixed := partial.ManaChoices[activationKey]; fixed && !maps.Equal(choices, candidate.Choices) {
 				continue
 			}
 			if partial.Allocation != nil {
@@ -297,62 +382,76 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 				continue
 			}
 			costExclude := manaSourceRestrictions{excluded: make(map[id.ID]bool)}
-			input, ok := completeMana(current, playerID, manaCostPtr(ability.ManaCost), 0, costExclude, spendContext{abilitySource: source}, nil, lifeReserved, nil, 0, zone.None, Partial{poolOnly: true})
+			costPartial := partial.ManaPayments[activationKey]
+			if partial.Allocation != nil {
+				expected := partial.Allocation.Activations[len(activations)]
+				if expected.CostPlan != nil {
+					var valid bool
+					costPartial, valid = bindManaCostOccurrence(costPartial, *expected.CostPlan)
+					if !valid {
+						continue
+					}
+				}
+			}
+			costPartial.poolOnly = true
+			input, ok := completeMana(current, playerID, manaCostPtr(ability.ManaCost), 0, costExclude, spendContext{abilitySource: source}, nil, lifeReserved, nil, 0, zone.None, costPartial)
 			if !ok {
 				continue
 			}
-			var delta game.ResourceProjection
-			var witness additionalWitness
-			witness, ok = completeAdditional(current, playerID, ability.AdditionalCosts, 0, nil, source, ability.SourceCardID, candidate.SourceZone, 0, nil, nil, nil, func(w additionalWitness) bool {
+			_, completed := completeAdditional(current, playerID, ability.AdditionalCosts, 0, nil, source, ability.SourceCardID, candidate.SourceZone, 0, costPartial.Components, costPartial.Groups, nil, func(w additionalWitness) bool {
+				for _, permanent := range append(slices.Clone(w.plan.sacrifices), w.plan.exilePermanents...) {
+					if restrictions.nonSacrificingOnly[permanent.ObjectID] || restrictions.excluded[permanent.ObjectID] {
+						return false
+					}
+				}
 				pool := player.ManaPool.Units()
 				for unit, amount := range input.poolSpend {
 					pool[unit] -= amount
 				}
-				var good bool
-				delta, good = projectActivationCosts(current, playerID, w, tap, candidate.Source, pool, input.lifePayment)
+				delta, good := projectActivationCosts(current, playerID, w, tap, candidate.Source, pool, input.lifePayment)
 				if !good {
 					return false
 				}
 				resources := delta.Players[playerID]
 				resources.Riders = current.RidersAfterInput(playerID, candidate.Source, input.poolSpend)
 				delta.Players[playerID] = resources
-				return resources.Life >= lifeReserved
-			})
-			if !ok {
-				continue
-			}
-			costState = current.ProjectResources(delta).(ManaState)
-			production, effects, ok := costState.ForecastMana(playerID, candidate)
-			if !ok {
-				continue
-			}
-			next := mergeProjection(projection, delta)
-			next = mergeProjection(next, effects)
-			resources := next.Players[playerID]
-			for _, produced := range production {
-				resources.Mana[produced.Unit] += produced.Amount
-				if produced.Rider != nil {
-					for range produced.Amount {
-						resources.Riders = append(resources.Riders, *produced.Rider)
+				if resources.Life < lifeReserved {
+					return false
+				}
+				costState = current.ProjectResources(delta).(ManaState)
+				production, effects, ok := costState.ForecastMana(playerID, candidate)
+				if !ok {
+					return false
+				}
+				next := mergeProjection(projection, delta)
+				next = mergeProjection(next, effects)
+				resources = next.Players[playerID]
+				for _, produced := range production {
+					resources.Mana[produced.Unit] += produced.Amount
+					if produced.Rider != nil {
+						for range produced.Amount {
+							resources.Riders = append(resources.Riders, *produced.Rider)
+						}
 					}
 				}
-			}
-			next.Players[playerID] = resources
-			if !candidate.Reusable {
-				next.Used[game.ActivatedAbilityUse{SourceID: candidate.Source, AbilityIndex: candidate.AbilityIndex}] = true
-			}
-			costPlan := Plan{request: candidate.Request, option: 0, components: witness.components, groups: witness.groups, allocation: freezeMana(input), valid: true}
-			activation := ManaActivation{Source: candidate.Source, AbilityIndex: candidate.AbilityIndex, SourceZone: candidate.SourceZone, CostPlan: &costPlan, Choices: maps.Clone(candidate.Choices), Production: production, Effects: effects}
-			if len(production) > 0 && !slices.ContainsFunc(production, func(p ManaProduction) bool { return p.Unit != production[0].Unit }) {
-				activation.Color, activation.Amount = production[0].Unit.Color, production[0].Amount
-				activation.Snow, activation.FromCreature = production[0].Unit.Snow, production[0].Unit.FromCreature
-				for _, extra := range production[1:] {
-					activation.Amount += extra.Amount
+				next.Players[playerID] = resources
+				if !candidate.Reusable {
+					next.Used[game.ActivatedAbilityUse{SourceID: candidate.Source, AbilityIndex: candidate.AbilityIndex}] = true
 				}
-			}
-			activation.Sacrifice = candidate.Sacrifice
-			activation.Untap = slices.ContainsFunc(candidate.Body.AdditionalCosts, func(additional cost.Additional) bool { return additional.Kind == cost.AdditionalUntap })
-			if search(next, append(slices.Clone(activations), activation)) {
+				costPlan := Plan{request: candidate.Request, option: 0, components: w.components, groups: w.groups, allocation: freezeMana(input), valid: true}
+				activation := ManaActivation{Source: candidate.Source, AbilityIndex: candidate.AbilityIndex, SourceZone: candidate.SourceZone, CostPlan: &costPlan, Choices: maps.Clone(candidate.Choices), Production: production, Effects: effects, Before: cloneProjection(projection)}
+				if len(production) > 0 && !slices.ContainsFunc(production, func(p ManaProduction) bool { return p.Unit != production[0].Unit }) {
+					activation.Color, activation.Amount = production[0].Unit.Color, production[0].Amount
+					activation.Snow, activation.FromCreature = production[0].Unit.Snow, production[0].Unit.FromCreature
+					for _, extra := range production[1:] {
+						activation.Amount += extra.Amount
+					}
+				}
+				activation.Sacrifice = candidate.Sacrifice
+				activation.Untap = slices.ContainsFunc(candidate.Body.AdditionalCosts, func(additional cost.Additional) bool { return additional.Kind == cost.AdditionalUntap })
+				return search(next, append(slices.Clone(activations), activation))
+			})
+			if completed {
 				return true
 			}
 		}
@@ -383,6 +482,11 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 				}
 			case cost.AdditionalEnergy:
 				limit += player.EnergyCounters
+			case cost.AdditionalSacrifice:
+				if amount := AdditionalCostAmount(additional); amount > 0 {
+					source, _ := s.PermanentByObjectID(candidate.Source)
+					limit += len(CandidatePermanentsForCost(s, playerID, additional, source)) / amount
+				}
 			}
 		}
 	}
@@ -423,7 +527,7 @@ func completeOrdinaryMana(s ManaState, player game.PlayerID, manaCost *cost.Mana
 		input := paymentPlan{poolSpend: make(map[mana.Unit]int)}
 		costPlan := Plan{request: request, components: witness.components, groups: witness.groups, allocation: freezeMana(input), valid: true}
 		unit := mana.Unit{Color: tap.color, Snow: tap.snow, FromCreature: tap.fromCreature}
-		plan.activations = append(plan.activations, ManaActivation{Source: tap.permanent.ObjectID, AbilityIndex: tap.abilityIndex, SourceZone: zone.Battlefield, Color: tap.color, Amount: tap.amount, Snow: tap.snow, FromCreature: tap.fromCreature, Untap: tap.untap, CostPlan: &costPlan, Production: []ManaProduction{{Unit: unit, Amount: tap.amount}}})
+		plan.activations = append(plan.activations, ManaActivation{Source: tap.permanent.ObjectID, AbilityIndex: tap.abilityIndex, SourceZone: zone.Battlefield, Color: tap.color, Amount: tap.amount, Snow: tap.snow, FromCreature: tap.fromCreature, Untap: tap.untap, CostPlan: &costPlan, Production: []ManaProduction{{Unit: unit, Amount: tap.amount}}, Before: cloneProjection(projection)})
 		resources := permanentResources(tap.permanent)
 		resources.Tapped = !tap.untap
 		projection.Permanents[tap.permanent.ObjectID] = resources
@@ -433,7 +537,7 @@ func completeOrdinaryMana(s ManaState, player game.PlayerID, manaCost *cost.Mana
 	}
 	plan.manaTaps = nil
 	plan.projection = projection
-	return plan, partial.acceptsMana(plan)
+	return plan, partial.acceptsMana(plan) && (restrictions.resourceValid == nil || restrictions.resourceValid(s.ProjectResources(projection)))
 }
 func reservedAdditional(r manaSourceRestrictions, player game.PlayerID) additionalCostPlan {
 	if r.reserved != nil {

@@ -216,8 +216,9 @@ func ManaAbilityLibraryMovement(body *ManaAbility) string {
 // primitiveLeavesLibraries reports whether primitive is known never to move a
 // card to or from a library, apart from replacement effects (CR 605.1a).
 func primitiveLeavesLibraries(primitive Primitive) bool {
-	switch primitive.(type) {
-	case AddMana, Choose, Damage, GainLife, LoseLife, SkipNextUntap, Tap, Untap, AddCounter, RemoveCounter:
+	switch primitive.Kind() {
+	case PrimitiveAddMana, PrimitiveChoose, PrimitiveDamage, PrimitiveGainLife, PrimitiveLoseLife,
+		PrimitiveSkipNextUntap, PrimitiveTap, PrimitiveUntap, PrimitiveAddCounter, PrimitiveRemoveCounter, PrimitiveCreateToken:
 		return true
 	}
 	return false
