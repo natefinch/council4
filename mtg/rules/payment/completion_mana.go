@@ -275,6 +275,9 @@ func manaBranches(req manaRequirement, x int, prefs *Preferences, fixed map[int]
 			payLife, manaOnly = prefs.phyrexianChoiceAt(req.phyrexian)
 		}
 		if selected, set := fixed[req.phyrexian]; set {
+			if payLife && !selected || manaOnly && selected {
+				return nil
+			}
 			payLife, manaOnly = selected, !selected
 		}
 		life := manaPaymentBranch{life: 2, method: game.SymbolPaymentPhyrexianLife}

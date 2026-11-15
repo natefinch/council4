@@ -1399,9 +1399,6 @@ func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, play
 		return false
 	}
 	res = resolved
-	if !canPayResolutionPayment(g, playerID, source, source.CardInstanceID, &res) {
-		return false
-	}
 	engine := ctx.engine
 	if engine == nil {
 		engine = NewEngine(nil)
@@ -1410,19 +1407,16 @@ func enterBattlefieldPaymentPaid(ctx enterBattlefieldContext, g *game.Game, play
 	if prompt == "" {
 		prompt = "Pay enter-the-battlefield cost?"
 	}
-	if !engine.chooseMay(g, ctx.agents, playerID, prompt, ctx.log) {
-		return false
-	}
-	prefs := engine.paymentPreferencesForPermanentCost(g, playerID, source, manaCostPtr(res.ManaCost), res.AdditionalCosts, res.XValue, ctx.agents, ctx.log)
-	return paymentOrch.payGenericCost(g, payment.GenericRequest{
-		PlayerID:        playerID,
-		Source:          source,
+	_, _, paid := engine.genericPayment(g, payment.GenericRequest{
+		PlayerID: playerID,
+		// The entrant is not a battlefield resource yet. Its dynamic amounts
+		// were materialized above; retain only the card identity for costs.
 		SourceCardID:    source.CardInstanceID,
 		Cost:            manaCostPtr(res.ManaCost),
 		XValue:          res.XValue,
 		AdditionalCosts: res.AdditionalCosts,
-		Prefs:           prefs,
-	})
+	}, prompt, ctx.agents, ctx.log)
+	return paid
 }
 
 // matchingZoneReplacementEffects returns the zone-change replacement effects that

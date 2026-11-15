@@ -8,6 +8,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -277,11 +278,9 @@ func TestPayCostRespectsManaAbilityTimingAndUsage(t *testing.T) {
 	}
 }
 
-// TestAutoPaymentDoesNotUseComplexManaAbilities verifies that automatic mana
-// payment (used when paying spell costs) never auto-activates mana abilities
-// that carry a mana cost, pay-life cost, sacrifice cost, or produce more than
-// one symbol of output. These abilities require explicit player action.
-func TestAutoPaymentDoesNotUseComplexManaAbilities(t *testing.T) {
+// CR 605.3a/608.2g: generic payments can use modeled side-effecting mana
+// abilities. Availability is pure; the shared mana window chooses them.
+func TestGenericPaymentPlansComplexManaAbilities(t *testing.T) {
 	tests := []struct {
 		name      string
 		body      game.ManaAbility
@@ -340,15 +339,46 @@ func TestAutoPaymentDoesNotUseComplexManaAbilities(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-			addComplexManaAbilityPermanent(g, game.Player1,
+			source := addComplexManaAbilityPermanent(g, game.Player1,
 				&game.CardDef{CardFace: game.CardFace{Name: "Complex Source", Types: []types.Card{types.Artifact}}},
 				&test.body,
 			)
 			if test.setupPool != nil {
 				test.setupPool(g)
 			}
-			if canPayCost(g, game.Player1, &test.wantCost) {
-				t.Fatal("canPayCost() = true using complex mana ability, want false (auto-payment must be conservative)")
+			beforeMana := g.Players[game.Player1].ManaPool.Total()
+			if !canPayCost(g, game.Player1, &test.wantCost) || source.Tapped ||
+				g.Players[game.Player1].Life != 40 || g.Players[game.Player1].ManaPool.Total() != beforeMana ||
+				len(g.Battlefield) != 1 {
+				t.Fatal("modeled mana ability lacked a pure completion witness")
+			}
+			seen := 0
+			agent := &costedObservationAgent{t: t, choose: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+				if req.Prompt == "Activate a mana ability while paying?" {
+					seen++
+				}
+				return req.DefaultSelection
+			}}
+			if _, _, paid := NewEngine(nil).genericPayment(g, payment.GenericRequest{PlayerID: game.Player1, Cost: &test.wantCost}, "",
+				reboundKickerAgents(agent), &TurnLog{}); !paid || seen != 1 {
+				t.Fatal("shared generic-payment window did not choose and apply the source")
+			}
+			if test.name == "sacrifice-source" {
+				if _, exists := permanentByObjectID(g, source.ObjectID); exists {
+					t.Fatal("planned sacrifice source remains")
+				}
+			} else if !source.Tapped {
+				t.Fatal("planned mana source did not tap")
+			}
+			wantLife, wantMana := 40, 0
+			if test.name == "tap+pay-life" {
+				wantLife = 39
+			}
+			if test.name == "multi-symbol tap" {
+				wantMana = 1
+			}
+			if g.Players[game.Player1].Life != wantLife || g.Players[game.Player1].ManaPool.Total() != wantMana {
+				t.Fatal("planned input, output or life payment was not exact")
 			}
 		})
 	}

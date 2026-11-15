@@ -2,6 +2,7 @@ package rules
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -11,6 +12,63 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
 )
+
+func TestRegisteredSmotheringTithePlansOptionalTreasurePayment(t *testing.T) {
+	for _, scenario := range []string{"pay", "decline", "unpayable"} {
+		t.Run(scenario, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			addCombatPermanent(g, game.Player1, registryCardDef(t, "Smothering Tithe"))
+			count := 2
+			if scenario == "unpayable" {
+				count = 1
+			}
+			for range count {
+				if _, ok := createTokenPermanent(g, game.Player2, recklessLackeyTreasure(t)); !ok {
+					t.Fatal("Treasure creation failed")
+				}
+			}
+			addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Drawn"}})
+			if _, ok := engine.drawCard(g, game.Player2, false); !ok || !engine.putTriggeredAbilitiesOnStack(g) {
+				t.Fatal("registered Tithe did not trigger")
+			}
+			consent, windows := 0, 0
+			agent := &costedObservationAgent{t: t, choose: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+				if req.Player != game.Player2 {
+					t.Fatal("tax was offered to the wrong player")
+				}
+				if req.Kind == game.ChoiceMay {
+					consent++
+					if req.Prompt != "Pay {2}?" {
+						t.Fatalf("tax prompt = %q", req.Prompt)
+					}
+					if scenario == "decline" {
+						return []int{0}
+					}
+				}
+				if req.Prompt == "Activate a mana ability while paying?" {
+					windows++
+					for _, option := range req.Options {
+						if !strings.Contains(option.Label, "Treasure") {
+							t.Fatal("unpayable finish offered for Tithe")
+						}
+					}
+				}
+				return req.DefaultSelection
+			}}
+			engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{game.Player2: agent}, &TurnLog{})
+			if scenario == "pay" {
+				if consent != 1 || windows != 2 || namedTokenCount(g, game.Player2, "Treasure") != 0 ||
+					namedTokenCount(g, game.Player1, "Treasure") != 0 || g.Players[game.Player2].ManaPool.Total() != 0 {
+					t.Fatal("Tithe was not paid atomically with the chosen Treasures")
+				}
+			} else if windows != 0 || namedTokenCount(g, game.Player2, "Treasure") != count ||
+				namedTokenCount(g, game.Player1, "Treasure") != 1 || consent != map[bool]int{true: 1}[scenario == "decline"] {
+				t.Fatal("unpaid Tithe consumed sources, offered an impossible payment or lost its reward")
+			}
+		})
+	}
+}
 
 func TestDrawTaxTreasurePaymentOutcomes(t *testing.T) {
 	t.Parallel()

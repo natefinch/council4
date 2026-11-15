@@ -398,12 +398,8 @@ func (e *Engine) resolveWardTriggeredAbilityWithChoices(g *game.Game, obj *game.
 	wardCost := wardKeyword.Cost
 	cost := &wardCost
 	request := payment.GenericRequest{PlayerID: payer, Cost: cost, AdditionalCosts: wardKeyword.AdditionalCosts}
-	if paymentOrch.canPayGenericCost(g, request) && e.chooseMay(g, agents, payer, "Pay ward cost?", log) {
-		prefs := e.paymentPreferencesForCost(g, payer, cost, wardKeyword.AdditionalCosts, 0, agents, log)
-		request.Prefs = prefs
-		if paymentOrch.payGenericCost(g, request) {
-			return "resolved"
-		}
+	if _, _, paid := e.genericPayment(g, request, "Pay ward cost?", agents, log); paid {
+		return "resolved"
 	}
 	counterStackObject(g, obj.WardTargetStackObjectID)
 	return "resolved"

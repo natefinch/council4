@@ -1224,6 +1224,19 @@ func TestManaSpendRiderEndToEndNonSpellAbilityNoFalseScry(t *testing.T) {
 	}
 }
 
+func TestGenericSpellPaymentRetainsSpendReceiptForCommit(t *testing.T) {
+	g := elfCommanderGame(t)
+	player := g.Players[game.Player1]
+	player.ManaPool.Add(mana.G, 1)
+	addRiders(g, game.Player1, mana.G, 1)
+	manaCost := cost.Mana{cost.G}
+	spell := creatureSpellDef("Elf spell", types.Elf)
+	spend, ok := paymentOrch.payGenericCostForSpell(g, payment.GenericRequest{PlayerID: game.Player1, Cost: &manaCost, Spell: spell})
+	if !ok || spend[mana.Unit{Color: mana.G}] != 1 || player.ManaPool.Total() != 0 || len(player.ManaRiders) != 1 || firedSpendRiderCount(g) != 0 {
+		t.Fatal("generic casting-context payment lost or prematurely consumed its spend receipt")
+	}
+}
+
 // commanderCardDef registers a commander card instance in g (off the
 // battlefield) and tracks it for the player, returning its instance ID. It is
 // used to place the commander on the stack or in another zone for current-

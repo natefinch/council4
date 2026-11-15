@@ -1,14 +1,108 @@
 package rules
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/counter"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
+
+func TestRegisteredCumulativeUpkeepPlansWholeTreasurePayment(t *testing.T) {
+	for _, scenario := range []string{"pay", "decline", "unpayable"} {
+		t.Run(scenario, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			source := addCombatPermanent(g, game.Player1, registryCardDef(t, "Mystic Remora"))
+			source.Counters.Add(counter.Age, 1)
+			count := 2
+			if scenario == "unpayable" {
+				count = 1
+			}
+			for range count {
+				if _, ok := createTokenPermanent(g, game.Player1, recklessLackeyTreasure(t)); !ok {
+					t.Fatal("Treasure creation failed")
+				}
+			}
+			emitBeginningOfStepEvent(g, game.StepUpkeep)
+			if !engine.putTriggeredAbilitiesOnStack(g) {
+				t.Fatal("registered cumulative upkeep did not trigger")
+			}
+			consent, windows := 0, 0
+			agent := &costedObservationAgent{t: t, choose: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+				if req.Kind == game.ChoiceMay {
+					consent++
+					if req.Prompt != "Pay {2}?" || source.Counters.Get(counter.Age) != 2 {
+						t.Fatal("upkeep payment was not materialized after adding the age counter")
+					}
+					if scenario == "decline" {
+						return []int{0}
+					}
+				}
+				if req.Prompt == "Activate a mana ability while paying?" {
+					windows++
+					for _, option := range req.Options {
+						if !strings.Contains(option.Label, "Treasure") {
+							t.Fatal("partial upkeep payment offered")
+						}
+					}
+				}
+				return req.DefaultSelection
+			}}
+			engine.resolveTopOfStackWithChoices(g, reboundKickerAgents(agent), &TurnLog{})
+			_, remains := permanentByObjectID(g, source.ObjectID)
+			if source.Counters.Get(counter.Age) != 2 || g.Players[game.Player1].ManaPool.Total() != 0 {
+				t.Fatal("upkeep counter or mana receipt was incorrect")
+			}
+			if scenario == "pay" {
+				if !remains || windows != 2 || consent != 1 || countTokenPermanentsNamed(g, "Treasure") != 0 {
+					t.Fatal("whole cumulative cost was not paid with both Treasures")
+				}
+			} else if remains || windows != 0 || countTokenPermanentsNamed(g, "Treasure") != count ||
+				consent != map[bool]int{true: 1}[scenario == "decline"] {
+				t.Fatal("unpaid upkeep made a partial payment or did not sacrifice its source")
+			}
+		})
+	}
+}
+
+func TestCumulativeUpkeepKeepsRepeatedPaymentChoicesDistinct(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	source := addCumulativeUpkeepPermanent(g, game.Player1, cost.Mana{cost.PhyrexianMana(mana.U)})
+	source.Counters.Add(counter.Age, 1)
+	island := addBasicLandPermanent(g, game.Player1, types.Island)
+	choices := 0
+	agent := &costedObservationAgent{t: t, choose: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+		if req.Prompt == "Choose Phyrexian payment" {
+			choices++
+			want := "Pay with mana"
+			if choices == 1 {
+				want = "Pay 2 life"
+			}
+			for _, option := range req.Options {
+				if option.Label == want {
+					return []int{option.Index}
+				}
+			}
+			t.Fatalf("independent upkeep choice %d unavailable: %+v", choices, req.Options)
+		}
+		return req.DefaultSelection
+	}}
+	emitBeginningOfStepEvent(g, game.StepUpkeep)
+	if !engine.putTriggeredAbilitiesOnStack(g) {
+		t.Fatal("cumulative upkeep did not trigger")
+	}
+	engine.resolveTopOfStackWithChoices(g, reboundKickerAgents(agent), &TurnLog{})
+	if choices != 2 || !island.Tapped || g.Players[game.Player1].Life != 38 ||
+		g.Players[game.Player1].Graveyard.Contains(source.CardInstanceID) {
+		t.Fatal("repeated cost choices were merged or the whole payment did not apply")
+	}
+}
 
 func TestCumulativeUpkeepAddsAgeThenPaysMultipliedExactMana(t *testing.T) {
 	t.Parallel()
