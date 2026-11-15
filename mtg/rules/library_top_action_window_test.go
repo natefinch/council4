@@ -286,10 +286,9 @@ func (a *nestedManaWindowAgent) ChooseChoice(obs PlayerObservation, request game
 // Confluence in the payment-time mana window (CR 605.3a). The Altar's
 // sacrifice of Homing Golem puts the Golem on top of the library (its own
 // replacement effect, so the Altar's ability is still a mana ability, CR
-// 605.1a). Confluence's activation opens a window nested in the cast's after
-// the top already changed; the cast's snapshot governs, so the new top stays
-// hidden through Confluence's color choice and is revealed once the spell
-// becomes cast (CR 401.5, 601.2i).
+// 605.1a). Confluence's planned color choice opens a nested window before
+// atomic payment. No decision observes the changed top mid-payment; it is
+// revealed once the spell becomes cast (CR 401.5, 601.2h-i; 2026-11-06).
 func TestNestedManaAbilityKeepsOuterLibraryTopSnapshot(t *testing.T) {
 	t.Parallel()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -314,9 +313,11 @@ func TestNestedManaAbilityKeepsOuterLibraryTopSnapshot(t *testing.T) {
 		t.Fatalf("activated %v, want Phyrexian Altar (putting Homing Golem on top) then Mana Confluence", agent.activated)
 	}
 	if !agent.colorChoice || agent.depth != 2 {
-		t.Fatalf("Confluence's color choice made = %t with %d windows open, want it inside the cast's window", agent.colorChoice, agent.depth)
+		t.Fatalf("Confluence's planned color choice made = %t with %d windows open, want it before atomic payment in the cast's window", agent.colorChoice, agent.depth)
 	}
-	agent.assertHiddenWhileChanged(t)
+	if agent.changed != 0 || len(agent.leaks) != 0 {
+		t.Fatal("a source/output decision observed intermediate payment mutations")
+	}
 	if obj, ok := g.Stack.Peek(); !ok || obj.SourceID != solRing {
 		t.Fatalf("stack top = %+v, want Sol Ring cast", obj)
 	}

@@ -348,7 +348,7 @@ func TestLibraryTopWindowSurvivesCloneAndDeterminize(t *testing.T) {
 	}
 }
 
-// topChangingPaymentRoute builds a reversible cast, from a zone other than the
+// topChangingPaymentRoute builds a completable cast, from a zone other than the
 // library, that opens a payment-time mana ability window in which Player1 can
 // pay only with Phyrexian Altar plus another manual mana source. (A cast from hand
 // with priority pays from mana activated beforehand.)
@@ -366,11 +366,11 @@ func topChangingPaymentRoutes() []topChangingPaymentRoute {
 			card := addCardToExile(g, game.Player1, productionChoiceCard(t, "Sol Ring"))
 			e := NewEngine(nil)
 			return g, func(agents [game.NumPlayers]PlayerAgent) {
-				if e.castMadnessSpellWithChoices(g, game.Player1, g.CardInstances[card], cost.Mana{cost.O(2)}, agents, &TurnLog{}) {
-					t.Fatal("the unpaid madness cast succeeded")
+				if !e.castMadnessSpellWithChoices(g, game.Player1, g.CardInstances[card], cost.Mana{cost.O(2)}, agents, &TurnLog{}) {
+					t.Fatal("the completable madness cast failed")
 				}
-				if g.Stack.Size() != 0 || !g.Players[game.Player1].Exile.Contains(card) {
-					t.Fatal("the unpaid madness cast didn't leave the card in exile")
+				if g.Stack.Size() != 1 || g.Players[game.Player1].Exile.Contains(card) {
+					t.Fatal("the completed madness cast did not leave exile")
 				}
 			}
 		}},
@@ -391,8 +391,8 @@ func topChangingPaymentRoutes() []topChangingPaymentRoute {
 // mana ability (CR 601.2g), sacrificing Homing Golem, puts the Golem on top
 // (its own replacement effect, so the Altar's ability is still a mana ability,
 // CR 605.1a), and the new top stays hidden through the rest of the payment.
-// The cost goes unpaid and the cast is reversed (CR 733.1), which ends the
-// cast without undoing the sacrifice, so the Golem is then revealed.
+// Decisions are planned before atomic application (601.2h, 2026-11-06), so
+// none observes the intermediate new top. The completed cast reveals it.
 func TestLibraryTopChangedByPaymentStaysHidden(t *testing.T) {
 	t.Parallel()
 	for _, route := range topChangingPaymentRoutes() {
@@ -415,10 +415,14 @@ func TestLibraryTopChangedByPaymentStaysHidden(t *testing.T) {
 			if agent.unchanged == 0 || agent.unchangedVisible != agent.unchanged {
 				t.Fatalf("the unchanged top was visible at %d of %d choices, want all", agent.unchangedVisible, agent.unchanged)
 			}
-			agent.assertHiddenWhileChanged(t)
+			// Planned source/output choices precede atomic application, so no
+			// decision may observe the new library top mid-payment (401.5).
+			if agent.changed != 0 || len(agent.leaks) != 0 {
+				t.Fatal("a planned payment exposed an intermediate library state")
+			}
 			assertNoLibraryTopWindow(t, g)
 			if card, ok := NewObservation(g, game.Player2).LibraryTopRevealed(game.Player1); !ok || card.CardInstanceID != golem {
-				t.Fatal("the new top card isn't revealed after the cast was reversed")
+				t.Fatal("the new top card isn't revealed after the cast completed")
 			}
 		})
 	}

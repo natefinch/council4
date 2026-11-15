@@ -22,7 +22,7 @@ func (s *rulesPaymentState) ProjectResources(p game.ResourceProjection) payment.
 	for _, resource := range p.Permanents {
 		opaque = opaque || resource.Removed
 	}
-	opaque = opaque || len(p.UnavailableCards) > 0
+	opaque = opaque || len(p.UnavailableCards) > 0 || len(p.CardMoves) > 0
 	return &rulesPaymentState{g: s.g.ResourceView(p), readOnly: true, engine: s.engine, publicZoneOpaque: opaque}
 }
 
@@ -41,6 +41,38 @@ func (s *rulesPaymentState) assertWritable() {
 }
 
 func (s *rulesPaymentState) ResourceReadOnly() bool { return s.readOnly }
+
+func (s *rulesPaymentState) ForecastCardCost(player game.PlayerID, cardID id.ID, from, to zone.Type, discard bool) (game.ResourceProjection, bool) {
+	defer s.BeginPaymentRead()()
+	card, ok := s.g.GetCardInstance(cardID)
+	counters := s.g.CardCounters[cardID]
+	if !ok || !counters.IsEmpty() {
+		return game.ResourceProjection{}, false
+	}
+	event := game.Event{Kind: game.EventZoneChanged, Player: player, Controller: player, CardID: cardID, FromZone: from, ToZone: to}
+	pending := newZoneChangeReplacement(event)
+	if discard {
+		pending = prepareDiscard(s.g, player, cardID, 0).ordinary
+	}
+	if len(pending.pendingChoices(s.g)) > 0 || pending.result.exileCounter.Exists ||
+		pending.result.destination != zone.Graveyard && pending.result.destination != zone.Exile {
+		return game.ResourceProjection{}, false
+	}
+	// A replacement leaving the card in its source doesn't consume a resource.
+	if pending.result.destination == from {
+		return game.ResourceProjection{}, false
+	}
+	event.ToZone, event.CardZoneVersion = pending.result.destination, card.ZoneVersion+1
+	events := []game.Event{prepareEvent(s.g, event)}
+	if discard {
+		event.Kind = game.EventCardDiscarded
+		events = append(events, prepareEvent(s.g, event))
+	}
+	return game.ResourceProjection{
+		CardMoves: []game.ResourceCardMove{{Player: player, Card: cardID, From: from, To: event.ToZone}},
+		Events:    events,
+	}, true
+}
 
 // A tapped {T} source without a possible plannable untap cannot satisfy a
 // required-source choice. Do not exhaust every unrelated mana history for it.
@@ -114,11 +146,15 @@ func (s *rulesPaymentState) ResourceSelectionStable(additional cost.Additional) 
 					}
 				}
 			}
-			if body, ok := ability.(*game.ManaAbility); ok && (counterChoice || powerChoice) {
+			if body, ok := ability.(*game.ManaAbility); ok {
 				for _, component := range body.AdditionalCosts {
-					if component.Kind == cost.AdditionalPutCounter {
+					if component.Kind == cost.AdditionalDiscard || component.Kind == cost.AdditionalExile ||
+						(counterChoice || powerChoice) && component.Kind == cost.AdditionalPutCounter {
 						return false
 					}
+				}
+				if !counterChoice && !powerChoice {
+					continue
 				}
 				for _, mode := range body.Content.Modes {
 					for _, instruction := range mode.Sequence {

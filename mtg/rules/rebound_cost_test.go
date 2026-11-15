@@ -277,12 +277,18 @@ func TestReboundCastOptionalCostsAndStormCopies(t *testing.T) {
 			beginAdditionalUpkeep(e, g, game.Player1, reboundKickerAgents(agent))
 			resolveReboundTriggers(e, g, reboundKickerAgents(agent))
 
-			if len(agent.requests) != 1 {
-				t.Fatalf("free-cast requests = %d, want 1", len(agent.requests))
+			wantRequests := 1
+			if tc.wantKicked {
+				wantRequests++
+			}
+			if len(agent.requests) != wantRequests {
+				t.Fatalf("free-cast requests = %d, want consent followed by any optional-cost choice", len(agent.requests))
 			}
 			kickedOffered := false
-			for _, option := range agent.requests[0].Options {
-				kickedOffered = kickedOffered || strings.Contains(option.Label, "with kicker")
+			for _, request := range agent.requests {
+				for _, option := range request.Options {
+					kickedOffered = kickedOffered || strings.Contains(option.Label, "with kicker")
+				}
 			}
 			if kickedOffered != tc.wantKicked {
 				t.Fatalf("kicked option offered = %t, want %t", kickedOffered, tc.wantKicked)
@@ -459,15 +465,9 @@ func TestReboundCastLocksCostBeforeManaAbilities(t *testing.T) {
 	}
 }
 
-// TestReboundCastRollsBackPaymentTimeManaAbilities combines a payment-time
-// mana ability with Thalia's tax and a mandatory sacrifice cost. Mana
-// abilities only add mana, so without an artifact the proposal is not offered
-// and no payment window opens. With a second Thalia the {2} tax exceeds the
-// Grove's mana, so the proposal is not offered (#3585). Adding Nurturing
-// Peatland makes it payable: the proposal is offered, but leaving the Peatland
-// unused leaves the cast unpaid, so it is reversed along with the reversible
-// mana activation (CR 733), leaving the card in exile.
-func TestReboundCastRollsBackPaymentTimeManaAbilities(t *testing.T) {
+// Impossible additional/mana totals are not offered. When both lands can pay,
+// finishing without a required land is not offered (601.2h; 2026-11-06).
+func TestReboundCastOffersOnlyCompletablePayments(t *testing.T) {
 	reg := cards.NewDefaultRegistry()
 	for _, tc := range []struct {
 		name          string
@@ -481,7 +481,7 @@ func TestReboundCastRollsBackPaymentTimeManaAbilities(t *testing.T) {
 		{name: "all costs paid", artifact: true, thalias: 1, wantWindows: 1, wantActivated: 1, wantCast: true},
 		{name: "sacrifice impossible", artifact: false, thalias: 1},
 		{name: "mana short", artifact: true, thalias: 2},
-		{name: "mana unpaid", artifact: true, thalias: 2, peatland: true, wantWindows: 2, wantActivated: 1},
+		{name: "both sources required", artifact: true, thalias: 2, peatland: true, wantWindows: 2, wantActivated: 1, wantCast: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e, g := newEffectiveCascadeGame()
@@ -537,7 +537,12 @@ func TestReboundCastRollsBackPaymentTimeManaAbilities(t *testing.T) {
 			if len(obj.SacrificedAsCostIDs) != 1 || !g.Players[game.Player1].Graveyard.Contains(fodder.CardInstanceID) {
 				t.Fatalf("sacrificed as cost = %v, want the artifact sacrificed", obj.SacrificedAsCostIDs)
 			}
-			if !grove.Tapped || g.Players[game.Player1].Life != life-1 || obj.ManaSpentToCast != 1 {
+			lifePaid, manaPaid := 1, 1
+			if peatland != nil {
+				lifePaid, manaPaid = 2, 2
+			}
+			if !grove.Tapped || g.Players[game.Player1].Life != life-lifePaid || obj.ManaSpentToCast != manaPaid ||
+				peatland != nil && !peatland.Tapped {
 				t.Fatalf("grove tapped=%t life=%d mana spent=%d, want the Grove to pay Thalia's tax", grove.Tapped, g.Players[game.Player1].Life, obj.ManaSpentToCast)
 			}
 		})
@@ -642,7 +647,7 @@ func (a *freeCastScriptAgent) ChooseChoice(_ PlayerObservation, request game.Cho
 	case request.Prompt == "Activate a mana ability while paying?":
 		a.windows++
 		selected := pickLabel(a.ability)
-		if selected[0] != 0 {
+		if request.Options[selected[0]].Label != "Finish paying" {
 			a.activated++
 		}
 		return selected
@@ -791,14 +796,9 @@ func TestFreeCastOffersOnlyFeasibleNonManaCosts(t *testing.T) {
 	}
 }
 
-// TestFreeCastReoffersAfterUnpaidProposal proves an unpaid free-cast proposal
-// is reversed to the choice it came from (CR 733) rather than ending the
-// opportunity. Under Thalia's tax with Waterlogged Grove and Nurturing Peatland
-// for mana, a kicked proposal and a spell needing {1} more each total {2}, so
-// they are offered (#3585), but the caster activates only the Grove and leaves
-// them unpaid; each is reversed, including the Grove activation, and the
-// remaining proposal is cast with the Grove's mana.
-func TestFreeCastReoffersAfterUnpaidProposal(t *testing.T) {
+// CR 601.2b/f/h (2026-11-06): choosing the payable kicked/costly announcement
+// commits to a complete payment, not a doomed attempt followed by another cast.
+func TestFreeCastCompletesSelectedAdditionalCosts(t *testing.T) {
 	reg := cards.NewDefaultRegistry()
 	t.Run("kicked option of one card", func(t *testing.T) {
 		e, g := newEffectiveCascadeGame()
@@ -818,16 +818,15 @@ func TestFreeCastReoffersAfterUnpaidProposal(t *testing.T) {
 			t.Fatal("free cast failed after the kicked proposal was reversed")
 		}
 
-		if len(agent.castChoices) != 2 || len(agent.castChoices[0]) != 2 || len(agent.castChoices[1]) != 1 ||
-			strings.Contains(agent.castChoices[1][0], "with kicker") {
-			t.Fatalf("cast choices = %v, want kicked and unkicked, then unkicked only", agent.castChoices)
+		if len(agent.castChoices) != 1 || len(agent.castChoices[0]) != 2 {
+			t.Fatalf("cast choices = %v, want one kicked/unkicked announcement", agent.castChoices)
 		}
 		obj, ok := g.Stack.Peek()
-		if !ok || obj.SourceID != cardID || obj.KickerPaid || obj.ManaSpentToCast != 1 {
-			t.Fatalf("stack top = %+v, want the unkicked spell paying Thalia's tax", obj)
+		if !ok || obj.SourceID != cardID || !obj.KickerPaid || obj.ManaSpentToCast != 2 {
+			t.Fatalf("stack top = %+v, want the kicked spell paying the locked total", obj)
 		}
-		if agent.activated != 2 || !grove.Tapped || peatland.Tapped || g.Players[game.Player1].Life != life-1 {
-			t.Fatalf("activations=%d grove tapped=%t peatland tapped=%t life=%d, want the first activation reversed",
+		if agent.activated != 2 || !grove.Tapped || !peatland.Tapped || g.Players[game.Player1].Life != life-2 {
+			t.Fatalf("activations=%d grove tapped=%t peatland tapped=%t life=%d, want both required payments",
 				agent.activated, grove.Tapped, peatland.Tapped, g.Players[game.Player1].Life)
 		}
 	})
@@ -853,18 +852,18 @@ func TestFreeCastReoffersAfterUnpaidProposal(t *testing.T) {
 
 		e.resolveTopOfStackWithChoices(g, reboundKickerAgents(agent), &TurnLog{})
 
-		if len(agent.spellChoices) != 2 || len(agent.spellChoices[0]) != 2 || len(agent.spellChoices[1]) != 1 {
-			t.Fatalf("spell choices = %v, want both spells, then the untried one", agent.spellChoices)
+		if len(agent.spellChoices) != 1 || len(agent.spellChoices[0]) != 2 {
+			t.Fatalf("spell choices = %v, want one choice between the two payable spells", agent.spellChoices)
 		}
-		if !g.Players[game.Player1].Hand.Contains(costlyID) {
-			t.Fatal("the reversed proposal left hand")
+		if !g.Players[game.Player1].Hand.Contains(plainID) || g.Players[game.Player1].Hand.Contains(costlyID) {
+			t.Fatal("the chosen spell did not leave hand")
 		}
 		obj, ok := g.Stack.Peek()
-		if !ok || obj.SourceID != plainID || obj.ManaSpentToCast != 1 {
-			t.Fatalf("stack top = %+v, want the plain spell paying Thalia's tax", obj)
+		if !ok || obj.SourceID != costlyID || obj.ManaSpentToCast != 2 {
+			t.Fatalf("stack top = %+v, want the chosen spell paying all costs", obj)
 		}
-		if agent.activated != 2 || !grove.Tapped || peatland.Tapped || g.Players[game.Player1].Life != life-1 {
-			t.Fatalf("activations=%d grove tapped=%t peatland tapped=%t life=%d, want the first activation reversed",
+		if agent.activated != 2 || !grove.Tapped || !peatland.Tapped || g.Players[game.Player1].Life != life-2 {
+			t.Fatalf("activations=%d grove tapped=%t peatland tapped=%t life=%d, want both required payments",
 				agent.activated, grove.Tapped, peatland.Tapped, g.Players[game.Player1].Life)
 		}
 	})

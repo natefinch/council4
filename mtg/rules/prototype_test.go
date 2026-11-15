@@ -349,14 +349,19 @@ func (a prototypeFreeCastAgent) ChooseChoice(_ PlayerObservation, request game.C
 func TestPrototypeFreeCastUsesPrototypeManaValue(t *testing.T) {
 	g, engine := prototypeScenario(t)
 	cardID := addCardToHand(g, game.Player1, prototypeTestDef())
+	card, _ := g.GetCardInstance(cardID)
+	options := engine.freeCastOptionsForCard(g, game.Player1, card, zone.Hand, game.Selection{}, opt.Val(3))
+	if len(options) != 1 || options[0].cast.Face != game.FacePrototype {
+		t.Fatal("only the mana value 3 prototype should be available")
+	}
 	pushElectrodominance(g, game.PlayerTarget(game.Player2), 3)
 
 	var labels []string
 	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{
 		game.Player1: prototypeFreeCastAgent{labels: &labels},
 	}, &TurnLog{})
-	if !slices.Equal(labels, []string{prototypeTestName + " (prototype)"}) {
-		t.Fatalf("free-cast face options = %q, want only the mana value 3 prototyped cast", labels)
+	if len(labels) != 0 {
+		t.Fatalf("free-cast face options = %q, want no redundant single-face choice", labels)
 	}
 	obj, ok := g.Stack.Peek()
 	if !ok || obj.SourceID != cardID || obj.Face != game.FacePrototype {

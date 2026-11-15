@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // PermanentResources is a planned resource state, not a zone-change operation.
@@ -24,9 +25,17 @@ type PlayerResources struct {
 	Riders []ManaRiderInstance
 }
 
+// ResourceCardMove records a deterministic payment-cost move in a read view.
+type ResourceCardMove struct {
+	Player PlayerID
+	Card   id.ID
+	From   zone.Type
+	To     zone.Type
+}
+
 // ResourceProjection contains only payment resources and recorded ability uses.
 // Missing entries retain their current state. It never allocates object IDs or
-// changes RNG, logs, zones or the underlying game.
+// changes RNG, logs or the underlying game. CardMoves changes only view zones.
 type ResourceProjection struct {
 	Permanents       map[id.ID]PermanentResources
 	Players          map[PlayerID]PlayerResources
@@ -35,6 +44,7 @@ type ResourceProjection struct {
 	UnavailableCards map[id.ID]bool
 	LastKnown        map[id.ID]ObjectSnapshot
 	SpentDelayed     map[id.ID]bool
+	CardMoves        []ResourceCardMove
 }
 
 // ResourceView supplies canonical rules evaluators with a read-only,
@@ -95,6 +105,32 @@ func (g *Game) ResourceView(projection ResourceProjection) *Game {
 				player.Hand.Remove(cardID)
 			}
 			view.Players[playerID] = &player
+		}
+	}
+	if len(projection.CardMoves) > 0 {
+		view.CardInstances = maps.Clone(g.CardInstances)
+		for _, move := range projection.CardMoves {
+			original := view.Players[move.Player]
+			player := *original
+			player.Hand, player.Graveyard, player.Exile = original.Hand.Clone(), original.Graveyard.Clone(), original.Exile.Clone()
+			cards := func(kind zone.Type) *zone.Zone {
+				switch kind {
+				case zone.Hand:
+					return &player.Hand
+				case zone.Graveyard:
+					return &player.Graveyard
+				case zone.Exile:
+					return &player.Exile
+				default:
+					panic("unsupported payment resource zone")
+				}
+			}
+			cards(move.From).Remove(move.Card)
+			cards(move.To).Add(move.Card)
+			view.Players[move.Player] = &player
+			card := *view.CardInstances[move.Card]
+			card.ZoneVersion++
+			view.CardInstances[move.Card] = &card
 		}
 	}
 	if len(projection.Used) > 0 {

@@ -223,12 +223,18 @@ func TestSuspendCastOptionalKickerWithTax(t *testing.T) {
 
 			e.runSuspendUpkeep(g, game.Player1, suspendAgents(agent))
 
-			if len(agent.requests) != 1 {
-				t.Fatalf("free-cast requests = %d, want 1", len(agent.requests))
+			wantRequests := 1
+			if tc.wantKicked {
+				wantRequests++
+			}
+			if len(agent.requests) != wantRequests {
+				t.Fatalf("free-cast requests = %d, want consent followed by any optional-cost choice", len(agent.requests))
 			}
 			kickedOffered := false
-			for _, option := range agent.requests[0].Options {
-				kickedOffered = kickedOffered || strings.Contains(option.Label, "with kicker")
+			for _, request := range agent.requests {
+				for _, option := range request.Options {
+					kickedOffered = kickedOffered || strings.Contains(option.Label, "with kicker")
+				}
 			}
 			if kickedOffered != tc.wantKicked {
 				t.Fatalf("kicked option offered = %t, want %t", kickedOffered, tc.wantKicked)
@@ -275,7 +281,7 @@ func (*suspendTargetAgent) ChooseAction(PlayerObservation, []action.Action) acti
 }
 
 func (a *suspendTargetAgent) ChooseChoice(_ PlayerObservation, request game.ChoiceRequest) []int {
-	if request.Kind != game.ChoiceResolution || !strings.Contains(request.Prompt, "without paying its mana cost") {
+	if request.Kind != game.ChoiceTarget {
 		return request.DefaultSelection
 	}
 	a.offered = len(request.Options)
@@ -392,13 +398,10 @@ func TestSuspendCastPaysWithPaymentTimeManaAbility(t *testing.T) {
 	}
 }
 
-// TestSuspendCastRollsBackPaymentTimeManaAbilities: with two Thalias the {2}
-// tax exceeds Waterlogged Grove's mana, so the proposal is not offered and no
-// window opens (#3585). Adding Nurturing Peatland makes it payable: the
-// proposal is offered, but leaving the Peatland unused leaves the cast unpaid,
-// so it is reversed along with the reversible mana activation (CR 733),
-// leaving the card exiled.
-func TestSuspendCastRollsBackPaymentTimeManaAbilities(t *testing.T) {
+// The {2} tax needs both lands. Without Peatland no cast is offered; with it
+// the required payment completes without a doomed finish option (601.2h;
+// 2026-11-06).
+func TestSuspendCastOffersOnlyCompletablePayments(t *testing.T) {
 	reg := cards.NewDefaultRegistry()
 	for _, tc := range []struct {
 		name          string
@@ -407,7 +410,7 @@ func TestSuspendCastRollsBackPaymentTimeManaAbilities(t *testing.T) {
 		wantActivated int
 	}{
 		{name: "mana short"},
-		{name: "mana unpaid", peatland: true, wantWindows: 2, wantActivated: 1},
+		{name: "both sources required", peatland: true, wantWindows: 2, wantActivated: 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e, g := newEffectiveCascadeGame()
@@ -427,6 +430,13 @@ func TestSuspendCastRollsBackPaymentTimeManaAbilities(t *testing.T) {
 
 			if agent.windows != tc.wantWindows || agent.activated != tc.wantActivated {
 				t.Fatalf("payment windows=%d activations=%d, want %d/%d", agent.windows, agent.activated, tc.wantWindows, tc.wantActivated)
+			}
+			if peatland != nil {
+				object, _ := requireSuspendCast(t, g, cardID)
+				if !grove.Tapped || !peatland.Tapped || g.Players[game.Player1].Life != life-2 || object.ManaSpentToCast != 2 {
+					t.Fatal("required payment was not completed (CR 601.2h, 2026-11-06)")
+				}
+				return
 			}
 			requireSuspendNotCast(t, g, cardID)
 			if grove.Tapped || g.Players[game.Player1].Life != life || g.Players[game.Player1].ManaPool.Total() != 0 {

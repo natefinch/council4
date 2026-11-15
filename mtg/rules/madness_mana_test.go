@@ -10,6 +10,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // Source review: Comprehensive Rules effective 2026-09-25 (media.wizards.com
@@ -72,8 +73,8 @@ func requireMadnessNotCast(t *testing.T, g *game.Game, cardID id.ID) {
 // life-paying mana ability is never activated automatically, as the only green
 // source. The cast is proposed and the Grove pays {G} while paying (CR 601.2g).
 // The cast runs in a clone without changing the original game. When the caster
-// does not activate the Grove, the proposal is reversed and the Wurm goes to
-// the graveyard (CR 702.35a, 733.1).
+// cannot decline the required Grove payment after announcing the cast
+// (CR 601.2h, 2026-11-06).
 func TestMadnessCastPaysWithPaymentTimeManaAbility(t *testing.T) {
 	reg := cards.NewDefaultRegistry()
 	e, g := newEffectiveCascadeGame()
@@ -104,15 +105,15 @@ func TestMadnessCastPaysWithPaymentTimeManaAbility(t *testing.T) {
 		}
 	})
 
-	t.Run("grove not activated", func(t *testing.T) {
+	t.Run("required grove cannot be declined", func(t *testing.T) {
 		clone := g.Clone()
 		agent := &paymentManaAgent{ability: "no such ability"}
 		e.resolveTopOfStackWithChoices(clone, reboundKickerAgents(agent), &TurnLog{})
 
-		requireMadnessNotCast(t, clone, cardID)
-		if agent.windows != 1 || reboundPermanentNamed(t, clone, "Waterlogged Grove").Tapped ||
-			clone.Players[game.Player1].Life != life || clone.Players[game.Player1].ManaPool.Total() != 2 {
-			t.Fatalf("windows=%d life=%d pool=%d, want the offered proposal reversed without payment",
+		requireMadnessCast(t, clone, cardID)
+		if agent.windows != 1 || !reboundPermanentNamed(t, clone, "Waterlogged Grove").Tapped ||
+			clone.Players[game.Player1].Life != life-1 || clone.Players[game.Player1].ManaPool.Total() != 0 {
+			t.Fatalf("windows=%d life=%d pool=%d, want the required payment completed",
 				agent.windows, clone.Players[game.Player1].Life, clone.Players[game.Player1].ManaPool.Total())
 		}
 	})
@@ -144,16 +145,10 @@ func TestMadnessCastLocksCostBeforeManaAbilities(t *testing.T) {
 	}
 }
 
-// TestMadnessCastRollsBackPaymentTimeManaAbilities combines a payment-time mana
-// ability with Thalia's tax and a mandatory sacrifice cost on a madness cast.
-// Mana abilities only add mana, so without an artifact the proposal is not made
-// and no payment window opens. With a second Thalia the {2}{G} total exceeds
-// the mana the Grove and pool can make, so no proposal is made (#3585). Adding
-// Nurturing Peatland makes it payable: the proposal is made, but leaving the
-// Peatland unused leaves the cast unpaid, so it is reversed along with the
-// Grove's reversible activation (CR 733.1), and the card goes to the graveyard
-// (CR 702.35a).
-func TestMadnessCastRollsBackPaymentTimeManaAbilities(t *testing.T) {
+// Impossible sacrifice/mana totals are not offered. With both lands the total
+// is completable, so neither required payment can be declined into an unpaid
+// cast (601.2h, 702.35a; 2026-11-06).
+func TestMadnessCastOffersOnlyCompletablePayments(t *testing.T) {
 	reg := cards.NewDefaultRegistry()
 	for _, tc := range []struct {
 		name          string
@@ -167,7 +162,7 @@ func TestMadnessCastRollsBackPaymentTimeManaAbilities(t *testing.T) {
 		{name: "all costs paid", artifact: true, thalias: 1, wantWindows: 1, wantActivated: 1, wantCast: true},
 		{name: "sacrifice impossible", artifact: false, thalias: 1},
 		{name: "mana short", artifact: true, thalias: 2},
-		{name: "mana unpaid", artifact: true, thalias: 2, peatland: true, wantWindows: 2, wantActivated: 1},
+		{name: "both sources required", artifact: true, thalias: 2, peatland: true, wantWindows: 2, wantActivated: 1, wantCast: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e, g := newEffectiveCascadeGame()
@@ -222,7 +217,12 @@ func TestMadnessCastRollsBackPaymentTimeManaAbilities(t *testing.T) {
 			if len(obj.SacrificedAsCostIDs) != 1 || !g.Players[game.Player1].Graveyard.Contains(fodder.CardInstanceID) {
 				t.Fatalf("sacrificed as cost = %v, want the artifact sacrificed", obj.SacrificedAsCostIDs)
 			}
-			if !grove.Tapped || g.Players[game.Player1].Life != life-1 || obj.ManaSpentToCast != 2 {
+			lifePaid, manaPaid := 1, 2
+			if peatland != nil {
+				lifePaid, manaPaid = 2, 3
+			}
+			if !grove.Tapped || g.Players[game.Player1].Life != life-lifePaid || obj.ManaSpentToCast != manaPaid ||
+				peatland != nil && !peatland.Tapped {
 				t.Fatalf("grove tapped=%t life=%d mana spent=%d, want the Grove to pay Thalia's tax",
 					grove.Tapped, g.Players[game.Player1].Life, obj.ManaSpentToCast)
 			}
@@ -247,5 +247,54 @@ func TestMadnessCastWithoutManaPaymentOpensNoManaWindow(t *testing.T) {
 	if agent.windows != 0 || grove.Tapped || obj.ManaSpentToCast != 0 {
 		t.Fatalf("windows=%d grove tapped=%t mana spent=%d, want a {0} madness cast without a mana window",
 			agent.windows, grove.Tapped, obj.ManaSpentToCast)
+	}
+}
+
+func TestMadnessAnnouncesAlternativeCostXOnStack(t *testing.T) {
+	e, g := newEffectiveCascadeGame()
+	def := numericDamageSpell()
+	def.ManaCost = opt.Val(cost.Mana{cost.O(1), cost.R})
+	def.StaticAbilities = append(def.StaticAbilities, game.StaticAbility{KeywordAbilities: []game.KeywordAbility{
+		game.MadnessKeyword{Cost: cost.Mana{cost.X, cost.R}},
+	}})
+	card := addCardToHand(g, game.Player1, def)
+	discardIntoMadness(t, e, g, card)
+	g.Players[game.Player1].ManaPool.Add(mana.C, 21)
+	g.Players[game.Player1].ManaPool.Add(mana.R, 1)
+	var announced *game.StackObject
+	numbers := 0
+	agent := &controlScript{choice: func(_ PlayerObservation, request game.ChoiceRequest) []int {
+		if request.Kind == game.ChoiceMay {
+			return []int{1}
+		}
+		if request.Kind == game.ChoiceNumber || request.Kind == game.ChoiceTarget {
+			top, ok := g.Stack.Peek()
+			if !ok || top.SourceID != card || !top.Casting || g.Players[game.Player1].Exile.Contains(card) ||
+				announced != nil && announced != top {
+				t.Fatal("madness announcements did not observe the same Casting object")
+			}
+			announced = top
+		}
+		if request.Kind == game.ChoiceNumber {
+			numbers++
+			return []int{21}
+		}
+		if request.Kind == game.ChoiceTarget {
+			for _, option := range request.Options {
+				if len(option.Targets) == 1 && option.Targets[0] == game.PlayerTarget(game.Player2) {
+					return []int{option.Index}
+				}
+			}
+		}
+		return request.DefaultSelection
+	}}
+	e.resolveTopOfStackWithChoices(g, reboundKickerAgents(agent), &TurnLog{})
+	object, _ := requireMadnessCast(t, g, card)
+	if object != announced || object.Casting || object.XValue != 21 || object.ManaSpentToCast != 22 || numbers != 1 {
+		t.Fatal("madness used the printed cost instead of its announced alternative X")
+	}
+	e.resolveTopOfStack(g, &TurnLog{})
+	if g.Players[game.Player2].Life != 19 {
+		t.Fatal("madness did not resolve with the exact announced X")
 	}
 }

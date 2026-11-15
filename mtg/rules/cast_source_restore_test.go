@@ -50,8 +50,8 @@ import (
 // players can't look at it unless an instruction allows it.
 
 // sourceRestoreAgent accepts optional casts and activates only Phyrexian
-// Altar's mana ability while paying, sacrificing Homing Golem, leaving the cost
-// short so the cast is reversed after the Golem went to the library.
+// Altar's mana ability while paying, sacrificing Homing Golem. Any remaining
+// required mana is supplied by the completion-preserving default.
 type sourceRestoreAgent struct {
 	sacrificed int
 }
@@ -105,8 +105,8 @@ func graveyardRestoreRoutes() []graveyardRestoreRoute {
 			thalias(t, g, 1)
 			return g, cardID, func(agents [game.NumPlayers]PlayerAgent) {
 				e.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
-				if spellCastProhibited(g, game.Player1, vanillaCreatureDef()) {
-					t.Fatal("Conduit's can't-cast-additional lock applied after a reversed cast")
+				if !spellCastProhibited(g, game.Player1, vanillaCreatureDef()) {
+					t.Fatal("Conduit's can't-cast-additional lock missing after a completed cast")
 				}
 			}
 		}},
@@ -123,15 +123,10 @@ func graveyardRestoreRoutes() []graveyardRestoreRoute {
 	}
 }
 
-// TestReversedGraveyardCastKeepsGraveyardOrder casts a card from the middle of
-// its owner's graveyard on the unmigrated resolution-time routes: a paid cast
-// through Conduit of Worlds and a free cast. Phyrexian Altar and Waterlogged Grove could pay
-// together, so the cast is proposed, but the caster activates only the Altar,
-// sacrificing Homing Golem, which goes on top of its owner's library (CR
-// 601.2g), and the cost goes unpaid. The cast is reversed (CR 733.1): the
-// Golem stays in the library, and the card returns between the cards that were
-// above and below it rather than on top (CR 404.2).
-func TestReversedGraveyardCastKeepsGraveyardOrder(t *testing.T) {
+// CR 601.2h (2026-11-06): the required Grove cannot be declined after the
+// Altar is chosen. The completed cast preserves the remaining graveyard order
+// (404.2), including when a sacrifice replacement moves its subject to library.
+func TestResolutionGraveyardCastPreservesRemainingOrder(t *testing.T) {
 	for _, route := range graveyardRestoreRoutes() {
 		t.Run(route.name, func(t *testing.T) {
 			g, cardID, run := route.build(t)
@@ -156,16 +151,14 @@ func TestReversedGraveyardCastKeepsGraveyardOrder(t *testing.T) {
 			if library := g.Players[game.Player1].Library.All(); agent.sacrificed != 1 || !slices.Equal(library, []id.ID{golem}) {
 				t.Fatalf("library = %v, want Phyrexian Altar's sacrifice to put Homing Golem there while paying", library)
 			}
-			if g.Stack.Size() != 0 || reboundPermanentNamed(t, g, "Waterlogged Grove").Tapped || g.Players[game.Player1].Life != life {
-				t.Fatal("the unpaid cast left a spell or a Grove payment behind")
+			if g.Stack.Size() != 1 || !reboundPermanentNamed(t, g, "Waterlogged Grove").Tapped || g.Players[game.Player1].Life != life-1 {
+				t.Fatal("the required payment did not complete")
 			}
-			for _, event := range g.Events {
-				if event.Kind == game.EventSpellCast && event.CardID == cardID {
-					t.Fatal("the reversed cast produced a spell-cast event")
-				}
+			if top, ok := g.Stack.Peek(); !ok || top.SourceID != cardID || spellCastEventCount(g) != 1 {
+				t.Fatal("expected one cast object and event")
 			}
-			if got, want := g.Players[game.Player1].Graveyard.All(), []id.ID{above, cardID, below}; !slices.Equal(got, want) {
-				t.Fatalf("graveyard after reversal = %v, want %v: the card back in its place (CR 404.2)", got, want)
+			if got, want := g.Players[game.Player1].Graveyard.All(), []id.ID{above, below}; !slices.Equal(got, want) {
+				t.Fatalf("remaining graveyard = %v, want %v (CR 404.2)", got, want)
 			}
 		})
 	}
@@ -204,14 +197,9 @@ func TestPriorityGraveyardCastPreservesRemainingOrder(t *testing.T) {
 	}
 }
 
-// TestReversedFreeCastFromExileStaysFaceDownInPlace foretells Doomskar between
-// two other exiled cards, then on a later turn casts it from exile without
-// paying its mana cost while two Thalias add {2}. Phyrexian Altar and
-// Waterlogged Grove could pay that together, but only the Altar is activated,
-// sacrificing Homing Golem into its owner's library, so the cast is
-// reversed (CR 733.1): the card returns to its place in exile still face down
-// (CR 406.3) and foretold, and its foretell cast is still offered.
-func TestReversedFreeCastFromExileStaysFaceDownInPlace(t *testing.T) {
+// The announced free cast consumes its face-down exile source once its
+// completion-preserving payment finishes (601.2a/h, 2026-11-06).
+func TestFreeCastFromFaceDownExilePreservesRemainingOrder(t *testing.T) {
 	e, g := newEffectiveCascadeGame()
 	below := addCardToExile(g, game.Player1, productionChoiceCard(t, "Forest"))
 	cardID := addCardToHand(g, game.Player1, productionChoiceCard(t, "Doomskar"))
@@ -238,20 +226,14 @@ func TestReversedFreeCastFromExileStaysFaceDownInPlace(t *testing.T) {
 	e.chooseAndCastFreeSpellFromSource(g, g.Players[game.Player1], game.Player1, cardID, zone.Exile,
 		game.Selection{}, opt.V[int]{}, false, reboundKickerAgents(agent), &TurnLog{})
 
-	if top, _ := g.Players[game.Player1].Library.Top(); agent.sacrificed != 1 || top != golem || g.Stack.Size() != 0 || grove.Tapped {
-		t.Fatalf("sacrificed=%d stack=%d grove tapped=%t, want the unpaid free cast reversed after Homing Golem went to the library",
+	if top, _ := g.Players[game.Player1].Library.Top(); agent.sacrificed != 1 || top != golem || g.Stack.Size() != 1 || !grove.Tapped {
+		t.Fatalf("sacrificed=%d stack=%d grove tapped=%t, want the completed free cast after Homing Golem went to the library",
 			agent.sacrificed, g.Stack.Size(), grove.Tapped)
 	}
-	if got, want := exile.All(), []id.ID{above, cardID, below}; !slices.Equal(got, want) {
-		t.Fatalf("exile after reversal = %v, want %v", got, want)
+	if got, want := exile.All(), []id.ID{above, below}; !slices.Equal(got, want) {
+		t.Fatalf("remaining exile = %v, want %v", got, want)
 	}
-	if !exile.IsFaceDown(cardID) {
-		t.Fatal("the reversed foretold card returned to exile face up")
-	}
-	g.Players[game.Player1].ManaPool.Add(mana.W, 2)
-	g.Players[game.Player1].ManaPool.Add(mana.C, 3)
-	cast := action.CastSpellFaceFromZone(cardID, zone.Exile, game.FaceFront, nil, 0, nil)
-	if !cardIsForetoldInExile(g, game.Player1, cardID) || !containsAction(e.legalActions(g, game.Player1), cast) {
-		t.Fatal("the reversed foretold card lost its foretell cast")
+	if cardIsForetoldInExile(g, game.Player1, cardID) || spellCastEventCount(g) != 1 {
+		t.Fatal("completed free cast retained its exile permission or was cast more than once")
 	}
 }

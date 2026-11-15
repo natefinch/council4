@@ -160,8 +160,8 @@ rules-specific commit data for permanent/general/equip/loyalty, hand,
 graveyard, cycling, ninjutsu and hand-mana activations. Suspend, foretell, plot
 and turn-face-up special actions use the same descriptor/procedure. The existing
 action kinds contain no other mana-costed special action; land plays retain
-their existing entry/replacement decisions. Resolution-time casting remains
-pending #3723; priority casting uses the procedure described below.
+their existing entry/replacement decisions. Priority and resolution-time casting
+use the procedure described below.
 
 Nonmana abilities are on the stack before any announcement/payment callback
 (CR 602.2a). Hidden-zone activation sources are publicly revealed first;
@@ -263,8 +263,7 @@ production. Normal choices cannot decline a required source into an unpaid
 cast. Only a selected opaque activation opens the shared whole-world/RNG/log
 checkpoint; canceling it also cancels the source transition or prepared copy
 (734.1–2). Priority no longer withholds proposals or exhausted actions.
-Resolution-time proposal/probe/reversal machinery remains for #3723; final
-dead-helper removal remains #3725.
+Final dead-helper removal remains #3725.
 
 Folded issue interpretation under the **2026-11-06** rules:
 
@@ -277,7 +276,7 @@ Folded issue interpretation under the **2026-11-06** rules:
 - #3705: registered Desperate Ritual and Glacial Ray exercise multiple splice
   reveals visible to an opponent before the host's and spliced text's targets.
 - #3570: priority Phyrexian symbols, including kicker, are binding before
-  targets. The free/resolution-time portion remains #3723.
+  targets. Resolution-time casting now uses the same helpers (see below).
 - #3632/#3633: planned valid mana sources enable X and counter/life additional
   costs. Millikin and Deranged Assistant are **nonmana activated abilities**
   under 605.1a, not payment-time sources. Underworld Breach/Sol Ring escape is
@@ -290,6 +289,64 @@ Folded issue interpretation under the **2026-11-06** rules:
 
 Additional sections read in the official rules cited above: 601.3,
 702.47a–e, 702.140a–f, 708.4–6, 702.37a–g, 401.5 and 734.1–2.
+
+### Resolution-time spell casting (#3723)
+
+Free casts (cascade, discover, rebound, suspend, effect permissions and copies
+of cards), paid resolution/search casts and madness supply descriptors to
+`Engine.costedAction`. The resolving effect supplies permission and any required
+alternative cost; it does not grant ordinary priority or impose sorcery timing
+(608.2g). Printed restrictions, source-zone prohibitions and cast limits still
+apply. Madness's uncastable or declined card follows its graveyard branch.
+
+Only the face/card and consent are selected before casting. The procedure moves
+the source and pushes its topmost `Casting` object before modes, numbers,
+additional-cost announcements, binding Phyrexian intentions, splice disclosure
+and targets. The same object becomes cast at commit. Source-owner-aware resource
+views preserve foreign-zone casts; a cast copy leaves its original in place and
+has its own payment identity. Target, counter-transition, copy, suspend,
+exile-on-resolution, splice, cast-event and mana-spend-rider data retain their
+normal commit semantics.
+
+Availability and announcement options use exact pending-target completions, not
+bundled target choices, clone probes, sampled targets or inconclusive successes.
+Numeric declarations retain exact caller values; X-dependent target feasibility
+also checks target-mana-value breakpoints, not a numeric search cutoff.
+The shared helpers select cost options and Phyrexian intentions before target
+prefixes. Total costs are then locked and completed/applied by the procedure.
+Required mana sources cannot be declined into an unpaid cast, and ordinary
+failed-proposal retry/withholding loops are gone. Only the existing shared
+opaque-activation checkpoint can reverse payment; invalid external declarations
+can still be rejected before payment.
+
+The registered Lightning Axe regressions exercise both per-card and multi-card
+selection with another discard card, a legal creature target and only Waterlogged
+Grove. Its additional discard cost stays mandatory despite the free mana cost;
+the unaffordable `{5}` alternative is filtered, no Grove/life payment occurs,
+and the target callback sees the object that becomes cast (#3465).
+A registered Lightning Bolt with a Phyrexian kicker observes that same identity
+during the binding announcement and later target choice. Only payable intentions
+are offered; a mana intention is never reopened as life, except for K'rrik's
+separate color-to-life effect (#3570).
+
+Existing source-reservation scenarios also require single-card discard/exile
+mana costs (Overeager Apprentice and Molt Tender). The canonical schema now
+projects these deterministic hand/graveyard cost moves, including card
+incarnations and canonical replacement destinations, in read-only resource
+views. Repeated histories retain the moves and cannot reuse consumed cards.
+Random/multi-card costs, counter-bearing cards, replacement-order choices and
+nonmonotone/library destinations remain contextual or structural opacity, not
+approximated payment evidence. Explicit controller-directed mana production is
+equivalent to the implicit controller. The shared mana window records its
+permission scope without granting priority; output decisions precede atomic
+application, so they cannot disclose intermediate hidden library tops.
+
+Rules read: official Comprehensive Rules effective **2026-11-06**, using the
+Wizards source and SHA-256 recorded above. Sections **601.2a–i, 608.2g,
+118.9a–d, 702.35a–c, 702.62a–d, 702.85a–c, 702.88a–c and 734.1–2**.
+The current illegal-action section is **734**, not the issue's historical 733.
+CR 605.1a's library-movement boundary is unchanged: Millikin and Deranged
+Assistant are nonmana abilities, never payment-window fixtures.
 
 Follow the ordered sub-issues of #3718: planner plans and completion queries,
 mana-ability schemas, abilities and special actions (proving the procedure
