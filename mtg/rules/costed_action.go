@@ -58,6 +58,9 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 		savedLog = *log
 		savedLog.Entries = slices.Clone(log.Entries)
 	}
+	// CR 601.2/602.2 and 734.1 return an invalid announcement to its source.
+	// This cancels only proposal-owned state, never paid normal resources;
+	// whole-world restoration below requires a selected opaque mana ability.
 	cancelAnnouncement := func(restoreIDs bool) {
 		if descriptor.usesStack {
 			g.Stack.RemoveByID(descriptor.object.ID)
@@ -300,6 +303,8 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 					keptLog = cloneOpaqueLog(savedLog)
 					keepingLogs = true
 				}
+				// CR 734.1–2: only a selected opaque activation can invalidate
+				// a witnessed payment. Normal choices never snapshot the game.
 				if checkpoint == nil && !inheritedOpaque {
 					checkpoint = newOpaquePaymentCheckpoint(g)
 					randomFinish = g.BookmarkRandom()
@@ -651,11 +656,22 @@ func newOpaquePaymentCheckpoint(g *game.Game) *opaquePaymentCheckpoint {
 }
 
 func (c *opaquePaymentCheckpoint) reversible(g *game.Game) bool {
-	var libraries [game.NumPlayers]zone.Zone
 	for player, saved := range c.world.Players {
-		libraries[player] = saved.Library
+		current := &g.Players[player].Library
+		if saved.Library.ReorderVersion() != current.ReorderVersion() || !slices.Equal(saved.Library.All(), current.All()) {
+			return false
+		}
 	}
-	return manaActivationIsReversible(g, libraries, len(c.world.Events))
+	// CR 734.1 forbids undoing library moves, shuffles and reveals. Intrinsic
+	// library-moving abilities are nonmana (605.1a), but replacements of an
+	// opaque ability may still cross this boundary.
+	for _, event := range g.Events[len(c.world.Events):] {
+		if event.Kind == game.EventCardRevealed && event.FromZone == zone.Library ||
+			event.Kind == game.EventZoneChanged && (event.FromZone == zone.Library || event.ToZone == zone.Library) {
+			return false
+		}
+	}
+	return true
 }
 
 func (c *opaquePaymentCheckpoint) restore(g *game.Game) {

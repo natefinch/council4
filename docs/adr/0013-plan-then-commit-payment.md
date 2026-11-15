@@ -1,6 +1,6 @@
 # Plan-then-commit cost payment
 
-Status: accepted; implementation tracked by epic
+Status: implemented; delivery tracked by epic
 [#3718](https://github.com/natefinch/council4/issues/3718).
 
 ## Context
@@ -11,19 +11,12 @@ with a cost (CR 116.2b/f/h/k), and paying for an effect (CR 605.3a, 608.2g)
 all follow one procedure: announce choices, choose targets, determine the
 total cost, optionally activate mana abilities, then pay in full.
 
-The payment planner in `mtg/rules/payment` is already shared for cost math,
-but the procedure around it is not. It is implemented separately for priority
-casts, mutate, prepared copies, face-down casts, free casts, paid resolution
-casts, madness, activated abilities, special actions and generic payments.
-Each copy has its own pre-offer feasibility check (`activationFeasible`, or
-`manualManaMayPay`, which searches mana-ability orders on clones up to 128
-runs and offers the action when inconclusive), its own payment-time mana
-window, and its own rewind (`castProposals` withholding, `castAttempts`,
-`restoreCastSourceCard`, partial checkpoints in `payment_mana_rollback.go`).
-
-Agents answer one question at a time and can commit to choices with no legal
-completion. The engine then rewinds under CR 733 and tracks withheld choices
-so the agent can't repeat them. From 2026-10-24 to 2026-11-05, production
+Before this change, the planner shared cost math but not the surrounding
+procedure. Separate casting, activation and payment routes used heuristic or
+bounded clone searches, offered inconclusive results as payable, and maintained
+partial checkpoints and proposal-withholding state. Agents could commit to
+choices with no legal completion, forcing a normal payment to rewind.
+From 2026-10-24 to 2026-11-05, production
 filed about 47 payment and cost issues, many the same gap found one route at
 a time (#3627 → #3629 → #3630 → #3691–#3695) or artifacts of partial rewind
 (#3694 leaked object IDs, #3576 and #3695 lost retry choices, #3633 an
@@ -53,7 +46,11 @@ inconclusive search treated as payable).
    *opaque*. If a player activates one during payment (CR 605.3a), the
    procedure takes one whole-game snapshot before it. If the payment then
    can't complete, the snapshot is restored, including object IDs, RNG and
-   logs, and the player keeps priority (current CR 734.1–2). No other path rewinds.
+   logs, and the player keeps priority (current CR 734.1–2). If an opaque
+   effect crosses an irreversible library boundary, legal mana actions are
+   retained instead of replayed. No normal payment rewinds. Invalid source
+   announcements are canceled separately as required by CR 601.2/602.2 and
+   734.1–2, before any normal resource payment.
 
 ## Why this is enough
 
@@ -70,11 +67,10 @@ random.
 - Fixes land once, in the procedure or planner, instead of per route.
 - Agents and search (ADR 0011) never explore doomed branches, and choice
   points stay at stable seams.
-- `castProposals`/`castAttempts` withholding, `manualManaMayPay`, the
-  64-sample withholding interaction, partial checkpoints and per-route
-  rollback closures are removed as routes migrate (#3725).
-- Generic payments (ward, pay-or, attack taxes, cumulative upkeep) gain
-  planned mana abilities, which they currently lack.
+- Clone probes, sample-based withholding, partial checkpoints/replay and
+  per-route rollback closures have been removed (#3725).
+- Generic payments (ward, pay-or, attack taxes, cumulative upkeep) use the
+  same planned mana abilities and completion-preserving choices as spells.
 - The planner gains complexity: joint planning and activation schemas. It
   must stay deterministic and fail closed: an unrecognized shape is opaque,
   never approximated.
@@ -147,9 +143,10 @@ activation through the normal source-labelled payment-mana log.
 including planned production. Spell-commit rider consumers must use this
 receipt with `Spell.PoolSpend`, rather than a snapshot captured before
 activation. Input/filter and non-spell rider consumption is handled during
-application. Existing payment callers retain their APIs pending migration.
+application. Compatibility payment APIs remain for existing callers; they do
+not implement a second casting or activation procedure.
 
-## Migration
+## Implemented routes
 
 ### Activated abilities and costed special actions (#3721)
 
@@ -217,7 +214,7 @@ nonprogressing policy terminates under the execution decision budget.
 Rules read: official Comprehensive Rules effective **2026-11-06**,
 [Wizards source](https://media.wizards.com/2026/downloads/MagicCompRules%2020261106.txt),
 SHA-256 `524f5195a1e5f54bb13c735edf399ac717a4458e2713f398d1a3e6877186b829`.
-Sections: 601.2a–i, 602.2a–b, 605.1a–b/605.3a, 116.2b/f/h/k/116.3,
+Sections: 601.2a–i, 602.2a–b, 605.1a–b/605.3a–c, 608.2g, 116.2b/f/h/k/116.3,
 701.40b/701.58b, 702.37e/702.168d, 702.49a–d, 702.29a–f, and 734.1–2
 (the current reversal section is 734, not the historical 733).
 
@@ -263,7 +260,7 @@ production. Normal choices cannot decline a required source into an unpaid
 cast. Only a selected opaque activation opens the shared whole-world/RNG/log
 checkpoint; canceling it also cancels the source transition or prepared copy
 (734.1–2). Priority no longer withholds proposals or exhausted actions.
-Final dead-helper removal remains #3725.
+No route-specific payment rewind or proposal-exhaustion state remains.
 
 Folded issue interpretation under the **2026-11-06** rules:
 
@@ -285,7 +282,10 @@ Folded issue interpretation under the **2026-11-06** rules:
 - #3628: the old library-moving “Milling Prism” mana-ability example is not
   legal under 605.1a. Existing standalone activation/resolution and enclosing
   library-top window behavior is retained; no illegal nested activation is
-  enabled or claimed fixed by that example.
+  enabled or claimed fixed by that example. The remaining claim is explicitly
+  outside the completed payment redesign and must be unparked pending valid
+  current-edition gameplay evidence, not treated as new Engine scope or a
+  fixed reproduction. Issue reconciliation is separate from this code change.
 
 Additional sections read in the official rules cited above: 601.3,
 702.47a–e, 702.140a–f, 708.4–6, 702.37a–g, 401.5 and 734.1–2.
@@ -391,10 +391,31 @@ Wizards source and SHA-256 recorded above. Sections **605.3a, 608.2g,
 illegal-action section is **734**, not 733; CR 605.1a's library-movement
 boundary remains unchanged.
 
-Follow the ordered sub-issues of #3718: planner plans and completion queries,
-mana-ability schemas, abilities and special actions (proving the procedure
-and the opaque fallback), priority spell casting, resolution-time casts,
-generic payments, then removal of dead machinery. Behavior is preserved
-except where existing tests asserted a rewind on the normal path; those tests
-change to the rules-correct outcome, with the rule cited. The absorbed open
-issues are labelled `Parked` so production does not fix them piecemeal.
+### Cleanup and rewind audit (#3725)
+
+The shared procedure retains the cost descriptor (`activationCost`), source
+identity checks and the source-announcement cancellation required by CR
+601.2/602.2 and 734.1–2. Cancellation removes the proposed stack object and
+restores its original source position/counters and announcement IDs/events/logs;
+it is not a payment-resource checkpoint. A land entry that fails also returns
+its proposed source rather than losing the card.
+
+The only payment `Game.Clone` is `newOpaquePaymentCheckpoint`, reached only
+after a selected structural or contextual opaque mana ability. Nested opaque
+payments join that checkpoint. `opaquePaymentCheckpoint.restore` repairs live
+references and calls `Game.RestoreOpaquePayment`; `BookmarkRandom` restores the
+exact caller-supplied random-word stream. Library changes are checked under
+734.1 before restoration; irreversible legal mana actions remain without
+replay. Priority is retained and distinct retries remain legal under 734.2.
+Normal payment uses neither a world snapshot nor a probe, sample budget,
+withheld proposal or route checkpoint.
+
+Retained gameplay scenarios cover binding announcements, complete targets
+beyond the former sample, resource competition, exact activation occurrences,
+source reservations, cost locking, privacy and library-top windows. Tests of
+the removed proposal-withholding internals are gone; actual priority and
+prepared-copy casts still exercise those payment/target interactions.
+`costed_action_test.go` retains reversible and irreversible opaque failures,
+custom-RNG restoration and legal retries; generic and attack-payment scenarios
+exercise the same fallback. This implementation status does not by itself
+close the epic or reconcile its absorbed issues.

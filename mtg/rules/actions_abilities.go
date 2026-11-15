@@ -51,7 +51,7 @@ func (e *Engine) describeActivation(g *game.Game, player game.PlayerID, activate
 				return costedAction{}, false
 			}
 			manaBody = value
-			c = abilityRequestCost(manaCostPtr(value.ManaCost), payment.AbilityRequest{
+			c = abilityRequestCost(payment.AbilityRequest{
 				PlayerID: player, Source: permanent, ManaCost: value.ManaCost,
 				AdditionalCosts: abilityAdditionalCosts(value.AdditionalCosts), ForMana: true,
 			}, permanentSource(permanent.ObjectID))
@@ -70,7 +70,7 @@ func (e *Engine) describeActivation(g *game.Game, player game.PlayerID, activate
 			if value.LoyaltyCost < 0 {
 				costs = []cost.Additional{{Kind: cost.AdditionalRemoveCounter, CounterKind: counter.Loyalty, Amount: -value.LoyaltyCost}}
 			}
-			c = abilityRequestCost(nil, payment.AbilityRequest{PlayerID: player, Source: permanent, AdditionalCosts: costs}, permanentSource(permanent.ObjectID))
+			c = abilityRequestCost(payment.AbilityRequest{PlayerID: player, Source: permanent, AdditionalCosts: costs}, permanentSource(permanent.ObjectID))
 		}
 	} else if value, ability, ok := handManaAbilitySource(g, player, activate.SourceID, activate.AbilityIndex); ok {
 		if !canActivateHandManaAbility(g, player, value.ID, &ability, activate.AbilityIndex) {
@@ -79,7 +79,7 @@ func (e *Engine) describeActivation(g *game.Game, player game.PlayerID, activate
 		card, manaBody, body = value, &ability, &ability
 		def = cardFaceOrDefault(card, game.FaceFront)
 		sourceZone = zone.Hand
-		c = abilityRequestCost(nil, payment.AbilityRequest{
+		c = abilityRequestCost(payment.AbilityRequest{
 			PlayerID: player, SourceCardID: card.ID, SourceZone: zone.Hand, AdditionalCosts: ability.AdditionalCosts, ForMana: true,
 		}, cardSource(handCardPresent(player, card.ID)))
 	} else if value, ability, ok := handActivatedAbilitySource(g, player, activate.SourceID, activate.AbilityIndex); ok {
@@ -291,10 +291,6 @@ func attackTargetForAttacker(g *game.Game, attackerID id.ID) (game.AttackTarget,
 	return game.AttackTarget{}, false
 }
 
-func canActivateNinjutsuAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
-	return ninjutsuActivation(g, playerID, cardID, body, abilityIndex, targets, xValue).payableNow(g)
-}
-
 func ninjutsuActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) activationCost {
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || xValue != 0 || abilityIndex < 0 ||
 		!game.BodyHasKeyword(body, game.Ninjutsu) || game.BodyFunctionZone(body) != zone.Hand || body.Timing != game.DuringCombat ||
@@ -306,7 +302,7 @@ func ninjutsuActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, body
 	if !ok || !game.BodyHasKeyword(&gotAbility, game.Ninjutsu) {
 		return activationCost{}
 	}
-	return abilityRequestCost(manaCostPtr(body.ManaCost), payment.AbilityRequest{
+	return abilityRequestCost(payment.AbilityRequest{
 		PlayerID: playerID, SourceCardID: cardID, SourceZone: zone.Hand, ManaCost: body.ManaCost,
 		CostModifiers:   activatedAbilityCostModifiers(g, playerID, card, body),
 		AdditionalCosts: abilityAdditionalCosts(body.AdditionalCosts),

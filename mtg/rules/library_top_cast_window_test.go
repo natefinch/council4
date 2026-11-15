@@ -207,13 +207,13 @@ func TestLibraryTopChangedByCastFromLibraryStaysHidden(t *testing.T) {
 		{name: "Future Sight cast", permission: "Future Sight", cast: func(t *testing.T, e *Engine, g *game.Game, rites id.ID, agents [game.NumPlayers]PlayerAgent) {
 			g.Players[game.Player1].ManaPool.Add(mana.B, 1)
 			cast := action.CastSpellFaceFromZone(rites, zone.Library, game.FaceFront, nil, 0, nil)
-			if outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, agents, &TurnLog{}, nil); outcome != actionApplied {
+			if outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, agents, &TurnLog{}); outcome != actionApplied {
 				t.Fatalf("outcome = %v, want Village Rites cast from the library", outcome)
 			}
 		}},
 		{name: "Bolas's Citadel pay-life cast", permission: "Bolas's Citadel", cast: func(t *testing.T, e *Engine, g *game.Game, rites id.ID, agents [game.NumPlayers]PlayerAgent) {
 			cast := action.CastSpellFaceFromZone(rites, zone.Library, game.FaceFront, nil, 0, nil)
-			if outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, agents, &TurnLog{}, nil); outcome != actionApplied {
+			if outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, agents, &TurnLog{}); outcome != actionApplied {
 				t.Fatalf("outcome = %v, want Village Rites cast from the library for 1 life", outcome)
 			}
 			if life := g.Players[game.Player1].Life; life != 19 {
@@ -334,7 +334,7 @@ func TestLibraryTopWindowSurvivesCloneAndDeterminize(t *testing.T) {
 	}
 	cast := action.CastSpellFaceFromZone(rites, zone.Library, game.FaceFront, nil, 0, nil)
 
-	if outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, agent.agents(), &TurnLog{}, nil); outcome != actionApplied {
+	if outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, agent.agents(), &TurnLog{}); outcome != actionApplied {
 		t.Fatalf("outcome = %v, want Village Rites cast from the library", outcome)
 	}
 
@@ -445,7 +445,7 @@ func TestUnchangedLibraryTopStaysRevealedWhileCastingFromHand(t *testing.T) {
 		}
 	}
 
-	if outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.CastSpell(rites, nil, 0, nil), agent.agents(), &TurnLog{}, nil); outcome != actionApplied {
+	if outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.CastSpell(rites, nil, 0, nil), agent.agents(), &TurnLog{}); outcome != actionApplied {
 		t.Fatalf("outcome = %v, want Village Rites cast from hand", outcome)
 	}
 

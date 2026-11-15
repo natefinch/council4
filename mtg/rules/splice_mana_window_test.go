@@ -188,7 +188,7 @@ func TestSpliceOfferedWhenPayableWithPaymentTimeManaAbilities(t *testing.T) {
 				}
 				agent := &spliceManaAgent{splices: []string{"Desperate Ritual"}, mana: tc.order[:lands]}
 
-				outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.CastSpell(hostID, nil, 0, nil), spliceManaAgents(agent), &TurnLog{}, nil)
+				outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.CastSpell(hostID, nil, 0, nil), spliceManaAgents(agent), &TurnLog{})
 
 				if outcome != actionApplied {
 					t.Fatalf("outcome = %v, want the host cast", outcome)
@@ -238,7 +238,7 @@ func TestSpliceDeclinedWithPaymentTimeManaAbilityLeavesLandUnused(t *testing.T) 
 	p.ManaPool.Add(mana.C, 1)
 	agent := &spliceManaAgent{splices: []string{""}}
 
-	outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.CastSpell(hostID, nil, 0, nil), spliceManaAgents(agent), &TurnLog{}, nil)
+	outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.CastSpell(hostID, nil, 0, nil), spliceManaAgents(agent), &TurnLog{})
 
 	if outcome != actionApplied || !agent.spliceOffered("Desperate Ritual") {
 		t.Fatalf("outcome = %v, offers = %v; want the splice offered and the host cast", outcome, agent.offered)
@@ -265,7 +265,7 @@ func TestSpliceRequiredManaSourceRetainsCompletion(t *testing.T) {
 	p.ManaPool.Add(mana.C, 1)
 	agent := &spliceManaAgent{splices: []string{"Desperate Ritual"}}
 
-	outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.CastSpell(hostID, nil, 0, nil), spliceManaAgents(agent), &TurnLog{}, nil)
+	outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.CastSpell(hostID, nil, 0, nil), spliceManaAgents(agent), &TurnLog{})
 
 	if outcome != actionApplied || !agent.spliceOffered("Desperate Ritual") {
 		t.Fatalf("outcome = %v, offers = %v; want the selected splice completed", outcome, agent.offered)
@@ -296,7 +296,7 @@ func TestSpliceTargetsPaidWithPaymentTimeManaAbility(t *testing.T) {
 	opponentLife := g.Players[game.Player2].Life
 	agent := &spliceManaAgent{splices: []string{"Glacial Ray"}, mana: []string{groveMana}, target: opt.Val(game.Player2)}
 
-	outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.CastSpell(hostID, nil, 0, nil), spliceManaAgents(agent), &TurnLog{}, nil)
+	outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.CastSpell(hostID, nil, 0, nil), spliceManaAgents(agent), &TurnLog{})
 
 	if outcome != actionApplied {
 		t.Fatalf("outcome = %v, offers = %v; want Glacial Ray spliced", outcome, agent.offered)
@@ -358,7 +358,7 @@ func TestSpliceJudgedAgainstAnnouncedPhyrexianPayment(t *testing.T) {
 				agent.mana = []string{groveMana}
 			}
 
-			outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.CastSpell(hostID, nil, 0, nil), spliceManaAgents(agent), &TurnLog{}, nil)
+			outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.CastSpell(hostID, nil, 0, nil), spliceManaAgents(agent), &TurnLog{})
 
 			if outcome != actionApplied {
 				t.Fatalf("outcome = %v, want the host cast", outcome)
@@ -467,7 +467,7 @@ func TestSpliceManaWindowCastInCloneLeavesOriginal(t *testing.T) {
 	clone := g.Clone()
 	agent := &spliceManaAgent{splices: []string{"Desperate Ritual"}, mana: []string{groveMana}}
 
-	outcome, _ := e.attemptActionWithChoices(clone, game.Player1, action.CastSpell(hostID, nil, 0, nil), spliceManaAgents(agent), &TurnLog{}, nil)
+	outcome, _ := e.attemptActionWithChoices(clone, game.Player1, action.CastSpell(hostID, nil, 0, nil), spliceManaAgents(agent), &TurnLog{})
 
 	if outcome != actionApplied {
 		t.Fatalf("outcome = %v, want the clone's cast spliced", outcome)

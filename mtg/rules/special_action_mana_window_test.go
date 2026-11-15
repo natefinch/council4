@@ -211,7 +211,7 @@ func TestSpecialActionPaysWithPaymentTimeManaAbilities(t *testing.T) {
 			life := g.Players[game.Player1].Life
 			agent := newActivationWindowAgent(route.order, top)
 
-			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
+			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{})
 
 			if outcome != actionApplied {
 				t.Fatalf("outcome = %v, want the special action taken", outcome)
@@ -261,7 +261,7 @@ func TestOptionalSpecialActionManaWindow(t *testing.T) {
 			}
 			agent := newActivationWindowAgent(order, top)
 
-			outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.ForetellCard(sawItComing), reboundKickerAgents(agent), &TurnLog{}, nil)
+			outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.ForetellCard(sawItComing), reboundKickerAgents(agent), &TurnLog{})
 
 			if outcome != actionApplied || !p.Exile.Contains(sawItComing) {
 				t.Fatalf("outcome = %v, want Saw It Coming foretold", outcome)
@@ -294,7 +294,7 @@ func TestSpecialActionRetainsCompletionWhenManaChoicesDeclined(t *testing.T) {
 			}
 			life := g.Players[game.Player1].Life
 			agent := newActivationWindowAgent(route.order[:len(route.order)-1], top)
-			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
+			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{})
 			if outcome != actionApplied {
 				t.Fatalf("outcome = %v, want the retained payment completed", outcome)
 			}
@@ -369,7 +369,7 @@ func TestSpecialActionDoesNotOfferManaThatRemovesItsPermanent(t *testing.T) {
 	life := g.Players[game.Player1].Life
 	agent := newActivationWindowAgent([]string{groveMana, "Sacrifice a creature"}, top)
 
-	outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
+	outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{})
 
 	if outcome != actionApplied || agent.activated != 1 {
 		t.Fatalf("outcome = %v after %d explicit mana choices, want completion without Altar", outcome, agent.activated)
@@ -406,7 +406,7 @@ func TestNestedManaAbilityDuringSpecialActionKeepsLibraryTopHidden(t *testing.T)
 	sawItComing := addCardToHand(g, game.Player1, registryCardDef(t, "Saw It Coming"))
 	agent := &nestedManaWindowAgent{libraryTopWindowAgent: &libraryTopWindowAgent{owner: game.Player1, start: start}}
 
-	outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.ForetellCard(sawItComing), reboundKickerAgents(agent), &TurnLog{}, nil)
+	outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.ForetellCard(sawItComing), reboundKickerAgents(agent), &TurnLog{})
 
 	if outcome != actionApplied || !g.Players[game.Player1].Exile.Contains(sawItComing) {
 		t.Fatalf("outcome = %v, want Saw It Coming foretold", outcome)

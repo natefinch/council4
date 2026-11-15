@@ -176,7 +176,7 @@ func TestManaWindowLogHidesHandMaskingOptions(t *testing.T) {
 			}
 			agent := &manaSourcePickAgent{}
 			log := &TurnLog{}
-			if outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), log, nil); outcome != actionApplied {
+			if outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), log); outcome != actionApplied {
 				t.Fatalf("outcome = %v, want the cast applied", outcome)
 			}
 			if obj, ok := g.Stack.Peek(); !ok || obj.SourceID != cardID || obj.SourceZone != zone.Hand || obj.ManaSpentToCast != 1 {
@@ -415,7 +415,7 @@ func TestPriorityCastManaWindowActivatesChosenSource(t *testing.T) {
 			picks := tc.picks(groves, treasure, guide)
 			agent := &manaSourcePickAgent{picks: slices.Clone(picks)}
 			log := &TurnLog{}
-			if outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), log, nil); outcome != actionApplied {
+			if outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), log); outcome != actionApplied {
 				t.Fatalf("outcome = %v, want the cast applied", outcome)
 			}
 			spellOnStackFrom(zone.Hand, false)(t, g, cardID)

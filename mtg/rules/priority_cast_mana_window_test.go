@@ -310,7 +310,7 @@ func TestPriorityCastPaysWithPaymentTimeManaAbilities(t *testing.T) {
 					return
 				}
 				agent := &priorityCastWindowAgent{limit: -1, colors: route.colors}
-				outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
+				outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{})
 				if outcome != actionApplied {
 					t.Fatalf("outcome = %v, want the cast applied", outcome)
 				}
@@ -345,7 +345,7 @@ func TestPriorityCastRequiredManaSourcesRetainCompletion(t *testing.T) {
 			for _, limit := range []int{1, 0} {
 				clone := g.Clone()
 				agent := &priorityCastWindowAgent{limit: limit, colors: route.colors}
-				outcome, _ := e.attemptActionWithChoices(clone, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
+				outcome, _ := e.attemptActionWithChoices(clone, game.Player1, act, reboundKickerAgents(agent), &TurnLog{})
 				if outcome != actionApplied || agent.windows == 0 {
 					t.Fatalf("outcome = %v, windows = %d; want a completed cast", outcome, agent.windows)
 				}
@@ -443,7 +443,7 @@ func TestFutureSightVillageRitesNotPaidWithMillikin(t *testing.T) {
 			}
 			agent := &windowOptionsAgent{priorityCastWindowAgent: priorityCastWindowAgent{limit: -1}}
 
-			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
+			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{})
 
 			if outcome != actionApplied {
 				t.Fatalf("outcome = %v, want Village Rites cast", outcome)
@@ -529,7 +529,7 @@ func TestPriorityCastCompletesAfterOpaqueManaShuffle(t *testing.T) {
 			order := &manaOrderAgent{order: []string{groveMana, altarMana}, colors: route.colors}
 			agent := &sacrificingAgent{next: order, victim: "Blightsteel Colossus"}
 
-			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
+			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{})
 
 			if outcome != actionApplied || order.activated != 2 || agent.sacrifices != 1 {
 				t.Fatalf("outcome = %v, activated = %d, Colossus sacrificed %d times; want the remaining witness completed", outcome, order.activated, agent.sacrifices)
@@ -606,7 +606,7 @@ func TestVillageRitesCompletesRemainingWitnessAfterManaChoices(t *testing.T) {
 			order := &manaOrderAgent{order: test.order, colors: []string{"W", "G"}}
 			agent := &sacrificingAgent{next: order, victim: "Blightsteel Colossus"}
 
-			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
+			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{})
 
 			if outcome != actionApplied || order.activated != len(test.order) {
 				t.Fatalf("outcome = %v, activated = %d; want the remaining witness completed after %d choices", outcome, order.activated, len(test.order))

@@ -33,12 +33,9 @@ func (e *Engine) PaymentPlanner(g *game.Game, logs ...*TurnLog) payment.Planner 
 	return payment.New(state)
 }
 
-// canPaySpellCosts reports whether the player can currently pay all costs for
-// the spell described by req.
 // canPaySpellCosts reports whether the player could pay the full cost of casting
-// the spell described by req, without paying it. It is the feasibility check for
-// the pay-the-cost step of casting: a total cost that can't be paid in full makes
-// the cast illegal and is rewound (CR 601.2h, CR 118.3).
+// the spell described by req, without paying it (CR 601.2h, 118.3). Casting
+// routes use the executing Engine's Complete/Options/Apply procedure.
 func (o paymentOrchestratorType) canPaySpellCosts(g *game.Game, req payment.SpellRequest) bool {
 	return o.planner(g).CanPaySpellCosts(req)
 }
@@ -56,12 +53,6 @@ func (o paymentOrchestratorType) paySpellCosts(g *game.Game, req payment.SpellRe
 // described by req, without applying it.
 func (o paymentOrchestratorType) buildAbilityCostPlan(g *game.Game, req payment.AbilityRequest) bool {
 	return o.planner(g).BuildAbilityCostPlan(req)
-}
-
-// canPayAbilityNonManaCosts reports whether the components of the ability cost
-// req describes other than its mana cost can be paid now.
-func (o paymentOrchestratorType) canPayAbilityNonManaCosts(g *game.Game, req payment.AbilityRequest) bool {
-	return o.planner(g).CanPayAbilityNonManaCosts(req)
 }
 
 // abilityCostPayment carries the identities of objects and cards consumed to pay

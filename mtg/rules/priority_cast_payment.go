@@ -15,7 +15,7 @@ import (
 )
 
 // The procedure owns the source transition. Only an invalid proposal or an
-// opaque payment cancels it; normal payment choices always retain a witness.
+// opaque payment cancels it (CR 601.2, 734.1–2); normal choices retain a witness.
 type costedSpellSource struct {
 	player   game.PlayerID
 	card     id.ID
@@ -38,7 +38,7 @@ func (s *costedSpellSource) move(g *game.Game) bool {
 }
 
 func (s *costedSpellSource) cancel(g *game.Game) {
-	restoreCastSourceCard(s.place)
+	s.place.cancelMove()
 	s.counters.undo(g)
 }
 

@@ -68,7 +68,7 @@ func (e *Engine) applyPlayLandFaceFromZoneWithChoices(g *game.Game, playerID gam
 	}
 
 	if _, ok := createCardPermanentFaceWithChoices(e, g, card, playerID, sourceZone, face, agents, log); !ok {
-		restoreCastSourceCard(place)
+		place.cancelMove()
 		return false
 	}
 	g.Turn.LandsPlayedThisTurn++
@@ -118,17 +118,17 @@ func (e *Engine) applyCastSpell(g *game.Game, playerID game.PlayerID, cast actio
 }
 
 func (e *Engine) applyCastSpellWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	outcome, _ := e.attemptCastSpellWithChoices(g, playerID, cast, agents, log, nil)
+	outcome, _ := e.attemptCastSpellWithChoices(g, playerID, cast, agents, log)
 	return outcome == actionApplied
 }
 
 // All priority spell routes supply the shared CR 601.2a-i procedure.
-func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) (actionOutcome, []game.Target) {
+func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (actionOutcome, []game.Target) {
 	if !castGiftRecipientValid(g, playerID, cast) {
 		return actionFailed, nil
 	}
 	if cast.Mutate {
-		outcome := e.attemptMutateCastWithChoices(g, playerID, cast, agents, log, attempts)
+		outcome := e.attemptMutateCastWithChoices(g, playerID, cast, agents, log)
 		if outcome == actionApplied {
 			object, _ := g.Stack.Peek()
 			return outcome, object.Targets
@@ -140,7 +140,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 		if cast.Permission != (game.PlayPermission{}) {
 			return actionFailed, nil
 		}
-		return e.attemptPreparedCopyWithChoices(g, playerID, cast, agents, log, attempts)
+		return e.attemptPreparedCopyWithChoices(g, playerID, cast, agents, log)
 	}
 
 	var validationPermission []game.PlayPermission
@@ -325,7 +325,7 @@ func priorityCastRequest(playerID game.PlayerID, spellDef *game.CardDef, sourceZ
 }
 
 // Mutate uses the same proposal, payment and commit as other spells.
-func (e *Engine) attemptMutateCastWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) actionOutcome {
+func (e *Engine) attemptMutateCastWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
 	sourceZone := normalizedCastSourceZone(cast)
 	var validationPermission []game.PlayPermission
 	if cast.Permission != (game.PlayPermission{}) {
@@ -733,7 +733,7 @@ func (e *Engine) preparedCopyChoicesLegal(g *game.Game, playerID game.PlayerID, 
 
 // attemptPreparedCopyWithChoices casts a copy of a prepared permanent's spell
 // (see attemptCastSpellWithChoices).
-func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) (actionOutcome, []game.Target) {
+func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (actionOutcome, []game.Target) {
 	if cast.Face != game.FaceAlternate || cast.KickerPaid {
 		return actionFailed, nil
 	}
@@ -837,7 +837,7 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 }
 
 func (e *Engine) applyPreparedCopyWithChoices(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	outcome, _ := e.attemptPreparedCopyWithChoices(g, playerID, cast, agents, log, nil)
+	outcome, _ := e.attemptPreparedCopyWithChoices(g, playerID, cast, agents, log)
 	return outcome == actionApplied
 }
 
@@ -1735,190 +1735,6 @@ func anyCastRouteAvailable(g *game.Game, spellDef *game.CardDef, xValue int, req
 	return false
 }
 
-// castFeasibleWithManaWindow reports whether some route's request to cast
-// spellDef with xValue, though not payable from current resources, can be paid
-// after the caster activates payment-time mana abilities (CR 601.2g). The cast
-// is judged as it would be proposed: with the card already moved from
-// sourceZone to the stack (CR 601.2a), so a mana ability such as Deathbloom
-// Ritualist's doesn't count the very card cast from the graveyard.
-func (e *Engine) castFeasibleWithManaWindow(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, spellDef *game.CardDef, xValue int, requests []payment.SpellRequest) bool {
-	if !e.hasManualPaymentManaAbility(g, playerID) {
-		return false
-	}
-	proposed := g.Clone()
-	proposed.Execution = game.ExecutionDiagnostics{}
-	if !stageProposedSpell(proposed, playerID, cardID, sourceZone, face, xValue) {
-		return false
-	}
-	manual := e.paymentManaWindow(proposed, playerID)
-	if manual == nil {
-		return false
-	}
-	for _, request := range requests {
-		if !castRouteAllowsX(spellDef, xValue, request) {
-			continue
-		}
-		if _, feasible := spellCostFeasibility(proposed, request, manual); feasible {
-			return true
-		}
-	}
-	return false
-}
-
-// stageProposedSpell moves cardID from the zone sourceZone of whichever player
-// holds it to the stack as a spell controlled by playerID with face and
-// xValue, as proposing its cast does (CR 601.2a). It is only for a clone of the
-// game that judges what the caster can do once the cast is proposed, such as
-// which payment-time mana abilities they can then activate (CR 601.2g): a cost
-// of one of those abilities can't use the very card being cast. It reports
-// false, changing nothing, when no player's sourceZone holds the card.
-func stageProposedSpell(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, xValue int) bool {
-	card, ok := g.GetCardInstance(cardID)
-	if !ok {
-		return false
-	}
-	holder := slices.IndexFunc(g.Players[:], func(player *game.Player) bool {
-		if player == nil {
-			return false
-		}
-		source := castSourceZone(player, sourceZone)
-		return source != nil && source.Contains(cardID)
-	})
-	if holder < 0 {
-		return false
-	}
-	counterTransition := prepareCastCounterTransition(g, card, sourceZone)
-	if _, ok := takeCastSourceCard(g.Players[holder], cardID, sourceZone); !ok {
-		return false
-	}
-	counterTransition.apply(g)
-	g.Stack.Push(&game.StackObject{
-		ID: g.IDGen.Next(), Kind: game.StackSpell, SourceID: cardID, Face: face, Controller: playerID,
-		XValue: xValue, SourceZone: sourceZone,
-	})
-	return true
-}
-
-// chooseCastRouteCost lets the caster choose the permission to cast through
-// together with that permission's cost option (see chooseCastRouteOption) once
-// the spell's targets are final, for a cost with no Phyrexian payment to
-// announce (CR 601.2b). Only proposals open leaves open are offered; it
-// reports false when every proposal the cost allows is withheld.
-func (e *Engine) chooseCastRouteCost(g *game.Game, routes []castRoute, requests []payment.SpellRequest, open castProposals, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (int, spellCostProposal, bool) {
-	route, option, ok := e.chooseCastRouteOption(g, routes, requests, open, agents, log)
-	return route, spellCostProposal{optionIndex: option.Index}, ok
-}
-
-// proposeCastRouteCost proposes the cost of a spell cast with priority before
-// its targets are chosen (CR 601.2b): the caster chooses the route and its cost
-// option (see chooseCastRouteOption), then announces how each Phyrexian symbol
-// in that option will be paid. open's targetChoices are the choices of targets
-// the spell may still be given, which can change its total cost (CR 601.2f);
-// nil when its targets are already known. Only proposals open leaves open are
-// offered; it reports false when every proposal the cost allows is withheld.
-func (e *Engine) proposeCastRouteCost(g *game.Game, routes []castRoute, requests []payment.SpellRequest, open castProposals, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (int, spellCostProposal, bool) {
-	route, option, ok := e.chooseCastRouteOption(g, routes, requests, open, agents, log)
-	if !ok {
-		return 0, spellCostProposal{}, false
-	}
-	return route, spellCostProposal{
-		optionIndex: option.Index,
-		phyrexian: e.announcePhyrexianPayments(g, requests[route].PlayerID, option.ManaCost,
-			e.proposedSpellCostFeasibility(g, requests[route], open.targetChoices, option.Index),
-			open.announcementsWithheld(route, option.Index), agents, log),
-	}, true
-}
-
-// chooseCastRouteOption lets the caster choose the permission to cast through
-// together with that permission's cost option (CR 601.2b, 601.2f, 118.9): every
-// payable option of every route is offered in one choice, each route offering
-// only its own alternative costs and rider. A single route keeps the ordinary
-// spell-cost choice. With open's targetChoices, an option is payable when it
-// is payable with some choice of targets (see proposableSpellOptions); an
-// option the caster's payment-time mana abilities can make payable counts too
-// (CR 601.2g). Only options with a proposal open leaves open are offered; it
-// reports false when there are payable options but none is open.
-func (e *Engine) chooseCastRouteOption(g *game.Game, routes []castRoute, requests []payment.SpellRequest, open castProposals, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (int, payment.SpellOptionSummary, bool) {
-	playerID := requests[0].PlayerID
-	manual := e.paymentManaWindow(g, playerID)
-	openOptions := func(route int, options []payment.SpellOptionSummary) []payment.SpellOptionSummary {
-		return slices.DeleteFunc(options, func(option payment.SpellOptionSummary) bool {
-			return !open.optionOpen(g, playerID, route, option)
-		})
-	}
-	if len(requests) == 1 {
-		options := proposableSpellOptions(g, requests[0], open.targetChoices, manual)
-		if len(options) > 0 {
-			if options = openOptions(0, options); len(options) == 0 {
-				return 0, payment.SpellOptionSummary{}, false
-			}
-		}
-		return 0, e.chooseSpellCostOption(g, playerID, options, agents, log), true
-	}
-	type routeOption struct {
-		route  int
-		option payment.SpellOptionSummary
-	}
-	var options []routeOption
-	proposable := false
-	for i, request := range requests {
-		if !castRouteAllowsX(request.Card, request.XValue, request) {
-			continue
-		}
-		routeOptions := proposableSpellOptions(g, request, open.targetChoices, manual)
-		proposable = proposable || len(routeOptions) > 0
-		for _, option := range openOptions(i, routeOptions) {
-			options = append(options, routeOption{route: i, option: option})
-		}
-	}
-	if len(options) == 0 {
-		if proposable {
-			return 0, payment.SpellOptionSummary{}, false
-		}
-		return 0, e.chooseSpellCostOption(g, playerID, proposableSpellOptions(g, requests[0], open.targetChoices, manual), agents, log), true
-	}
-	selected := options[0]
-	if len(options) > 1 {
-		permissions := make([]game.RuleEffect, len(routes))
-		for i, route := range routes {
-			permissions[i] = castRoutePermission(route)
-		}
-		sources := permissionSources(g, permissions)
-		summaries := make([]payment.SpellOptionSummary, len(options))
-		for i, option := range options {
-			summaries[i] = option.option
-		}
-		labels := distinctSpellCostLabels(summaries)
-		counts := map[string]int{}
-		for _, label := range labels {
-			counts[label]++
-		}
-		choiceOptions := make([]game.ChoiceOption, 0, len(options))
-		for i, option := range options {
-			label := labels[i]
-			if counts[label] > 1 {
-				label += " (" + sources[option.route].label + ")"
-			}
-			choice := spellCostChoiceOption(i, label, option.option)
-			choice.SourcePermanent = sources[option.route].permanent
-			choiceOptions = append(choiceOptions, choice)
-		}
-		chosen := e.chooseChoice(g, agents, game.ChoiceRequest{
-			Kind:             game.ChoicePayment,
-			Player:           requests[0].PlayerID,
-			Prompt:           "Choose spell cost",
-			Options:          choiceOptions,
-			MinChoices:       1,
-			MaxChoices:       1,
-			DefaultSelection: []int{0},
-		}, log)
-		if len(chosen) == 1 && chosen[0] >= 0 && chosen[0] < len(options) {
-			selected = options[chosen[0]]
-		}
-	}
-	return selected.route, selected.option, true
-}
-
 // castRoutePermission returns the permission a route casts through: its play
 // permission, or else its linked free-cast permission.
 func castRoutePermission(route castRoute) game.RuleEffect {
@@ -2271,7 +2087,7 @@ type castSourcePlace struct {
 
 // takeCastSourceCard removes cardID from player's zone sourceZone for a
 // proposed cast or land play (CR 601.2a, 305.1), recording its place there for
-// restoreCastSourceCard.
+// cancellation of an invalid announcement.
 func takeCastSourceCard(player *game.Player, cardID id.ID, sourceZone zone.Type) (castSourcePlace, bool) {
 	source := castSourceZone(player, sourceZone)
 	if source == nil {
@@ -2304,13 +2120,13 @@ func castSourceZone(player *game.Player, sourceZone zone.Type) *zone.Zone {
 	}
 }
 
-// restoreCastSourceCard returns a card taken by takeCastSourceCard to its place
-// when the proposed cast or play is undone (CR 733.1), so the card is never
-// lost and its zone keeps its order. Costs and mana abilities may have moved
+// cancelMove returns a card taken by takeCastSourceCard to its place
+// when an invalid source announcement is canceled (CR 601.2, 734.1–2), so it
+// is never lost and its zone keeps its order. Opaque mana effects may have moved
 // other cards meanwhile, so the card goes directly above the nearest card that
 // was beneath it and is still there, or to the bottom if none remains; cards
 // that arrived on top stay above it. A face-down card stays face down.
-func restoreCastSourceCard(place castSourcePlace) {
+func (place castSourcePlace) cancelMove() {
 	if place.source == nil {
 		return
 	}
