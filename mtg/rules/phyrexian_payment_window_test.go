@@ -173,7 +173,7 @@ func TestFreeCastPhyrexianKickerAnnouncedBeforeManaWindow(t *testing.T) {
 		{name: "life with a tax mana payment", kicker: cost.PhyrexianMana(mana.G), thalia: true,
 			wantSteps: []string{"phyrexian", "window"}, wantActivated: 1, wantLifeLost: 3, wantManaSpent: 1},
 		{name: "K'rrik keeps the mana payment", kicker: cost.B, permanents: []string{"K'rrik, Son of Yawgmoth"},
-			wantSteps: []string{"window", "phyrexian"}, wantLifeLost: 2},
+			wantSteps: []string{"window"}, wantLifeLost: 2},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e, g := newEffectiveCascadeGame()
@@ -252,17 +252,8 @@ func TestMadnessPhyrexianLifeAnnouncedBeforeManaWindow(t *testing.T) {
 	}
 }
 
-// TestAnnouncedPhyrexianManaIsPaidWithMana announces a {B/P} as a mana payment
-// on each route, which Nurturing Peatland could pay, then activates Waterlogged
-// Grove, which can add only {G} or {U}. The announcement is binding (CR 601.2b, 601.2h): the symbol can't fall
-// back to 2 life, so the proposal is reversed (CR 733) with the Grove untapped
-// and its life refunded. The paid Vault Skirge returns to the graveyard and the
-// madness card goes to the graveyard. The free cast may redo the kicked cast
-// (CR 733.2): after the Grove the window is offered again while the Peatland
-// is untapped, but declining it leaves {B} unpaid; announcing {B} again and
-// declining the window is reversed too, and repeating that announcement would
-// only be reversed again, so only 2 life is then offered for the kicker, which
-// casts it kicked (#3574).
+// CR 601.2b/h (2026-11-06): an announced mana intention is binding.
+// Activating Grove does not reopen it; Peatland remains required to pay {B}.
 func TestAnnouncedPhyrexianManaIsPaidWithMana(t *testing.T) {
 	reg := cards.NewDefaultRegistry()
 	blackPhyrexian := cost.PhyrexianMana(mana.B)
@@ -273,10 +264,8 @@ func TestAnnouncedPhyrexianManaIsPaidWithMana(t *testing.T) {
 
 		e.resolveTopOfStackWithChoices(g, reboundKickerAgents(agent), &TurnLog{})
 
-		if g.Stack.Size() != 0 || !g.Players[game.Player1].Graveyard.Contains(cardID) {
-			t.Fatal("Vault Skirge was cast although its announced {B} was not paid")
-		}
-		requireAnnouncedManaReversed(t, g, agent, reboundPermanentNamed(t, g, "Waterlogged Grove"), life)
+		requireProposedSpellCast(t, g, cardID, zone.Graveyard, 1)
+		requireAnnouncedManaPaid(t, g, agent, reboundPermanentNamed(t, g, "Waterlogged Grove"), life-2)
 	})
 	t.Run("madness", func(t *testing.T) {
 		e, g := newEffectiveCascadeGame()
@@ -289,8 +278,8 @@ func TestAnnouncedPhyrexianManaIsPaidWithMana(t *testing.T) {
 
 		e.resolveTopOfStackWithChoices(g, reboundKickerAgents(agent), &TurnLog{})
 
-		requireMadnessNotCast(t, g, cardID)
-		requireAnnouncedManaReversed(t, g, agent, grove, life)
+		requireMadnessCast(t, g, cardID)
+		requireAnnouncedManaPaid(t, g, agent, grove, life-2)
 	})
 	t.Run("free", func(t *testing.T) {
 		e, g := newEffectiveCascadeGame()
@@ -311,22 +300,16 @@ func TestAnnouncedPhyrexianManaIsPaidWithMana(t *testing.T) {
 		if !ok || !found || obj.SourceID != cardID || !obj.KickerPaid {
 			t.Fatalf("cast=%t stack top=%+v, want the kicked cast redone after the unpaid kicker", ok, obj)
 		}
-		requireAnnouncedManaReversed(t, g, agent, grove, life-2)
-		if want := []string{"phyrexian", "window", "window", "phyrexian", "window", "phyrexian"}; !slices.Equal(agent.steps, want) {
-			t.Fatalf("steps=%v, want %v: {B} announced twice with the Peatland unused, then only 2 life offered", agent.steps, want)
+		requireAnnouncedManaPaid(t, g, agent, grove, life-2)
+		if want := []string{"phyrexian", "window", "window"}; !slices.Equal(agent.steps, want) {
+			t.Fatalf("steps=%v, want %v: one binding intention and both mana sources", agent.steps, want)
 		}
 	})
 }
 
-// TestFreeCastRedoesUnpayablePhyrexianKicker casts a spell without paying its
-// mana cost, choosing it kicked with a {B/P} kicker and announcing {B} with no
-// mana ability that could pay it. The announcement is binding (CR 601.2b,
-// 601.2h), so the cast is reversed (CR 733.1), and the caster may redo it in a
-// legal way (CR 733.2): the kicked cast stays available and only 2 life is
-// offered for its kicker, so answering {B} again is an invalid choice that
-// takes the offered 2 life (#3574). The registered Lightning Bolt, given the
-// kicker, is redone the same way.
-func TestFreeCastRedoesUnpayablePhyrexianKicker(t *testing.T) {
+// CR 601.2b/h (2026-11-06): the unpayable mana intention is filtered before
+// targets; a payable kicked cast stays available without retries.
+func TestFreeCastFiltersUnpayablePhyrexianKickerIntention(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		def  func() *game.CardDef
@@ -352,20 +335,25 @@ func TestFreeCastRedoesUnpayablePhyrexianKicker(t *testing.T) {
 				t.Fatalf("cast=%t stack top=%+v life=%d, want the kicked free cast redone for 2 life (%d)",
 					ok, obj, g.Players[game.Player1].Life, life-2)
 			}
-			if !slices.Equal(agent.steps, []string{"phyrexian", "phyrexian"}) || g.Execution.InvalidChoices != 1 {
-				t.Fatalf("steps=%v invalid=%d, want {B} announced, then 2 life the only offer", agent.steps, g.Execution.InvalidChoices)
+			want := []string{"phyrexian"}
+			if tc.name == "Lightning Bolt" {
+				want = append(want, "target")
+			}
+			if !slices.Equal(agent.steps, want) || g.Execution.InvalidChoices != 0 {
+				t.Fatalf("steps=%v invalid=%d, want only the completable life intention before targets", agent.steps, g.Execution.InvalidChoices)
 			}
 		})
 	}
 }
 
-func requireAnnouncedManaReversed(t *testing.T, g *game.Game, agent *phyrexianWindowAgent, grove *game.Permanent, life int) {
+func requireAnnouncedManaPaid(t *testing.T, g *game.Game, agent *phyrexianWindowAgent, grove *game.Permanent, life int) {
 	t.Helper()
 	if agent.activated != 1 || !slices.Equal(agent.steps[:2], []string{"phyrexian", "window"}) {
 		t.Fatalf("steps=%v activated=%d, want {B} announced as mana, then the Grove activated", agent.steps, agent.activated)
 	}
-	if grove.Tapped || g.Players[game.Player1].Life != life || g.Players[game.Player1].ManaPool.Total() != 0 {
-		t.Fatalf("grove tapped=%t life=%d pool=%d, want the Grove activation reversed and life %d",
+	if !grove.Tapped || g.Players[game.Player1].Life != life || g.Players[game.Player1].ManaPool.Total() != 1 ||
+		!reboundPermanentNamed(t, g, "Nurturing Peatland").Tapped {
+		t.Fatalf("grove tapped=%t life=%d pool=%d, want both mana activations and life %d",
 			grove.Tapped, g.Players[game.Player1].Life, g.Players[game.Player1].ManaPool.Total(), life)
 	}
 }
@@ -391,6 +379,89 @@ func TestPaidCastPhyrexianAnnouncedBeforeTargets(t *testing.T) {
 	if !slices.Equal(agent.steps, []string{"phyrexian", "target"}) || len(obj.Targets) != 1 || g.Players[game.Player1].Life != life-2 {
 		t.Fatalf("steps=%v targets=%v life=%d, want the {U/P} announced before the target and life %d",
 			agent.steps, obj.Targets, g.Players[game.Player1].Life, life-2)
+	}
+}
+
+// The registered Bolt keeps its ordinary target/effect while a Phyrexian
+// kicker exercises CR 601.2b before 601.2c on the free-cast route (#3570).
+func TestFreeCastPhyrexianKickerPrecedesTargetsOnAnnouncedObject(t *testing.T) {
+	for _, route := range []string{"life only", "mana", "Krrik color life"} {
+		t.Run(route, func(t *testing.T) {
+			e, g := newEffectiveCascadeGame()
+			reg := cards.NewDefaultRegistry()
+			def := copyCardDef(reg.Lookup("Lightning Bolt"))
+			def.StaticAbilities = append(def.StaticAbilities, game.StaticAbility{KeywordAbilities: []game.KeywordAbility{
+				game.KickerKeyword{Cost: cost.Mana{cost.PhyrexianMana(mana.B)}},
+			}})
+			card := addCardToHand(g, game.Player1, def)
+			if route == "mana" {
+				g.Players[game.Player1].ManaPool.Add(mana.B, 1)
+			}
+			if route == "Krrik color life" {
+				addCombatPermanent(g, game.Player1, reg.Lookup("K'rrik, Son of Yawgmoth"))
+			}
+			life := g.Players[game.Player1].Life
+			var announced *game.StackObject
+			var steps []string
+			agent := &controlScript{choice: func(_ PlayerObservation, request game.ChoiceRequest) []int {
+				phyrexian := request.Prompt == "Pay {B/P}"
+				if phyrexian || request.Kind == game.ChoiceTarget {
+					top, ok := g.Stack.Peek()
+					if !ok || !top.Casting || top.SourceID != card || g.Players[game.Player1].Hand.Contains(card) ||
+						announced != nil && announced != top {
+						t.Fatal("announcement did not retain the topmost Casting object")
+					}
+					announced = top
+				}
+				if phyrexian {
+					steps = append(steps, "phyrexian")
+					want := "Pay with mana"
+					if route == "life only" {
+						want = "Pay 2 life"
+						if len(request.Options) != 1 {
+							t.Fatal("unpayable mana intention was offered")
+						}
+					}
+					for _, option := range request.Options {
+						if option.Label == want {
+							return []int{option.Index}
+						}
+					}
+					t.Fatalf("missing intention %q", want)
+				}
+				if request.Kind == game.ChoiceTarget {
+					steps = append(steps, "target")
+					for _, option := range request.Options {
+						if slices.Equal(option.Targets, []game.Target{game.PlayerTarget(game.Player2)}) {
+							return []int{option.Index}
+						}
+					}
+				}
+				for _, option := range request.Options {
+					if strings.Contains(option.Label, "with kicker") {
+						return []int{option.Index}
+					}
+				}
+				return request.DefaultSelection
+			}}
+			if !e.chooseAndCastFreeSpellFromSource(g, g.Players[game.Player1], game.Player1, card, zone.Hand,
+				game.Selection{}, opt.V[int]{}, false, reboundKickerAgents(agent), &TurnLog{}) {
+				t.Fatal("kicked free cast failed")
+			}
+			top, _ := g.Stack.Peek()
+			wantLife, wantMana := 2, 0
+			if route == "mana" {
+				wantLife, wantMana = 0, 1
+			}
+			if !slices.Equal(steps, []string{"phyrexian", "target"}) || top != announced || top.Casting ||
+				!top.KickerPaid || top.ManaSpentToCast != wantMana || g.Players[game.Player1].Life != life-wantLife {
+				t.Fatalf("steps=%v object=%+v life=%d", steps, top, g.Players[game.Player1].Life)
+			}
+			e.resolveTopOfStackWithChoices(g, reboundKickerAgents(agent), &TurnLog{})
+			if g.Players[game.Player2].Life != 37 {
+				t.Fatal("registered Bolt did not resolve against the chosen player")
+			}
+		})
 	}
 }
 

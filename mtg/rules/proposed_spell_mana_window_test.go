@@ -6,6 +6,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -69,9 +70,8 @@ func requireProposedSpellCast(t *testing.T, g *game.Game, cardID id.ID, fromZone
 	}
 }
 
-// requireNoProposedCast checks that nothing was offered or changed: the
-// probe ran only on clones, so the live game's cards, IDs and events are as
-// they were.
+// requireNoProposedCast checks that resource-only availability offered nothing
+// and did not change live cards, IDs or events.
 func requireNoProposedCast(t *testing.T, g *game.Game, agent *proposedSpellManaAgent, cardID id.ID, fromZone zone.Type, before *game.Game, permanents ...string) {
 	t.Helper()
 	if len(agent.prompts) != 0 {
@@ -254,4 +254,32 @@ func TestConduitPaidCastLocksTotalAfterMovingSpell(t *testing.T) {
 			t.Fatal("Conduit's can't-cast-additional lock was not applied after the cast")
 		}
 	})
+}
+
+func TestResolutionManaCostsCanDiscardThenExileTheSameCard(t *testing.T) {
+	e, g := newEffectiveCascadeGame()
+	addCombatPermanent(g, game.Player1, productionChoiceCard(t, "Overeager Apprentice"))
+	tender := addCombatPermanent(g, game.Player1, productionChoiceCard(t, "Molt Tender"))
+	forest := addCardToHand(g, game.Player1, productionChoiceCard(t, "Forest"))
+	def := copyCardDef(productionChoiceCard(t, "Sol Ring"))
+	def.ManaCost = opt.Val(cost.Mana{cost.O(4)})
+	card := addCardToGraveyard(g, game.Player1, def)
+	agent := &proposedSpellManaAgent{abilities: []string{"Discard a card", "Exile a card"}}
+	if !e.castPaidSpellFromSource(g, g.Players[game.Player1], game.Player1, card, zone.Graveyard, reboundKickerAgents(agent), &TurnLog{}) {
+		t.Fatal("no joint witness for Apprentice followed by Molt Tender")
+	}
+	requirePaidCast(t, g, card, zone.Graveyard, 4)
+	if !tender.Tapped || g.Players[game.Player1].Hand.Contains(forest) ||
+		g.Players[game.Player1].Graveyard.Contains(forest) || !g.Players[game.Player1].Exile.Contains(forest) {
+		t.Fatal("the planned discard/exile history did not use the card's new zone")
+	}
+	discards := 0
+	for _, event := range g.Events {
+		if event.Kind == game.EventCardDiscarded && event.CardID == forest {
+			discards++
+		}
+	}
+	if discards != 1 {
+		t.Fatal("planning performed or repeated the actual discard")
+	}
 }

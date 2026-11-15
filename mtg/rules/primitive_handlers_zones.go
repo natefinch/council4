@@ -1454,9 +1454,7 @@ func handleCastForFree(r *effectResolver, prim game.CastForFree) effectResolved 
 		}
 		candidates = append(candidates, cardID)
 	}
-	// CR 733: an unpaid proposal is reversed, so the player chooses again among
-	// the eligible spells not yet tried.
-	for len(candidates) > 0 {
+	if len(candidates) > 0 {
 		options := make([]game.ChoiceOption, len(candidates))
 		for i, cardID := range candidates {
 			options[i] = game.ChoiceOption{
@@ -1493,7 +1491,6 @@ func handleCastForFree(r *effectResolver, prim game.CastForFree) effectResolved 
 			res.succeeded = true
 			return res
 		}
-		candidates = slices.Delete(candidates, idx, idx+1)
 	}
 	return res
 }

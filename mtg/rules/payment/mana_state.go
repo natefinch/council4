@@ -27,6 +27,7 @@ type ManaState interface {
 	ConsumePaymentRiders(game.PlayerID, *game.Permanent, map[mana.Unit]int, map[mana.Unit]int)
 	ManaAbilityLabel(id.ID, int) string
 	UntapResources(id.ID) (game.PermanentResources, bool)
+	ForecastCardCost(game.PlayerID, id.ID, zone.Type, zone.Type, bool) (game.ResourceProjection, bool)
 }
 
 // ManaProduction records exact units and their spend-linked semantics.

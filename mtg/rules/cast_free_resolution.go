@@ -2,7 +2,6 @@ package rules
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
@@ -15,52 +14,38 @@ import (
 type freeCastOption struct {
 	cardID id.ID
 	cast   action.CastSpellAction
-	// payable reports whether the proposal's costs can be paid from current
-	// resources without first activating a payment-time mana ability.
-	payable bool
 }
 
-// freeCastOptionsForCard lists the legal proposals to cast card without paying
-// its mana cost. A proposal whose remaining costs are not currently payable is
-// still offered when they could be paid after activating payment-time mana
-// abilities (CR 601.2g); an unpaid proposal is then reversed (CR 733).
 func (e *Engine) freeCastOptionsForCard(g *game.Game, playerID game.PlayerID, card *game.CardInstance, fromZone zone.Type, selection game.Selection, maxManaValue opt.V[int]) []freeCastOption {
 	return e.freeCastSpellOptions(g, playerID, card, fromZone, selection, maxManaValue, freeCastSpell{})
 }
 
-// freeCastSpellOptions is freeCastOptionsForCard for a route whose spell
-// options (such as casting the card transformed) restrict the faces offered.
+// Only faces are selected before CR 601.2a. Modes, additional costs and targets
+// are announced on the stack, using completion-preserving shared choices.
 func (e *Engine) freeCastSpellOptions(g *game.Game, playerID game.PlayerID, card *game.CardInstance, fromZone zone.Type, selection game.Selection, maxManaValue opt.V[int], spell freeCastSpell) []freeCastOption {
 	if card == nil || card.Def == nil || castFromZoneProhibited(g, playerID, fromZone) {
 		return nil
 	}
 	var options []freeCastOption
-	manualMana := e.paymentManaWindow(g, playerID)
 	for _, face := range freeCastSpellFaces(playerID, card, fromZone, spell) {
-		spellDef := cardFaceOrDefault(card, face)
-		if !spell.faceAvailable(g, playerID, card, face, spellDef, selection, maxManaValue) {
+		def := cardFaceOrDefault(card, face)
+		if !spell.faceAvailable(g, playerID, card, face, def, selection, maxManaValue) {
 			continue
 		}
-		for _, cast := range freeCastBranchOptions(g, playerID, card.ID, fromZone, face, spellDef) {
-			branch := castBranchForCast(cast)
-			for _, modes := range modeChoicesForSpellAtBranch(g, playerID, spellDef, branch) {
-				result := targetChoicesForSpellWithKickerCount(g, playerID, spellDef, modes, branch, cast.KickerCount)
-				if result.kind == targetInvalidSpec || result.kind == targetNoLegalChoices {
-					continue
-				}
-				for _, targets := range result.choices {
-					candidate := cast
-					candidate.ChosenModes = append([]int(nil), modes...)
-					candidate.Targets = append([]game.Target(nil), targets...)
-					if !freeCastProposalLegal(g, playerID, spellDef, candidate) {
-						continue
-					}
-					payable, feasible := spellCostFeasibility(g, freeCastCostRequest(playerID, spellDef, spell.costCast(candidate)), manualMana)
-					if feasible {
-						options = append(options, freeCastOption{cardID: card.ID, cast: candidate, payable: payable})
-					}
-				}
-			}
+		cast := action.CastSpellAction{CardID: card.ID, SourceZone: fromZone, Face: face}
+		object := &game.StackObject{Kind: game.StackSpell, SourceID: card.ID, Controller: playerID,
+			SourceZone: fromZone, Face: face, Copy: spell.copyCard, Casting: true}
+		if spell.copyCard {
+			object.SourceTokenDef = copyCardDef(card.Def)
+		}
+		holder, _ := playerHoldingCastSource(g, card.ID, fromZone)
+		source := playerID
+		if holder != nil {
+			source = holder.ID
+		}
+		view := priorityCastView(g, object, source)
+		if len(e.resolutionSpellChoices(view, cast, freeCastCostRequest(playerID, def, spell.costCast(cast)), true)) > 0 {
+			options = append(options, freeCastOption{cardID: card.ID, cast: cast})
 		}
 	}
 	return options
@@ -182,57 +167,17 @@ func expandFreeCastBooleanBranch(base []action.CastSpellAction, enabled bool, ap
 	return expanded
 }
 
-// freeCastOptionLegal reports whether cast may be proposed without paying its
-// mana cost: its choices must be legal and its remaining costs payable, either
-// now or after activating payment-time mana abilities (CR 601.2g).
-func (e *Engine) freeCastOptionLegal(g *game.Game, playerID game.PlayerID, spellDef *game.CardDef, cast action.CastSpellAction) bool {
-	if !freeCastProposalLegal(g, playerID, spellDef, cast) {
-		return false
-	}
-	_, feasible := spellCostFeasibility(g, freeCastCostRequest(playerID, spellDef, cast), e.paymentManaWindow(g, playerID))
-	return feasible
-}
-
-func freeCastProposalLegal(g *game.Game, playerID game.PlayerID, spellDef *game.CardDef, cast action.CastSpellAction) bool {
-	if cast.XValue < 0 || cast.KickerCount < 0 ||
-		cast.XValue != 0 && costHasVariableMana(manaCostPtr(spellDef.ManaCost)) {
-		return false
-	}
-	branch := castBranchForCast(cast)
-	if !modesValidForSpellAtBranch(g, playerID, spellDef, cast.ChosenModes, branch) ||
-		!spellTargetsValidForCast(g, playerID, spellDef, cast.ChosenModes, cast.Targets, cast.XValue,
-			effectiveKickerCount(cast.KickerPaid, cast.KickerCount), branch) {
-		return false
-	}
-	return true
-}
-
 func freeCastCostRequest(playerID game.PlayerID, spellDef *game.CardDef, cast action.CastSpellAction) payment.SpellRequest {
-	return payment.SpellRequest{
-		PlayerID:        playerID,
-		CardID:          cast.CardID,
-		SourceZone:      cast.SourceZone,
-		Card:            spellDef,
-		XValue:          cast.XValue,
-		KickerPaid:      cast.KickerPaid,
-		KickerCount:     cast.KickerCount,
-		Bargained:       cast.Bargained,
-		Offspring:       cast.Offspring,
-		ChosenModes:     cast.ChosenModes,
-		Targets:         cast.Targets,
-		CastPermissions: []payment.SpellCastPermission{payment.SpellCastPermissionDefault},
-		Alternative:     opt.Val(freeCastAlternativeCost()),
-	}
+	request := priorityCastRequest(playerID, spellDef, cast.SourceZone, cast,
+		[]payment.SpellCastPermission{payment.SpellCastPermissionDefault}, nil)
+	request.Alternative = opt.Val(freeCastAlternativeCost())
+	return request
 }
 
 func (e *Engine) chooseAndCastFreeSpellFromSource(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, cardID id.ID, fromZone zone.Type, selection game.Selection, maxManaValue opt.V[int], exileOnResolution bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	return e.chooseAndCastFreeSpellFromSourceMay(g, sourcePlayer, controllerID, cardID, fromZone, selection, maxManaValue, exileOnResolution, false, agents, log)
 }
 
-// chooseAndCastFreeSpellFromSourceMay offers controllerID the legal ways to cast
-// cardID without paying its mana cost. When mayDecline is set the cast is
-// optional ("you may cast"), so the same choice also offers declining, and
-// declining casts nothing; it is only offered when a legal cast exists.
 func (e *Engine) chooseAndCastFreeSpellFromSourceMay(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, cardID id.ID, fromZone zone.Type, selection game.Selection, maxManaValue opt.V[int], exileOnResolution, mayDecline bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	return e.chooseAndCastFreeSpell(g, sourcePlayer, controllerID, cardID, fromZone, selection, maxManaValue, freeCastSpell{exileOnResolution: exileOnResolution}, mayDecline, agents, log)
 }
@@ -263,7 +208,7 @@ func (s freeCastSpell) faceAvailable(g *game.Game, player game.PlayerID, card *g
 
 // costCast returns cast as its costs are evaluated. A cast copy has its own
 // costs, not the identity of the card it copies, so payment must not reserve or
-// consume that card as the casting source (see attemptFreeSpell).
+// consume that card as the casting source.
 func (s freeCastSpell) costCast(cast action.CastSpellAction) action.CastSpellAction {
 	if s.copyCard {
 		cast.CardID = 0
@@ -281,87 +226,31 @@ func (e *Engine) chooseAndCastFreeSpell(g *game.Game, sourcePlayer *game.Player,
 	}
 	options := e.freeCastSpellOptions(g, controllerID, card, fromZone, selection, maxManaValue, spell)
 	if len(options) == 0 {
-		for _, face := range freeCastSpellFaces(controllerID, card, fromZone, spell) {
-			if face == game.FaceFused {
-				continue
-			}
-			def := cardFaceOrDefault(card, face)
-			if spell.faceAvailable(g, controllerID, card, face, def, selection, maxManaValue) &&
-				(spellHasMultikicker(def) || !costHasVariableMana(manaCostPtr(def.ManaCost)) && additionalCostsUseX(def.AdditionalCosts)) {
-				options = append(options, freeCastOption{cardID: card.ID, cast: action.CastSpellAction{
-					CardID: card.ID, SourceZone: fromZone, Face: face,
-				}})
-			}
-		}
+		return false
 	}
-	// CR 733: a proposal whose costs are not paid is reversed to the moment
-	// before it was proposed, so the caster chooses again rather than losing
-	// the opportunity. A cast none of whose proposals remain (see castAttempts)
-	// is no longer offered.
-	var attempts castAttempts
-	for len(options) > 0 {
-		if !castSourceContains(sourcePlayer, cardID, fromZone) {
-			return false
-		}
-		index, ok := e.chooseFreeCastOption(g, controllerID, card, fromZone, options, mayDecline, agents, log)
+	index := 0
+	if len(options) > 1 || mayDecline {
+		index, ok = e.chooseFreeCastOption(g, controllerID, card, fromZone, options, mayDecline, agents, log)
 		if !ok {
 			return false
 		}
-		cast := options[index].cast
-		spellDef := cardFaceOrDefault(card, cast.Face)
-		cast, ok = e.chooseCastNumbers(g, controllerID, spellDef, cast, true, agents, log)
-		if !ok || !e.freeCastOptionLegal(g, controllerID, spellDef, spell.costCast(cast)) {
-			g.Execution.InvalidChoices++
-			return false
-		}
-		switch e.attemptFreeSpell(g, sourcePlayer, controllerID, card, cast, spell, agents, log, &attempts) {
-		case actionApplied:
-			return true
-		case actionFailed:
-			options = slices.Delete(options, index, index+1)
-		case actionReversed:
-		}
 	}
-	return false
+	cast := options[index].cast
+	return e.resolutionSpell(g, sourcePlayer, card, cast,
+		freeCastCostRequest(controllerID, cardFaceOrDefault(card, cast.Face), spell.costCast(cast)), spell, true, agents, log) == actionApplied
 }
 
-// chooseFreeCastOption asks controllerID to pick one of options, defaulting to
-// the first proposal payable from current resources. It reports false when the
-// caster declines or answers invalidly.
 func (e *Engine) chooseFreeCastOption(g *game.Game, controllerID game.PlayerID, card *game.CardInstance, fromZone zone.Type, options []freeCastOption, mayDecline bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (int, bool) {
-	defaultIndex := 0
-	for i := range options {
-		if options[i].payable {
-			defaultIndex = i
-			break
-		}
-	}
-	choiceOptions := make([]game.ChoiceOption, len(options))
-	for i := range options {
-		spellDef := cardFaceOrDefault(card, options[i].cast.Face)
-		choiceOptions[i] = game.ChoiceOption{
-			Index:   i,
-			Label:   freeCastOptionLabel(spellDef, options[i].cast),
-			Card:    cardChoiceInfo(g, card.ID),
-			Targets: append([]game.Target(nil), options[i].cast.Targets...),
-		}
+	choices := make([]game.ChoiceOption, len(options))
+	for index, option := range options {
+		choices[index] = game.ChoiceOption{Index: index, Label: freeCastOptionLabel(cardFaceOrDefault(card, option.cast.Face), option.cast), Card: cardChoiceInfo(g, card.ID)}
 	}
 	if mayDecline {
-		choiceOptions = append(choiceOptions, game.ChoiceOption{
-			Index: len(options),
-			Label: "Don't cast " + cardChoiceLabel(g, card.ID),
-			Card:  cardChoiceInfo(g, card.ID),
-		})
+		choices = append(choices, game.ChoiceOption{Index: len(options), Label: "Don't cast " + cardChoiceLabel(g, card.ID), Card: cardChoiceInfo(g, card.ID)})
 	}
 	selected := e.chooseChoice(g, agents, game.ChoiceRequest{
-		Kind:             game.ChoiceResolution,
-		Player:           controllerID,
-		Prompt:           "Choose how to cast " + cardChoiceLabel(g, card.ID) + " without paying its mana cost",
-		Options:          choiceOptions,
-		MinChoices:       1,
-		MaxChoices:       1,
-		DefaultSelection: []int{defaultIndex},
-		Private:          fromZone == zone.Hand || fromZone == zone.Library,
+		Kind: game.ChoiceResolution, Player: controllerID, Prompt: "Choose how to cast " + cardChoiceLabel(g, card.ID) + " without paying its mana cost",
+		Options: choices, MinChoices: 1, MaxChoices: 1, DefaultSelection: []int{0}, Private: fromZone == zone.Hand || fromZone == zone.Library,
 	}, log)
 	if len(selected) != 1 || selected[0] < 0 || selected[0] >= len(options) {
 		return 0, false
@@ -393,9 +282,6 @@ func freeCastOptionLabel(spellDef *game.CardDef, cast action.CastSpellAction) st
 	if cast.GiftPromised {
 		label += fmt.Sprintf(" promising gift to player %d", cast.GiftRecipient)
 	}
-	if len(cast.Targets) > 0 {
-		label += fmt.Sprintf(" targeting %v", cast.Targets)
-	}
 	return label
 }
 
@@ -408,182 +294,10 @@ func (e *Engine) castFreeOptionWithCopy(g *game.Game, sourcePlayer *game.Player,
 }
 
 func (e *Engine) castFreeSpell(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, card *game.CardInstance, cast action.CastSpellAction, spell freeCastSpell, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	return e.attemptFreeSpell(g, sourcePlayer, controllerID, card, cast, spell, agents, log, nil) == actionApplied
-}
-
-// attemptFreeSpell casts cast without paying its mana cost. A cast whose cost
-// includes Phyrexian symbols and that is reversed because the proposed cost
-// isn't paid (CR 733.1) is recorded in attempts, which may be nil; it reports
-// actionReversed while the caster may redo it with a proposal that remains,
-// and actionFailed once none does or the cast is otherwise not possible.
-func (e *Engine) attemptFreeSpell(g *game.Game, sourcePlayer *game.Player, controllerID game.PlayerID, card *game.CardInstance, cast action.CastSpellAction, spell freeCastSpell, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) actionOutcome {
-	defer g.OpenLibraryTopWindow()()
-	copyCard := spell.copyCard
-	if castFromZoneProhibited(g, controllerID, cast.SourceZone) {
-		return actionFailed
+	if card == nil || castFromZoneProhibited(g, controllerID, cast.SourceZone) ||
+		!freeCastFaceCastable(g, controllerID, spell.costCast(cast).CardID, cardFaceOrDefault(card, cast.Face)) ||
+		!spell.copyCard && (sourcePlayer == nil || !castSourceContains(sourcePlayer, card.ID, cast.SourceZone)) {
+		return false
 	}
-	// A cast copy has its own costs, not the identity of the card remaining in
-	// exile. Payment must not reserve or consume that card as the casting source.
-	paymentCardID := card.ID
-	if copyCard {
-		paymentCardID = 0
-		cast.CardID = 0
-	}
-	spellDef := cardFaceOrDefault(card, cast.Face)
-	// CR 601.2b: the cost is proposed, with its Phyrexian payments announced,
-	// before any remaining targets are chosen and before splicing. The free
-	// cast's own targets are part of the cast the caster chose, so a
-	// proposal is withheld for that cast alone.
-	costRequest := freeCastCostRequest(controllerID, spellDef, cast)
-	if !spellCostsIncludePhyrexian(g, []payment.SpellRequest{costRequest}) {
-		attempts = nil
-	}
-	proposals := newCastProposals(attempts, fmt.Sprintf("%+v", cast), nil)
-	proposal, ok := e.proposeSpellCost(g, costRequest, false, proposals, agents, log)
-	if !ok {
-		return actionFailed
-	}
-	branch := castBranchForCast(cast)
-	completedTargets, ok := e.completeSpellAnnouncementTargets(g, controllerID, spellDef, cast.ChosenModes, cast.Targets, agents, log, branch)
-	if !ok {
-		return actionFailed
-	}
-	cast.Targets = completedTargets
-	if !e.freeCastOptionLegal(g, controllerID, spellDef, cast) {
-		return actionFailed
-	}
-	targetCounts, ok := spellTargetCounts(g, controllerID, spellDef, cast.ChosenModes, cast.Targets, branch)
-	if !ok {
-		panic("validated free-cast spell targets could not be segmented")
-	}
-	var splice spliceCastResult
-	if cast.SourceZone == zone.Hand && spellIsArcane(spellDef) {
-		payable := e.proposedSpliceCostsPayable(g, freeCastCostRequest(controllerID, spellDef, cast), proposal)
-		splice = e.chooseSpliceOntoArcane(g, controllerID, card.ID, payable, agents, log)
-	}
-	obj := &game.StackObject{
-		ID:                            g.IDGen.Next(),
-		Kind:                          game.StackSpell,
-		SourceID:                      card.ID,
-		Face:                          cast.Face,
-		Controller:                    controllerID,
-		Targets:                       append([]game.Target(nil), cast.Targets...),
-		TargetCounts:                  targetCounts,
-		ChosenModes:                   append([]int(nil), cast.ChosenModes...),
-		XValue:                        cast.XValue,
-		KickerPaid:                    cast.KickerPaid,
-		KickerCount:                   cast.KickerCount,
-		GiftPromised:                  cast.GiftPromised,
-		GiftRecipient:                 cast.GiftRecipient,
-		Bargained:                     cast.Bargained,
-		OffspringPaid:                 cast.Offspring,
-		ExileInsteadOfGraveyard:       spell.exileOnResolution,
-		Suspend:                       spell.suspend,
-		SourceZone:                    cast.SourceZone,
-		SplicedContent:                splice.contents,
-		SplicedTargets:                splice.targets,
-		SplicedTargetCounts:           splice.targetCounts,
-		CastDuringControllerMainPhase: controllerID == g.Turn.ActivePlayer && g.Turn.IsMainPhase(),
-	}
-	var counterTransition castCounterTransition
-	var place castSourcePlace
-	if copyCard {
-		obj.Copy = true
-		obj.CastCopy = true
-		obj.CopyOwner = opt.Val(controllerID)
-		obj.SourceCardID = card.ID
-		obj.SourceTokenDef = copyCardDef(card.Def)
-	} else {
-		counterTransition = prepareCastCounterTransition(g, card, cast.SourceZone)
-		var taken bool
-		place, taken = takeCastSourceCard(sourcePlayer, card.ID, cast.SourceZone)
-		if !taken {
-			return actionFailed
-		}
-		counterTransition.apply(g)
-	}
-	g.Stack.Push(obj)
-	rollback := func() {
-		g.Stack.RemoveByID(obj.ID)
-		if !copyCard {
-			restoreCastSourceCard(place)
-			counterTransition.undo(g)
-		}
-	}
-	attempt := fmt.Sprintf("%+v|%+v|%v", cast, proposal, splice.manaCosts)
-	reversed := func(outcome actionOutcome) actionOutcome {
-		if attempts == nil || proposals.exhausted() {
-			return actionFailed
-		}
-		return outcome
-	}
-	targetEvents := prepareTargetEvents(g, obj)
-	request := payment.SpellRequest{
-		PlayerID:        controllerID,
-		CardID:          paymentCardID,
-		SourceZone:      cast.SourceZone,
-		Card:            spellDef,
-		XValue:          cast.XValue,
-		KickerPaid:      cast.KickerPaid,
-		KickerCount:     cast.KickerCount,
-		Bargained:       cast.Bargained,
-		Offspring:       cast.Offspring,
-		ChosenModes:     cast.ChosenModes,
-		Targets:         cast.Targets,
-		CastPermissions: []payment.SpellCastPermission{payment.SpellCastPermissionDefault},
-		SpliceManaCosts: splice.manaCosts,
-		Alternative:     opt.Val(freeCastAlternativeCost()),
-	}
-	// CR 601.2f-h: lock the total cost, then, if it includes a mana payment,
-	// let the caster activate mana abilities before paying it. An unpaid
-	// proposal is reversed (CR 733).
-	prepared, ok := e.lockSpellCostProposal(g, request, proposal)
-	if !ok {
-		rollback()
-		// The proposal can't be paid even after activating mana abilities,
-		// so it is withheld unless a spliced cost made it unpayable.
-		if len(splice.manaCosts) == 0 {
-			return reversed(proposals.reverseUnpayable(attempt, 0, proposal, nil))
-		}
-		return reversed(proposals.reverse(attempt, 0, proposal, nil))
-	}
-	request.PreparedCost = &prepared
-	prefs, undoMana := e.preparedSpellPaymentPreferences(g, request, prepared, proposal, agents, log)
-	request.Prefs = prefs
-	riderSnapshot, _ := manaSpendRiderSnapshot(g, controllerID)
-	paymentResult, ok := paymentOrch.paySpellCosts(g, request)
-	if !ok {
-		undoMana()
-		rollback()
-		return reversed(proposals.reverse(attempt, 0, proposal, nil))
-	}
-	obj.BuybackPaid = paymentResult.BuybackPaid
-	obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
-	obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
-	obj.PaidCostSubjects = paymentResult.PaidCostSubjects
-	obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
-	obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
-	obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
-	obj.ManaFromCreaturesSpentToCast = creatureManaSpent(paymentResult.PoolSpend)
-	typeLine := stackSpellTypeLine(g, obj, spellDef)
-	emitSpellCastEventsWithTargets(g, obj, game.Event{
-		SourceID:                     card.ID,
-		StackObjectID:                obj.ID,
-		Controller:                   controllerID,
-		CardID:                       paymentCardID,
-		TokenDef:                     obj.SourceTokenDef,
-		Face:                         cast.Face,
-		CardTypes:                    typeLine.types,
-		CardSupertypes:               typeLine.supertypes,
-		CardSubtypes:                 typeLine.subtypes,
-		Colors:                       spellColors(spellDef),
-		ManaValue:                    stackObjectKnownManaValue(g, obj),
-		ManaSpentToCast:              opt.Val(totalManaSpent(paymentResult.PoolSpend)),
-		ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(paymentResult.PoolSpend)),
-		KickerPaid:                   cast.KickerPaid,
-		FromZone:                     cast.SourceZone,
-		ToZone:                       zone.Stack,
-	}, targetEvents)
-	resolveSpellCastManaSpendRiders(g, controllerID, riderSnapshot, paymentResult.PoolSpend, spellDef, obj)
-	return actionApplied
+	return e.resolutionSpell(g, sourcePlayer, card, cast, freeCastCostRequest(controllerID, cardFaceOrDefault(card, cast.Face), spell.costCast(cast)), spell, false, agents, log) == actionApplied
 }

@@ -35,16 +35,25 @@ type scepterCopyPolicy struct {
 
 	pick     func(game.ChoiceOption) bool
 	requests []game.ChoiceRequest
+	label    string
 }
 
 func (p *scepterCopyPolicy) ChooseChoice(_ PlayerObservation, request game.ChoiceRequest) []int {
 	switch {
 	case request.Kind == game.ChoiceMay:
 		return []int{1}
+	case request.Kind == game.ChoiceTarget:
+		for _, option := range request.Options {
+			option.Label = p.label
+			if p.pick != nil && p.pick(option) {
+				return []int{option.Index}
+			}
+		}
 	case request.Kind == game.ChoiceResolution && strings.HasPrefix(request.Prompt, "Choose how to cast"):
 		p.requests = append(p.requests, request)
 		for _, option := range request.Options {
 			if p.pick != nil && p.pick(option) {
+				p.label = option.Label
 				return []int{option.Index}
 			}
 		}
@@ -55,6 +64,9 @@ func (p *scepterCopyPolicy) ChooseChoice(_ PlayerObservation, request game.Choic
 // onlyRequest returns the single cast-choice request the copy cast offered.
 func (p *scepterCopyPolicy) onlyRequest(t *testing.T) game.ChoiceRequest {
 	t.Helper()
+	if len(p.requests) == 0 {
+		return game.ChoiceRequest{}
+	}
 	if len(p.requests) != 1 {
 		t.Fatalf("cast-choice requests = %d, want 1", len(p.requests))
 	}
@@ -70,7 +82,8 @@ func scepterAgents(policy *scepterCopyPolicy) [game.NumPlayers]PlayerAgent {
 // pickCast accepts the cast option with or without kicker targeting want.
 func pickCast(kicked bool, want ...game.Target) func(game.ChoiceOption) bool {
 	return func(option game.ChoiceOption) bool {
-		return strings.Contains(option.Label, "with kicker") == kicked && sameTargetObjects(option.Targets, want)
+		return strings.Contains(option.Label, "with kicker") == kicked &&
+			(len(option.Targets) == 0 || sameTargetObjects(option.Targets, want))
 	}
 }
 
@@ -192,8 +205,8 @@ func TestIsochronScepterCopyOffersKickerAndTargetChoice(t *testing.T) {
 			unkicked++
 		}
 	}
-	if kicked != 2 || unkicked != 2 {
-		t.Fatalf("offered %d kicked and %d unkicked casts, want 2 of each (two targets)", kicked, unkicked)
+	if kicked != 1 || unkicked != 1 {
+		t.Fatalf("offered %d kicked and %d unkicked announcements, want one each before target choice (601.2b-c)", kicked, unkicked)
 	}
 	if !copyObj.KickerPaid || !sameTargetObjects(copyObj.Targets, []game.Target{want}) {
 		t.Fatalf("copy kicked=%v targets=%v, want kicked targeting the second creature", copyObj.KickerPaid, copyObj.Targets)
@@ -317,7 +330,8 @@ func TestIsochronScepterCopyOffersModes(t *testing.T) {
 	s.activate(t)
 	want := game.PermanentTarget(victim.ObjectID)
 	policy := &scepterCopyPolicy{pick: func(option game.ChoiceOption) bool {
-		return strings.Contains(option.Label, "modes [1]") && sameTargetObjects(option.Targets, []game.Target{want})
+		return strings.Contains(option.Label, "modes [1]") &&
+			(len(option.Targets) == 0 || sameTargetObjects(option.Targets, []game.Target{want}))
 	}}
 	hand := s.g.Players[game.Player1].Hand.Size()
 
@@ -349,7 +363,8 @@ func TestIsochronScepterCopyOffersSplitHalves(t *testing.T) {
 	s.activate(t)
 	want := game.PermanentTarget(victim.ObjectID)
 	policy := &scepterCopyPolicy{pick: func(option game.ChoiceOption) bool {
-		return strings.HasPrefix(option.Label, "Ice") && sameTargetObjects(option.Targets, []game.Target{want})
+		return strings.HasPrefix(option.Label, "Ice") &&
+			(len(option.Targets) == 0 || sameTargetObjects(option.Targets, []game.Target{want}))
 	}}
 	hand := s.g.Players[game.Player1].Hand.Size()
 

@@ -89,6 +89,14 @@ func ClassifyManaAbility(body *game.ManaAbility) (ActivationSchema, ManaAbilityC
 		case cost.AdditionalExileSource:
 			schema.exile = true
 		case cost.AdditionalPayLife, cost.AdditionalEnergy, cost.AdditionalRemoveCounter, cost.AdditionalPutCounter, cost.AdditionalSacrifice:
+		case cost.AdditionalDiscard:
+			if additional.Amount != 1 {
+				return ActivationSchema{}, OpaqueManaAbility
+			}
+		case cost.AdditionalExile:
+			if additional.Amount != 1 || additional.Source != zone.Hand && additional.Source != zone.Graveyard {
+				return ActivationSchema{}, OpaqueManaAbility
+			}
 		default:
 			return ActivationSchema{}, OpaqueManaAbility
 		}
@@ -123,7 +131,8 @@ func ClassifyManaAbility(body *game.ManaAbility) (ActivationSchema, ManaAbilityC
 			continue
 		}
 		if add, ok := instruction.Primitive.(game.AddMana); ok {
-			if !ResourceManaAmount(add.Amount) || len(add.CombinationColors) != 0 || add.Player.Exists || add.EachControlledColor != nil ||
+			if !ResourceManaAmount(add.Amount) || len(add.CombinationColors) != 0 ||
+				add.Player.Exists && add.Player.Val.Kind() != game.PlayerReferenceController || add.EachControlledColor != nil ||
 				add.ChoiceFrom != "" && !keys[add.ChoiceFrom] {
 				return ActivationSchema{}, OpaqueManaAbility
 			}
@@ -183,7 +192,8 @@ func ClassifyManaAbility(body *game.ManaAbility) (ActivationSchema, ManaAbilityC
 	}
 	if !schema.tap && !schema.untap && !schema.sacrifice && !schema.exile && !body.ManaCost.Exists &&
 		!slices.ContainsFunc(body.AdditionalCosts, func(c cost.Additional) bool {
-			return c.Kind == cost.AdditionalPayLife || c.Kind == cost.AdditionalRemoveCounter || c.Kind == cost.AdditionalEnergy || c.Kind == cost.AdditionalSacrifice
+			return c.Kind == cost.AdditionalPayLife || c.Kind == cost.AdditionalRemoveCounter || c.Kind == cost.AdditionalEnergy ||
+				c.Kind == cost.AdditionalSacrifice || c.Kind == cost.AdditionalDiscard || c.Kind == cost.AdditionalExile
 		}) {
 		return ActivationSchema{}, OpaqueManaAbility
 	}

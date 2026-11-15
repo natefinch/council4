@@ -313,7 +313,7 @@ func TestPhyrexianManaDefaultsToManaOnlyWhenManaAbilitiesCanPayIt(t *testing.T) 
 	}{
 		{name: "Grove alone", permanents: []string{"Etherium Sculptor"}, wantDefault: "Pay 2 life"},
 		{name: "Grove and Peatland", permanents: []string{"Etherium Sculptor", "Nurturing Peatland"},
-			wantDefault: "Pay B mana", wantMana: 1},
+			wantDefault: "Pay with mana", wantMana: 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e, g, cardID := conduitPaidCastGame(t, "Vault Skirge", tc.permanents...)

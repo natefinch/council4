@@ -118,8 +118,8 @@ func TestPaidCastZeroTotalOpensNoManaAbilityWindow(t *testing.T) {
 // Worlds with Waterlogged Grove as the only mana source. The locked total
 // includes a mana payment ({1}, or {1} with Thalia's tax offset by Etherium
 // Sculptor), so the window opens and the Grove pays it (CR 601.2f-g). When the
-// caster doesn't activate the Grove, the proposal is reversed: Sol Ring returns
-// to the graveyard and Conduit applies no lock (CR 733.1).
+// Grove is required, so finishing without it is not offered (CR 601.2h,
+// 2026-11-06); a policy taking defaults still completes the payment.
 func TestPaidCastManaTotalUsesManaAbilityWindow(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
@@ -144,12 +144,12 @@ func TestPaidCastManaTotalUsesManaAbilityWindow(t *testing.T) {
 			declined := g.Clone()
 			agent = &paymentManaAgent{ability: "no such ability"}
 			e.resolveTopOfStackWithChoices(declined, reboundKickerAgents(paidCastManaAgent{agent}), &TurnLog{})
-			if agent.windows != 1 || declined.Stack.Size() != 0 || !declined.Players[game.Player1].Graveyard.Contains(cardID) ||
-				reboundPermanentNamed(t, declined, "Waterlogged Grove").Tapped || declined.Players[game.Player1].Life != life {
-				t.Fatalf("windows=%d stack=%d, want the unpaid proposal reversed into the graveyard", agent.windows, declined.Stack.Size())
+			requirePaidCast(t, declined, cardID, zone.Graveyard, 1)
+			if agent.windows != 1 || !reboundPermanentNamed(t, declined, "Waterlogged Grove").Tapped || declined.Players[game.Player1].Life != life-1 {
+				t.Fatalf("windows=%d stack=%d, want the required Grove payment", agent.windows, declined.Stack.Size())
 			}
-			if spellCastProhibited(declined, game.Player1, vanillaCreatureDef()) {
-				t.Fatal("Conduit locked casting although the card was not cast")
+			if !spellCastProhibited(declined, game.Player1, vanillaCreatureDef()) {
+				t.Fatal("Conduit did not lock casting after the completed cast")
 			}
 		})
 	}

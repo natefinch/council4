@@ -43,6 +43,55 @@ func numericDamageSpell() *game.CardDef {
 	}}
 }
 
+func TestResolutionAvailabilityFindsXBeyondPolicySamples(t *testing.T) {
+	for _, free := range []bool{false, true} {
+		t.Run(map[bool]string{false: "paid", true: "free additional X"}[free], func(t *testing.T) {
+			e, g := newEffectiveCascadeGame()
+			victimDef := vanillaCreature("Large target", 2, 2)
+			victimDef.ManaCost = opt.Val(cost.Mana{cost.O(21)})
+			victim := addCombatPermanent(g, game.Player2, victimDef)
+			def := &game.CardDef{CardFace: game.CardFace{
+				Name: "Target X breakpoint", Types: []types.Card{types.Instant},
+				ManaCost: opt.Val(cost.Mana{cost.X, cost.R}),
+				SpellAbility: opt.Val(game.Mode{
+					Targets: []game.TargetSpec{{MinTargets: 1, MaxTargets: 1, Allow: game.TargetAllowPermanent, ManaValueEqualsX: true}},
+					Sequence: []game.Instruction{{Primitive: game.GainLife{
+						Player: game.ControllerReference(), Amount: game.Fixed(1),
+					}}},
+				}.Ability()),
+			}}
+			if free {
+				def.ManaCost = opt.Val(cost.Mana{cost.R})
+				def.AdditionalCosts = []cost.Additional{{Kind: cost.AdditionalPayLife, AmountFromX: true}}
+			} else {
+				g.Players[game.Player1].ManaPool.Add(mana.C, 21)
+				g.Players[game.Player1].ManaPool.Add(mana.R, 1)
+			}
+			card := addCardToHand(g, game.Player1, def)
+			agents := reboundKickerAgents(defaultChoiceAgent{})
+			ok := false
+			if free {
+				ok = e.chooseAndCastFreeSpellFromSource(g, g.Players[game.Player1], game.Player1, card, zone.Hand,
+					game.Selection{}, opt.V[int]{}, false, agents, &TurnLog{})
+			} else {
+				ok = e.castPaidSpellFromSource(g, g.Players[game.Player1], game.Player1, card, zone.Hand, agents, &TurnLog{})
+			}
+			object, _ := g.Stack.Peek()
+			if !ok || object == nil || object.XValue != 21 || len(object.Targets) != 1 || object.Targets[0] != game.PermanentTarget(victim.ObjectID) {
+				t.Fatal("availability treated a numeric policy cutoff as unpayability")
+			}
+			e.resolveTopOfStack(g, &TurnLog{})
+			wantLife := 41
+			if free {
+				wantLife = 20
+			}
+			if g.Players[game.Player1].Life != wantLife || g.Players[game.Player1].ManaPool.Total() != 0 {
+				t.Fatal("the exact X cost and resolving effect were not applied")
+			}
+		})
+	}
+}
+
 func TestExactNumericFreeAndPaidResolution(t *testing.T) {
 	for _, free := range []bool{false, true} {
 		for _, name := range []string{"multikicker", "additional X", "mana X"} {
@@ -505,7 +554,7 @@ func TestExactNumericFreeMultikickerTargetsAreCompact(t *testing.T) {
 		}
 		if request.Kind == game.ChoiceTarget {
 			targetRequest = true
-			if request.MinChoices != 22 || request.MaxChoices != 22 || len(request.Options) > 34 {
+			if request.MinChoices != 1 || request.MaxChoices != 1 || len(request.Options) > 34 {
 				t.Fatal("exact target selection materialized combinations rather than individual candidates")
 			}
 			var selected []int
@@ -516,7 +565,7 @@ func TestExactNumericFreeMultikickerTargetsAreCompact(t *testing.T) {
 					}
 				}
 			}
-			return selected
+			return selected[:1]
 		}
 		return request.DefaultSelection
 	}}

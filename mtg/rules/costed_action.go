@@ -217,7 +217,14 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 			}
 		}
 	}
+	closeManaWindow := func() {}
+	defer func() { closeManaWindow() }()
 	if manaCostIncludesManaPayment(costs.ManaCost, announcedLife) {
+		g.ManaPaymentScopes = append(g.ManaPaymentScopes, player)
+		closeManaWindow = func() {
+			g.ManaPaymentScopes = g.ManaPaymentScopes[:len(g.ManaPaymentScopes)-1]
+			closeManaWindow = func() {}
+		}
 		for {
 			planner = e.PaymentPlanner(g, log)
 			plan, ok, _ = planner.Complete(request, partial)
@@ -356,6 +363,7 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 		panic("prevalidated costed action failed: " + reason)
 	}
 	endRandom(false)
+	closeManaWindow()
 	if descriptor.commit != nil {
 		descriptor.commit(g, paid, agents, log, paymentStart)
 	}

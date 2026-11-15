@@ -288,6 +288,8 @@ func (a *fuseFreeCastAgent) ChooseChoice(_ PlayerObservation, request game.Choic
 	switch {
 	case request.Kind == game.ChoiceMay:
 		return []int{1}
+	case request.Kind == game.ChoiceTarget:
+		return request.DefaultSelection
 	case strings.HasPrefix(request.Prompt, "Choose a spell to cast"):
 		for _, option := range request.Options {
 			if strings.HasPrefix(option.Label, "Wear") {
@@ -334,7 +336,7 @@ func TestFuseElectrodominanceFreeCastFromHand(t *testing.T) {
 			agent := &fuseFreeCastAgent{t: t, pick: pick}
 			s.engine.resolveTopOfStackWithChoices(s.g, [game.NumPlayers]PlayerAgent{game.Player1: agent}, &TurnLog{})
 			if fuseLabelsOffer(agent.castLabel, "Wear // Tear (fused)") != tc.fused ||
-				!fuseLabelsOffer(agent.castLabel, "Wear ") || !fuseLabelsOffer(agent.castLabel, "Tear ") {
+				!fuseLabelsOffer(agent.castLabel, "Wear") || !fuseLabelsOffer(agent.castLabel, "Tear") {
 				t.Fatalf("X=%d free-cast options = %q, want Wear and Tear alone, fused only when X >= 3", tc.x, agent.castLabel)
 			}
 			obj, ok := s.g.Stack.Peek()
@@ -385,9 +387,9 @@ func TestFuseKariZevsExpertiseOffersHalvesOnly(t *testing.T) {
 	if !s.engine.applyAction(s.g, game.Player1, action.CastSpell(kari, []game.Target{game.PermanentTarget(creature.ObjectID)}, 0, nil)) {
 		t.Fatal("Kari Zev's Expertise cast = false, want true")
 	}
-	agent := &fuseFreeCastAgent{t: t, pick: "Wear "}
+	agent := &fuseFreeCastAgent{t: t, pick: "Wear"}
 	s.engine.resolveTopOfStackWithChoices(s.g, [game.NumPlayers]PlayerAgent{game.Player1: agent}, &TurnLog{})
-	if fuseLabelsOffer(agent.castLabel, "Wear // Tear") || !fuseLabelsOffer(agent.castLabel, "Wear ") || !fuseLabelsOffer(agent.castLabel, "Tear ") {
+	if fuseLabelsOffer(agent.castLabel, "Wear // Tear") || !fuseLabelsOffer(agent.castLabel, "Wear") || !fuseLabelsOffer(agent.castLabel, "Tear") {
 		t.Fatalf("Kari Zev's Expertise options = %q, want Wear or Tear alone, never fused (mana value 3 > 2)", agent.castLabel)
 	}
 	obj, ok := s.g.Stack.Peek()
