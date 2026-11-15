@@ -494,7 +494,15 @@ func TestActivatedAbilityPlansCompatibleSacrificeAndTapCosts(t *testing.T) {
 		if got := containsAction(engine.legalActions(g, game.Player1), act); !got {
 			t.Fatalf("with another creature = %v: ability legal = %v", withOther, got)
 		}
-		if got := engine.applyAction(g, game.Player1, act); !got {
+		agent := authoredChoicePolicy{choose: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+			for _, option := range req.Options {
+				if option.Label == "Bear" {
+					return []int{option.Index}
+				}
+			}
+			return req.DefaultSelection
+		}}
+		if got := engine.applyActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), nil); !got {
 			t.Fatalf("with another creature = %v: applyAction = %v", withOther, got)
 		}
 		if !withOther {

@@ -39,8 +39,8 @@ import (
 // A cast none of whose proposals remain is exhausted and no longer offered.
 // Each cast offers finitely many proposals and choices of targets, and each
 // repeated attempt withholds one of them or exhausts its cast, so a
-// deterministic caster always moves on. Activations reversed the same way are
-// recorded too (see reverseActivationAttempt).
+// deterministic caster always moves on. Activation/special-action retries
+// instead use the costed-action procedure and execution budget.
 type castAttempts struct {
 	reversed  map[string]bool
 	withheld  map[string]bool
@@ -72,20 +72,14 @@ func castActionKey(cast action.CastSpellAction) string {
 }
 
 // actionExhausted reports whether act is a cast, including a face-down cast,
-// none of whose proposals remain, or an activation or special action already
-// reversed and repeated (see reverseActivationAttempt).
+// none of whose proposals remain. It never suppresses an activation or special
+// action after an opaque payment reversal (CR 734.2).
 func (a *castAttempts) actionExhausted(act action.Action) bool {
 	if a == nil || len(a.exhausted) == 0 {
 		return false
 	}
 	if faceDown, ok := act.CastFaceDownPayload(); ok {
 		return a.exhausted[faceDownCastKey(faceDown)]
-	}
-	if activate, ok := act.ActivateAbilityPayload(); ok {
-		return a.exhausted[activationAttemptKey(activate)]
-	}
-	if isManaCostSpecialAction(act) {
-		return a.exhausted[specialActionAttemptKey(act)]
 	}
 	cast, ok := act.CastSpellPayload()
 	return ok && a.exhausted[castActionKey(cast)]

@@ -156,9 +156,12 @@ type AbilityRequest struct {
 // only when the payment is part of casting a spell outside the normal spell
 // planner, such as a madness cost; it selects the spell's mana-spending context.
 type GenericRequest struct {
-	PlayerID        game.PlayerID
-	Source          *game.Permanent
-	SourceCardID    id.ID
+	PlayerID     game.PlayerID
+	Source       *game.Permanent
+	SourceCardID id.ID
+	// SourceZone requires a special-action card to remain in this zone until
+	// payment. None leaves ordinary effect/ability source semantics unchanged.
+	SourceZone      zone.Type
 	Spell           *game.CardDef
 	Cost            *cost.Mana
 	XValue          int

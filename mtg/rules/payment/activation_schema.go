@@ -88,7 +88,7 @@ func ClassifyManaAbility(body *game.ManaAbility) (ActivationSchema, ManaAbilityC
 			schema.sacrifice = true
 		case cost.AdditionalExileSource:
 			schema.exile = true
-		case cost.AdditionalPayLife, cost.AdditionalEnergy, cost.AdditionalRemoveCounter, cost.AdditionalPutCounter:
+		case cost.AdditionalPayLife, cost.AdditionalEnergy, cost.AdditionalRemoveCounter, cost.AdditionalPutCounter, cost.AdditionalSacrifice:
 		default:
 			return ActivationSchema{}, OpaqueManaAbility
 		}
@@ -183,7 +183,7 @@ func ClassifyManaAbility(body *game.ManaAbility) (ActivationSchema, ManaAbilityC
 	}
 	if !schema.tap && !schema.untap && !schema.sacrifice && !schema.exile && !body.ManaCost.Exists &&
 		!slices.ContainsFunc(body.AdditionalCosts, func(c cost.Additional) bool {
-			return c.Kind == cost.AdditionalPayLife || c.Kind == cost.AdditionalRemoveCounter || c.Kind == cost.AdditionalEnergy
+			return c.Kind == cost.AdditionalPayLife || c.Kind == cost.AdditionalRemoveCounter || c.Kind == cost.AdditionalEnergy || c.Kind == cost.AdditionalSacrifice
 		}) {
 		return ActivationSchema{}, OpaqueManaAbility
 	}

@@ -25,12 +25,14 @@ const (
 // the zero value is invalid. Card definitions are immutable shared definitions,
 // while every per-game reference retained here is an ID, not a game pointer.
 type Request struct {
-	kind     requestKind
-	spell    SpellRequest
-	ability  AbilityRequest
-	generic  GenericRequest
-	sourceID id.ID
-	locked   bool
+	kind          requestKind
+	spell         SpellRequest
+	ability       AbilityRequest
+	generic       GenericRequest
+	sourceID      id.ID
+	locked        bool
+	abilityOption int
+	forecastOnly  bool
 }
 
 // ForSpell describes the spell's announced costs, including fixed targets.
@@ -124,6 +126,8 @@ type Partial struct {
 	Delve         opt.V[[]id.ID]
 	Allocation    *ManaAllocation
 	ManaAbilities map[ManaAbilityKey]bool
+	ManaPayments  map[ManaActivationKey]Partial
+	ManaChoices   map[ManaActivationKey]map[game.ChoiceKey]game.ResolutionChoiceResult
 	joint         bool
 	poolOnly      bool
 }
@@ -131,6 +135,13 @@ type Partial struct {
 type ManaAbilityKey struct {
 	Source       id.ID
 	AbilityIndex int
+}
+
+// ManaActivationKey binds decisions to a zero-based occurrence of one source
+// ability, independently of other sources' positions in the payment plan.
+type ManaActivationKey struct {
+	ManaAbilityKey
+	Occurrence int
 }
 
 // ManaActivation records one selected source's activation and exact output.
@@ -148,6 +159,7 @@ type ManaActivation struct {
 	Choices      map[game.ChoiceKey]game.ResolutionChoiceResult
 	Production   []ManaProduction
 	Effects      game.ResourceProjection
+	Before       game.ResourceProjection
 }
 
 // ManaAllocation is an independent snapshot of exact units spent, activations,
@@ -188,6 +200,40 @@ func (p Plan) Components() map[int]ComponentChoice { return cloneComponents(p.co
 // Mana returns an independent copy of the exact mana payment.
 func (p Plan) Mana() ManaAllocation { return cloneAllocation(p.allocation) }
 
+// Request returns the locked total without retaining mutable game references.
+// A procedure may keep it while an opaque mana ability changes live resources.
+func (p Plan) Request() Request {
+	var request Request
+	switch p.request.kind {
+	case spellPayment:
+		request = ForSpell(p.request.spell)
+	case abilityPayment:
+		request = ForAbility(p.request.ability)
+	case genericPayment:
+		request = ForGeneric(p.request.generic)
+	}
+	request.sourceID, request.locked, request.abilityOption = p.request.sourceID, p.request.locked, p.request.abilityOption
+	return request
+}
+
+// Costs exposes the selected, locked total for announcement/payment prompts.
+func (p Plan) Costs() SpellOptionSummary {
+	result := SpellOptionSummary{Index: p.option}
+	switch p.request.kind {
+	case spellPayment:
+		result = p.request.spell.PreparedCost.Summary
+		result.ManaCost = copyManaCost(p.request.spell.PreparedCost.option.manaCost)
+		result.AdditionalCosts = slices.Clone(p.request.spell.PreparedCost.option.additionalCosts)
+	case abilityPayment:
+		result.ManaCost = copyManaCost(manaCostPtr(p.request.ability.ManaCost))
+		result.AdditionalCosts = slices.Clone(p.request.ability.AdditionalCosts)
+	case genericPayment:
+		result.ManaCost, _ = resolveManaCostX(p.request.generic.Cost, p.x)
+		result.AdditionalCosts = slices.Clone(p.request.generic.AdditionalCosts)
+	}
+	return result
+}
+
 // ApplyResult carries payment evidence for spell, ability and generic callers.
 type ApplyResult struct {
 	Spell   SpellPaymentResult
@@ -216,6 +262,15 @@ func (p Planner) Complete(request Request, partial Partial) (Plan, bool, string)
 		return Plan{}, false, "no complete legal payment satisfies the fixed choices"
 	}
 	return plan, true, ""
+}
+
+// CanForecastMana checks the cost-paid source in its replacement/trigger
+// context without requiring a fictitious final payment or executing anything.
+func (p Planner) CanForecastMana(player game.PlayerID, key ManaAbilityKey) bool {
+	request := ForGeneric(GenericRequest{PlayerID: player})
+	request.forecastOnly = true
+	_, _, ok := p.complete(request, Partial{ManaAbilities: map[ManaAbilityKey]bool{key: true}})
+	return ok
 }
 
 func (p Planner) complete(request Request, partial Partial) (Plan, completion, bool) {
@@ -282,7 +337,25 @@ func (p Planner) complete(request Request, partial Partial) (Plan, completion, b
 			return plan, result, false
 		}
 		resolved = applyManaCostModifiers(resolved, req.CostModifiers)
-		options = []spellCostOption{{manaCost: resolved, additionalCosts: req.AdditionalCosts}}
+		options = []spellCostOption{{manaCost: resolved, additionalCosts: req.AdditionalCosts, index: 0, label: "Normal cost"}}
+		if request.locked {
+			options[0].index = request.abilityOption
+		} else {
+			for index, alternative := range req.AlternativeCosts {
+				if !alternativeCostConditionSatisfied(p.s, req.PlayerID, alternative) {
+					continue
+				}
+				alternativeMana, valid := resolveManaCostX(manaCostPtr(alternative.ManaCost), x)
+				if !valid {
+					continue
+				}
+				options = append(options, spellCostOption{
+					index: index + 1, label: alternative.Label,
+					manaCost:        applyManaCostModifiers(alternativeMana, req.CostModifiers),
+					additionalCosts: append(slices.Clone(req.AdditionalCosts), alternative.AdditionalCosts...),
+				})
+			}
+		}
 		ctx.abilitySource = source
 		tapSource, forMana = hasTapCostOf(req.AdditionalCosts), req.ForMana
 		if tapSource && (source == nil || !canTapForAbility(p.s, source)) {
@@ -307,6 +380,12 @@ func (p Planner) complete(request Request, partial Partial) (Plan, completion, b
 			prefs != nil && option.index != prefs.AlternativeIndex {
 			continue
 		}
+		if request.kind == abilityPayment {
+			tapSource = hasTapCostOf(option.additionalCosts)
+			if tapSource && (source == nil || !canTapForAbility(p.s, source)) {
+				continue
+			}
+		}
 		if request.kind != spellPayment {
 			option.additionalCosts = lockAdditionalAmounts(p.s, player, option.additionalCosts)
 		}
@@ -319,6 +398,12 @@ func (p Planner) complete(request Request, partial Partial) (Plan, completion, b
 		var witness additionalWitness
 		sawAdditional := false
 		tryResources := func(state State, prefix []ManaActivation, projection game.ResourceProjection) (paymentPlan, bool) {
+			if request.kind == genericPayment && request.generic.SourceZone != zone.None {
+				payer, ok := state.Player(player)
+				if !ok || !slices.Contains(cardIDsInZone(payer, request.generic.SourceZone), request.generic.SourceCardID) {
+					return paymentPlan{}, false
+				}
+			}
 			currentSource := source
 			if source != nil {
 				var ok bool
@@ -328,6 +413,7 @@ func (p Planner) complete(request Request, partial Partial) (Plan, completion, b
 				}
 			}
 			tail := partial
+			tail.poolOnly = !request.forecastOnly && !costAllowsManaActivation(option.manaCost, x, partial)
 			if partial.Allocation != nil {
 				allocation := cloneAllocation(*partial.Allocation)
 				if len(prefix) > len(allocation.Activations) {
@@ -346,6 +432,11 @@ func (p Planner) complete(request Request, partial Partial) (Plan, completion, b
 					delete(tail.ManaAbilities, key)
 				}
 			}
+			if len(prefix) != 0 {
+				counts := manaOccurrenceCounts(prefix)
+				tail.ManaPayments = remainingManaOccurrences(partial.ManaPayments, counts)
+				tail.ManaChoices = remainingManaOccurrences(partial.ManaChoices, counts)
+			}
 			selected, ok := completeAdditional(state, player, option.additionalCosts, x, prefs, currentSource, cardID, sourceZone, castingID, partial.Components, partial.Groups, nil, func(witness additionalWitness) bool {
 				sawAdditional = true
 				for index := range partial.Components {
@@ -360,12 +451,31 @@ func (p Planner) complete(request Request, partial Partial) (Plan, completion, b
 				}
 				restrictions := additionalManaRestrictions(excluded, witness.plan, true)
 				restrictions.reserved = &witness.plan
+				if request.kind == genericPayment {
+					restrictions.resourceValid = func(projected State) bool {
+						if request.sourceID != 0 {
+							if _, exists := projected.PermanentByObjectID(request.sourceID); !exists {
+								return false
+							}
+						}
+						if request.generic.SourceZone != zone.None {
+							payer, exists := projected.Player(player)
+							return exists && slices.Contains(cardIDsInZone(payer, request.generic.SourceZone), request.generic.SourceCardID)
+						}
+						return true
+					}
+				}
 				if tapSource {
 					restrictions.excluded[source.ObjectID] = true
 				}
 				manaPlan, ok := completeMana(state, player, option.manaCost, x, restrictions, currentCtx, prefs, witness.plan.lifePaid, spell, cardID, sourceZone, tail)
 				if !ok {
 					return false
+				}
+				if len(prefix) != 0 {
+					for index := range manaPlan.activations {
+						manaPlan.activations[index].Before = mergeProjection(projection, manaPlan.activations[index].Before)
+					}
 				}
 				manaPlan.activations = append(slices.Clone(prefix), manaPlan.activations...)
 				manaPlan.projection = mergeProjection(projection, manaPlan.projection)
@@ -381,7 +491,7 @@ func (p Planner) complete(request Request, partial Partial) (Plan, completion, b
 			return result.mana, ok
 		}
 		_, ok := tryResources(p.s, nil, game.ResourceProjection{})
-		if !ok && !sawAdditional {
+		if !ok && !sawAdditional && (request.forecastOnly || costAllowsManaActivation(option.manaCost, x, partial)) {
 			if state, supported := p.s.(ManaState); supported {
 				restrictions := manaSourceRestrictions{resourceCompletion: tryResources}
 				_, ok = completeManaActivations(state, player, nil, 0, restrictions, spendContext{}, nil, 0, nil, 0, zone.None, partial)
@@ -403,6 +513,7 @@ func (p Planner) complete(request Request, partial Partial) (Plan, completion, b
 			}
 			request.ability.CostModifiers = nil
 			request.ability.AlternativeCosts = nil
+			request.abilityOption = option.index
 		} else {
 			request.generic.AdditionalCosts = slices.Clone(option.additionalCosts)
 		}
@@ -462,6 +573,9 @@ func (p Planner) Apply(plan Plan) (ApplyResult, bool, string) {
 	}
 	if !plan.valid {
 		return ApplyResult{}, false, "invalid payment plan"
+	}
+	if plan.request.forecastOnly {
+		return ApplyResult{}, false, "a forecast query is not an action payment"
 	}
 	for cardID, version := range plan.cardVersions {
 		card, ok := p.s.CardInstance(cardID)
@@ -554,6 +668,7 @@ func cloneAllocation(a ManaAllocation) ManaAllocation {
 			}
 		}
 		activation.Effects = cloneProjection(activation.Effects)
+		activation.Before = cloneProjection(activation.Before)
 		if activation.CostPlan != nil {
 			copied := *activation.CostPlan
 			copied.allocation = cloneAllocation(copied.allocation)
@@ -596,6 +711,17 @@ func (p Partial) acceptsMana(plan paymentPlan) bool {
 			return false
 		}
 	}
+	for key := range p.ManaPayments {
+		if _, exists := manaActivationOccurrence(allocation.Activations, key); !exists {
+			return false
+		}
+	}
+	for key, choices := range p.ManaChoices {
+		activation, exists := manaActivationOccurrence(allocation.Activations, key)
+		if !exists || !maps.Equal(activation.Choices, choices) {
+			return false
+		}
+	}
 	if p.Allocation != nil && !reflect.DeepEqual(allocation, *p.Allocation) {
 		return false
 	}
@@ -621,6 +747,7 @@ const (
 	StepComponent
 	StepCostGroup
 	StepManaAbility
+	StepManaOutput
 )
 
 // Step specifies a decision. Index is the symbol/component/group index.
@@ -631,6 +758,9 @@ type Step struct {
 	Index  int
 	Values []int
 	Source id.ID
+	// ManaActivation redirects a component/Phyrexian/output step to one
+	// activation occurrence, retaining a witness for the whole action.
+	ManaActivation opt.V[ManaActivationKey]
 }
 
 // Choice is one value for a Step, with a complete payment witness.
@@ -641,10 +771,21 @@ type Choice struct {
 	Plan           Plan
 	UseManaAbility bool
 	Label          string
+	ManaChoices    map[game.ChoiceKey]game.ResolutionChoiceResult
 }
 
 // With returns a partial with one additional choice fixed, leaving p untouched.
 func (p Partial) With(step Step, choice Choice) Partial {
+	if step.ManaActivation.Exists && step.Kind != StepManaOutput {
+		key := step.ManaActivation.Val
+		p.ManaPayments = maps.Clone(p.ManaPayments)
+		if p.ManaPayments == nil {
+			p.ManaPayments = make(map[ManaActivationKey]Partial)
+		}
+		step.ManaActivation = opt.V[ManaActivationKey]{}
+		p.ManaPayments[key] = p.ManaPayments[key].With(step, choice)
+		return p
+	}
 	p.Components = cloneComponents(p.Components)
 	p.Groups = cloneGroups(p.Groups)
 	phyrexian := make(map[int]bool, len(p.Phyrexian))
@@ -669,6 +810,14 @@ func (p Partial) With(step Step, choice Choice) Partial {
 		p.Groups[uint8(step.Index)] = choice.Value
 	case StepManaAbility:
 		p.ManaAbilities[ManaAbilityKey{Source: step.Source, AbilityIndex: step.Index}] = choice.UseManaAbility
+	case StepManaOutput:
+		p.ManaChoices = maps.Clone(p.ManaChoices)
+		if p.ManaChoices == nil {
+			p.ManaChoices = make(map[ManaActivationKey]map[game.ChoiceKey]game.ResolutionChoiceResult)
+		}
+		if step.ManaActivation.Exists {
+			p.ManaChoices[step.ManaActivation.Val] = maps.Clone(choice.ManaChoices)
+		}
 	}
 	return p
 }
@@ -683,12 +832,70 @@ func (p Planner) Options(request Request, partial Partial, step Step) []Choice {
 			choices = append(choices, choice)
 		}
 	}
+	if step.ManaActivation.Exists {
+		key := step.ManaActivation.Val
+		plan, current, ok := p.complete(request, partial)
+		if !ok {
+			return nil
+		}
+		if activation, exists := manaActivationOccurrence(plan.allocation.Activations, key); exists && activation.CostPlan != nil {
+			state := p.s
+			if manaState, supported := state.(ManaState); supported {
+				state = manaState.ProjectResources(activation.Before)
+			}
+			inner := partial.ManaPayments[key]
+			if step.Kind == StepComponent {
+				costs := activation.CostPlan.Costs().AdditionalCosts
+				if step.Index < 0 || step.Index >= len(costs) {
+					return nil
+				}
+				var source *game.Permanent
+				if activation.SourceZone == zone.Battlefield {
+					source, _ = state.PermanentByObjectID(key.Source)
+				}
+				candidate := activation.CostPlan.request.ability
+				New(state).nextComponentChoices(current.player, costs[step.Index], 0, source, candidate.SourceCardID, 0,
+					inner.Components[step.Index], activation.CostPlan.components[step.Index], add)
+			} else if step.Kind == StepPhyrexian {
+				add(Choice{PayLife: false})
+				add(Choice{PayLife: true})
+			} else if step.Kind == StepManaOutput {
+				if manaState, supported := state.(ManaState); supported {
+					for _, candidate := range manaState.ManaActivationCandidates(current.player) {
+						if candidate.Source != key.Source || candidate.AbilityIndex != key.AbilityIndex || candidate.Choices == nil {
+							continue
+						}
+						if slices.ContainsFunc(choices, func(c Choice) bool { return maps.Equal(c.ManaChoices, candidate.Choices) }) {
+							continue
+						}
+						label := ""
+						keys := make([]game.ChoiceKey, 0, len(candidate.Choices))
+						for key := range candidate.Choices {
+							keys = append(keys, key)
+						}
+						slices.Sort(keys)
+						for _, key := range keys {
+							value := candidate.Choices[key]
+							if value.Color != "" {
+								label += string(value.Color)
+							}
+						}
+						add(Choice{ManaChoices: maps.Clone(candidate.Choices), Label: label})
+					}
+				}
+			}
+		}
+		return choices
+	}
 	switch step.Kind {
+	case StepManaOutput:
+		return nil
 	case StepManaAbility:
 		label := "mana ability"
 		if state, ok := p.s.(ManaState); ok {
 			label = state.ManaAbilityLabel(step.Source, step.Index)
 		}
+
 		add(Choice{UseManaAbility: false, Label: "Do not use " + label})
 		add(Choice{UseManaAbility: true, Label: "Use " + label})
 	case StepX:
@@ -703,8 +910,13 @@ func (p Planner) Options(request Request, partial Partial, step Step) []Choice {
 			for _, option := range p.SpellCostOptions(request.spell) {
 				add(Choice{Value: option.Index})
 			}
+		} else if request.kind == abilityPayment && !request.locked {
+			add(Choice{Value: 0, Label: "Normal cost"})
+			for index, alternative := range request.ability.AlternativeCosts {
+				add(Choice{Value: index + 1, Label: alternative.Label})
+			}
 		} else {
-			add(Choice{})
+			add(Choice{Value: request.abilityOption})
 		}
 	case StepComponent, StepCostGroup:
 		plan, current, ok := p.complete(request, partial)
@@ -746,7 +958,12 @@ func (p Planner) Options(request Request, partial Partial, step Step) []Choice {
 				collect(state.ProjectResources(current.mana.projection), nil, game.ResourceProjection{})
 				// One witness can hide another source or counter kind. Discover
 				// choices across resource projections, then validate each jointly.
-				if !state.OrdinaryManaOnly(current.player) || costs[step.Index].RequireTapped {
+				stable := false
+				if view, supported := state.(interface{ ResourceSelectionStable(cost.Additional) bool }); supported {
+					stable = view.ResourceSelectionStable(costs[step.Index])
+				}
+				if (request.forecastOnly || costAllowsManaActivation(current.option.manaCost, plan.x, partial)) &&
+					!stable && (!state.OrdinaryManaOnly(current.player) || costs[step.Index].RequireTapped) {
 					restrictions := manaSourceRestrictions{resourceCompletion: collect}
 					completeManaActivations(state, current.player, nil, 0, restrictions, spendContext{}, nil, 0, nil, 0, zone.None, partial)
 				}
@@ -757,6 +974,39 @@ func (p Planner) Options(request Request, partial Partial, step Step) []Choice {
 		}
 	}
 	return choices
+}
+
+func requestPlayer(request Request) game.PlayerID {
+	switch request.kind {
+	case spellPayment:
+		return request.spell.PlayerID
+	case abilityPayment:
+		return request.ability.PlayerID
+	default:
+		return request.generic.PlayerID
+	}
+}
+
+func costAllowsManaActivation(manaCost *cost.Mana, x int, partial Partial) bool {
+	if manaCost == nil {
+		return false
+	}
+	phyrexian := 0
+	for _, symbol := range *manaCost {
+		if symbol.Kind == cost.PhyrexianSymbol || symbol.Kind == cost.PhyrexianGenericSymbol {
+			if !partial.Phyrexian[phyrexian] {
+				return true
+			}
+			phyrexian++
+		} else if symbol.Kind == cost.VariableSymbol {
+			if x > 0 {
+				return true
+			}
+		} else if (cost.Mana{symbol}).ManaValue() > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // A component step chooses one more object/counter, not an entire Cartesian

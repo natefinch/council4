@@ -30,7 +30,7 @@ type manaPaymentBranch struct {
 // within this search so interchangeable sources do not cause factorial retries.
 // No game is cloned and no speculative mana ability is executed.
 func completeMana(s State, playerID game.PlayerID, manaCost *cost.Mana, x int, restrictions manaSourceRestrictions, ctx spendContext, prefs *Preferences, lifeReserved int, spell *spellCostOption, cardID id.ID, sourceZone zone.Type, partial Partial) (paymentPlan, bool) {
-	if partial.joint {
+	if partial.joint && !partial.poolOnly {
 		if state, ok := s.(ManaState); ok {
 			return completeManaActivations(state, playerID, manaCost, x, restrictions, ctx, prefs, lifeReserved, spell, cardID, sourceZone, partial)
 		}

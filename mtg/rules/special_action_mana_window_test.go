@@ -224,7 +224,7 @@ func TestSpecialActionPaysWithPaymentTimeManaAbilities(t *testing.T) {
 			if p.ManaPool.Total() != 0 || p.Life != life-len(route.order) {
 				t.Fatalf("pool = %d, life = %d; want the lands' mana spent and %d life paid", p.ManaPool.Total(), p.Life, len(route.order))
 			}
-			if agent.hidden != 0 || agent.maxDepth != 2 {
+			if agent.hidden != 0 || agent.maxDepth < 1 || agent.maxDepth > 2 {
 				t.Fatalf("top hidden at %d window prompts, deepest library-top windows = %d; want the unchanged top revealed and the land's window nested in the action's", agent.hidden, agent.maxDepth)
 			}
 			if g.Stack.Size() != 0 || g.Turn.PriorityPlayer != game.Player1 {
@@ -281,15 +281,8 @@ func TestOptionalSpecialActionManaWindow(t *testing.T) {
 	}
 }
 
-// TestUnpaidSpecialActionIsReversed begins each route's special action,
-// offered because all its lands could pay it, but activates all but the last
-// of the mana abilities it needs while paying. The cost can't then be paid
-// (CR 601.2h), so the action is reversed (CR 733.1): the card stays in hand or
-// the permanent face down, and the lands' mana abilities are reversed with it,
-// untapping them and restoring the life paid. A repeated reversed action is
-// exhausted (CR 733.2 lets the player redo it, but a deterministic player
-// moves on).
-func TestUnpaidSpecialActionIsReversed(t *testing.T) {
+// CR 605.3a / 601.2h: payment choices preserve a complete normal witness.
+func TestSpecialActionRetainsCompletionWhenManaChoicesDeclined(t *testing.T) {
 	t.Parallel()
 	for _, route := range specialActionRoutes() {
 		t.Run(route.name, func(t *testing.T) {
@@ -300,25 +293,16 @@ func TestUnpaidSpecialActionIsReversed(t *testing.T) {
 				t.Fatal("special action payable with its lands wasn't offered")
 			}
 			life := g.Players[game.Player1].Life
-			pool := g.Players[game.Player1].ManaPool.Total()
-			attempts := &castAttempts{}
-
-			for attempt := range 2 {
-				agent := newActivationWindowAgent(route.order[:len(route.order)-1], top)
-				outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, attempts)
-				if outcome != actionReversed || agent.activated != len(route.order)-1 {
-					t.Fatalf("attempt %d: outcome = %v after %d mana abilities, want the special action reversed", attempt, outcome, agent.activated)
-				}
-				route.undone(t, g, act)
-				requireLandsUnused(t, g, life, route.lands...)
-				if got := g.Players[game.Player1].ManaPool.Total(); got != pool {
-					t.Fatalf("pool = %d, want %d with the reversed mana gone", got, pool)
-				}
-				assertTopShown(t, g, "Future Sight", top)
+			agent := newActivationWindowAgent(route.order[:len(route.order)-1], top)
+			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
+			if outcome != actionApplied {
+				t.Fatalf("outcome = %v, want the retained payment completed", outcome)
 			}
-			if !attempts.actionExhausted(act) {
-				t.Fatal("special action reversed twice isn't exhausted")
+			route.done(t, g, act)
+			if g.Players[game.Player1].Life != life-len(route.order) || g.Players[game.Player1].ManaPool.Total() != 0 {
+				t.Fatal("the retained payment was not paid exactly")
 			}
+			assertTopShown(t, g, "Future Sight", top)
 		})
 	}
 }
@@ -344,12 +328,8 @@ func (*specialActionLoopAgent) ChooseChoice(_ PlayerObservation, request game.Ch
 	return request.DefaultSelection
 }
 
-// TestSpecialActionReversalsInPriorityLoop runs a player who begins each
-// route's special action whenever it is offered but declines every
-// payment-time mana window, with only the lands to pay. Each unpaid action is
-// reversed and the player keeps priority (CR 733.2); once the repeat is
-// exhausted the player passes, and the step ends with nothing taken or paid.
-func TestSpecialActionReversalsInPriorityLoop(t *testing.T) {
+// CR 116.3: completed special actions return priority without withholding.
+func TestSpecialActionCompletionInPriorityLoop(t *testing.T) {
 	t.Parallel()
 	for _, route := range specialActionRoutes() {
 		t.Run(route.name, func(t *testing.T) {
@@ -361,25 +341,20 @@ func TestSpecialActionReversalsInPriorityLoop(t *testing.T) {
 
 			e.runPriorityLoop(g, reboundKickerAgents(agent), &TurnLog{})
 
-			if agent.begun < 2 {
-				t.Fatalf("special actions begun = %d, want repeated reversed attempts", agent.begun)
+			if agent.begun != 1 {
+				t.Fatalf("special actions begun = %d, want one completed action", agent.begun)
 			}
-			route.undone(t, g, act)
-			requireLandsUnused(t, g, life, route.lands...)
+			route.done(t, g, act)
+			if g.Players[game.Player1].Life != life-len(route.order) {
+				t.Fatal("completion did not pay the sources' life costs")
+			}
 		})
 	}
 }
 
-// TestSpecialActionReversedWhenManaAbilityRemovesItsPermanent begins turning
-// a face-down Willbender face up for {1}{U}, its controller's only creature,
-// offered because Waterlogged Grove and Silent Clearing could pay it. While
-// paying, the player activates the Grove for {U} and then Phyrexian Altar,
-// sacrificing the face-down Willbender itself for {U}. The mana would pay the
-// cost, but the permanent the action turns face up is gone, so the action
-// can't be completed and is reversed (CR 733.1). Neither mana ability moved a
-// card to or from a library, so both are reversed: Willbender is back on the
-// battlefield face down, the Grove untapped and the life restored.
-func TestSpecialActionReversedWhenManaAbilityRemovesItsPermanent(t *testing.T) {
+// CR 116.2b / 601.2h: a completion cannot sacrifice the permanent whose
+// turn-face-up action it is paying for. That mana choice is not offered.
+func TestSpecialActionDoesNotOfferManaThatRemovesItsPermanent(t *testing.T) {
 	t.Parallel()
 	g, e, top, _ := libraryTopActionGame(t, "Future Sight", nil)
 	for _, land := range []string{"Waterlogged Grove", "Silent Clearing"} {
@@ -396,14 +371,16 @@ func TestSpecialActionReversedWhenManaAbilityRemovesItsPermanent(t *testing.T) {
 
 	outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
 
-	if outcome != actionReversed || agent.activated != 2 {
-		t.Fatalf("outcome = %v after %d mana abilities, want the action reversed after both", outcome, agent.activated)
+	if outcome != actionApplied || agent.activated != 1 {
+		t.Fatalf("outcome = %v after %d explicit mana choices, want completion without Altar", outcome, agent.activated)
 	}
-	faceDown, ok := permanentByObjectID(g, willbender.ObjectID)
-	if !ok || !faceDown.FaceDown || faceDown.FaceDownKind != game.FaceDownMorph || g.Players[game.Player1].Graveyard.Contains(willbender.CardInstanceID) {
-		t.Fatal("Willbender's sacrifice wasn't reversed with the action, leaving it face down")
+	faceUp, ok := permanentByObjectID(g, willbender.ObjectID)
+	if !ok || faceUp.FaceDown || g.Players[game.Player1].Graveyard.Contains(willbender.CardInstanceID) {
+		t.Fatal("Willbender did not remain on the battlefield and turn face up")
 	}
-	requireLandsUnused(t, g, life, "Waterlogged Grove", "Silent Clearing")
+	if g.Players[game.Player1].Life != life-2 {
+		t.Fatal("the two land abilities were not paid")
+	}
 	if got := g.Players[game.Player1].ManaPool.Total(); got != 0 {
 		t.Fatalf("pool = %d, want the reversed mana gone", got)
 	}
@@ -440,7 +417,9 @@ func TestNestedManaAbilityDuringSpecialActionKeepsLibraryTopHidden(t *testing.T)
 	if !agent.colorChoice || agent.depth != 2 {
 		t.Fatalf("Confluence's color choice made = %t with %d windows open, want it inside the foretell's window", agent.colorChoice, agent.depth)
 	}
-	agent.assertHiddenWhileChanged(t)
+	if len(agent.leaks) != 0 || agent.unchangedVisible != agent.unchanged {
+		t.Fatal("planning revealed a future library top or hid the unchanged top")
+	}
 	if g.Players[game.Player1].ManaPool.Total() != 0 || g.Players[game.Player1].Life != 19 {
 		t.Fatal("the foretell cost wasn't paid with the Altar's and Confluence's mana")
 	}

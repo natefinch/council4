@@ -77,6 +77,44 @@ type CardView struct {
 	EntersTapped bool
 }
 
+// CostDisclosureView is public announcement information, not a change to a
+// face-down permanent's characteristics. Morph/disguise disclose only a cost.
+type CostDisclosureView struct {
+	PermanentID id.ID
+	ManaCost    string
+	Card        opt.V[CardView]
+}
+
+func (o PlayerObservation) CostDisclosures() []CostDisclosureView {
+	var result []CostDisclosureView
+	for _, event := range o.g.Events {
+		if event.Kind != game.EventActionCostAnnounced {
+			continue
+		}
+		view := CostDisclosureView{PermanentID: event.PermanentID, ManaCost: event.AnnouncedManaCost}
+		if card, ok := o.g.GetCardInstance(event.CardID); ok {
+			view.Card = opt.Val(o.cardViewForDef(card.ID, card.Owner, cardFaceOrDefault(card, event.Face)))
+		}
+		result = append(result, view)
+	}
+	return result
+}
+
+// AnnouncedCards exposes only cards publicly shown for hidden-zone
+// activations (CR 602.2a), not the contents of those hidden zones.
+func (o PlayerObservation) AnnouncedCards() []CardView {
+	var result []CardView
+	for _, event := range o.g.Events {
+		if event.Kind != game.EventCardRevealed || !event.Announcement {
+			continue
+		}
+		if card, ok := o.g.GetCardInstance(event.CardID); ok {
+			result = append(result, o.cardViewForDef(card.ID, card.Owner, cardFaceOrDefault(card, event.Face)))
+		}
+	}
+	return result
+}
+
 // PlayerView is a read-only view of one player's public state. Hand and library
 // are reported only as sizes; their contents and order are hidden for
 // opponents (and the library order is hidden even for the observer).

@@ -291,6 +291,23 @@ func legalXValuesForCostAndAdditional(g *game.Game, playerID game.PlayerID, mana
 	})
 }
 
+// Enumerate the execution domain, then jointly validate each action's whole
+// cost. Affordability is not monotone when resources or targets depend on X.
+func costedAbilityXValues(body *game.ActivatedAbility, manaCost *cost.Mana) []int {
+	if !costHasVariableMana(manaCost) && !additionalCostsUseX(body.AdditionalCosts) {
+		return []int{0}
+	}
+	first := 0
+	if additionalCostsRequirePositiveX(body.AdditionalCosts) {
+		first = 1
+	}
+	values := make([]int, 0, maxSampledXValue+1)
+	for x := first; x <= maxSampledXValue; x++ {
+		values = append(values, x)
+	}
+	return values
+}
+
 // legalXValuesWithManaCheck samples the X values from zero that enumeration
 // validates for a cost whose mana portion has an X (variableMana) and whose
 // additional costs may also use X. affordable reports whether the mana cost
@@ -640,10 +657,12 @@ func equipActivation(g *game.Game, playerID game.PlayerID, permanent *game.Perma
 		return activationCost{}
 	}
 	sourceCard, _ := g.GetCardInstance(permanent.CardInstanceID)
-	return genericRequestCost(payment.GenericRequest{
-		PlayerID: playerID,
-		Cost:     manaCostPtr(effectiveActivatedAbilityCost(g, playerID, sourceCard, body)),
-	}, activationPermanentPresent(permanent.ObjectID))
+	return abilityRequestCost(manaCostPtr(effectiveActivatedAbilityCost(g, playerID, sourceCard, body)), payment.AbilityRequest{
+		PlayerID: playerID, Source: permanent, ManaCost: body.ManaCost,
+		CostModifiers:    activatedAbilityCostModifiers(g, playerID, sourceCard, body),
+		AdditionalCosts:  abilityAdditionalCosts(body.AdditionalCosts),
+		AlternativeCosts: body.AlternativeCosts,
+	}, permanentSource(permanent.ObjectID))
 }
 
 func canActivateGeneralAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
@@ -718,8 +737,11 @@ func cyclingActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, body 
 	if !ok || !game.BodyHasKeyword(&gotAbility, game.Cycling) {
 		return activationCost{}
 	}
-	return genericRequestCost(payment.GenericRequest{PlayerID: playerID, Cost: effectiveCyclingCost(g, playerID, card, body)},
-		cardSourcePresent(cyclingAbilitySource, playerID, cardID, abilityIndex))
+	return abilityRequestCost(effectiveCyclingCost(g, playerID, card, body), payment.AbilityRequest{
+		PlayerID: playerID, SourceCardID: cardID, SourceZone: zone.Hand,
+		ManaCost: body.ManaCost, CostModifiers: activatedAbilityCostModifiers(g, playerID, card, body),
+		AdditionalCosts: abilityAdditionalCosts(body.AdditionalCosts),
+	}, cardSource(cardSourcePresent(cyclingAbilitySource, playerID, cardID, abilityIndex)))
 }
 
 func canActivateGraveyardAbility(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) bool {
@@ -774,22 +796,16 @@ func handActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, body *ga
 		return activationCost{}
 	}
 	present := cardSourcePresent(handActivatedAbilitySource, playerID, cardID, abilityIndex)
-	if selfEntry {
-		return abilityRequestCost(manaCostPtr(body.ManaCost), payment.AbilityRequest{
-			PlayerID:         playerID,
-			SourceCardID:     card.ID,
-			SourceZone:       zone.Hand,
-			ManaCost:         body.ManaCost,
-			AdditionalCosts:  abilityAdditionalCosts(body.AdditionalCosts),
-			AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
-			XValue:           xValue,
-		}, cardSource(present))
-	}
-	return genericRequestCost(payment.GenericRequest{
-		PlayerID: playerID,
-		Cost:     effectiveHandAbilityCost(g, playerID, card, body),
-		XValue:   xValue,
-	}, present)
+	return abilityRequestCost(effectiveHandAbilityCost(g, playerID, card, body), payment.AbilityRequest{
+		PlayerID:         playerID,
+		SourceCardID:     card.ID,
+		SourceZone:       zone.Hand,
+		ManaCost:         body.ManaCost,
+		CostModifiers:    activatedAbilityCostModifiers(g, playerID, card, body),
+		AdditionalCosts:  abilityAdditionalCosts(body.AdditionalCosts),
+		AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
+		XValue:           xValue,
+	}, cardSource(present))
 }
 
 func canActivateGraveyardAbilityWithModes(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int, chosenModes []int) bool {
@@ -829,6 +845,7 @@ func graveyardActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, bod
 		SourceCardID:     cardID,
 		SourceZone:       zone.Graveyard,
 		ManaCost:         body.ManaCost,
+		CostModifiers:    activatedAbilityCostModifiers(g, playerID, card, body),
 		AdditionalCosts:  abilityAdditionalCosts(body.AdditionalCosts),
 		AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
 		XValue:           xValue,
@@ -843,6 +860,14 @@ func graveyardActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, bod
 // activation condition, and the player being able to pay its own cost (CR 602.2,
 // CR 118.3).
 func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ManaAbility, abilityIndex int) bool {
+	return manaAbilityAnnouncementLegal(g, playerID, permanent, body, abilityIndex) &&
+		paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{
+			PlayerID: playerID, Source: permanent, ManaCost: body.ManaCost,
+			AdditionalCosts: abilityAdditionalCosts(body.AdditionalCosts),
+		})
+}
+
+func manaAbilityAnnouncementLegal(g *game.Game, playerID game.PlayerID, permanent *game.Permanent, body *game.ManaAbility, abilityIndex int) bool {
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer && !g.ManaPaymentAllowed(playerID) || permanent.PhasedOut || effectiveController(g, permanent) != playerID {
 		return false
 	}
@@ -865,12 +890,7 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 	if abilityActivationProhibited(g, playerID, permanent, true) {
 		return false
 	}
-	return paymentOrch.buildAbilityCostPlan(g, payment.AbilityRequest{
-		PlayerID:        playerID,
-		Source:          permanent,
-		ManaCost:        body.ManaCost,
-		AdditionalCosts: abilityAdditionalCosts(body.AdditionalCosts),
-	})
+	return true
 }
 
 func manaBodyHasAddManaEffect(body *game.ManaAbility) bool {

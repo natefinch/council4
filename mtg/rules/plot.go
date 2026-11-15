@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 // plotCostForCard returns the Plot mana cost printed on the card's front face
@@ -21,7 +22,7 @@ func plotCostForCard(card *game.CardDef) (cost.Mana, bool) {
 // abilities (CR 605.3a).
 func (e *Engine) canPlotCard(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
 	c, _ := plotCost(g, playerID, cardID)
-	return e.activationFeasible(g, playerID, c)
+	return e.costedActionAvailable(g, playerID, c)
 }
 
 // plotCost is the cost of plotting the hand card cardID with its plot mana
@@ -43,7 +44,7 @@ func plotCost(g *game.Game, playerID game.PlayerID, cardID id.ID) (activationCos
 	if !ok || !isSorcerySpeed(g, playerID) {
 		return activationCost{}, nil
 	}
-	return specialActionCost(playerID, &manaCost, handCardPresent(playerID, cardID)), manaCost
+	return handSpecialActionCost(playerID, cardID, &manaCost), manaCost
 }
 
 // applyPlotCard resolves a plot special action: the player pays the plot cost,
@@ -51,29 +52,26 @@ func plotCost(g *game.Game, playerID game.PlayerID, cardID id.ID) (activationCos
 // the card from hand, recording the plot turn so the card may be cast from exile
 // without paying its mana cost on a later turn (CR 702.170a).
 func (e *Engine) applyPlotCard(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
-	defer g.OpenLibraryTopWindow()()
-	c, manaCost := plotCost(g, playerID, cardID)
-	if !e.activationFeasible(g, playerID, c) {
+	c, _ := plotCost(g, playerID, cardID)
+	if !e.costedActionAvailable(g, playerID, c) {
 		return actionFailed
 	}
 	card, _ := g.GetCardInstance(cardID)
-	if outcome := e.paySpecialActionCost(g, playerID, c, &manaCost, agents, log); outcome != actionApplied {
-		return outcome
-	}
-	destination, moved := moveCardBetweenZonesWithEvent(g, game.Event{
-		Controller: playerID, Player: card.Owner, CardID: cardID,
-		FromZone: zone.Hand, ToZone: zone.Exile,
-	}, zoneMoveOptions{})
-	if !moved {
-		return actionFailed
-	}
-	if destination == zone.Exile {
-		if g.PlottedCards == nil {
-			g.PlottedCards = make(map[id.ID]int)
+	return e.costedAction(g, playerID, costedAction{cost: c, commit: func(g *game.Game, _ payment.ApplyResult, _ [game.NumPlayers]PlayerAgent, _ *TurnLog, _ int) {
+		destination, moved := moveCardBetweenZonesWithEvent(g, game.Event{
+			Controller: playerID, Player: card.Owner, CardID: cardID,
+			FromZone: zone.Hand, ToZone: zone.Exile,
+		}, zoneMoveOptions{})
+		if !moved {
+			panic("completed plot source disappeared")
 		}
-		g.PlottedCards[cardID] = g.Turn.TurnNumber
-	}
-	return actionApplied
+		if destination == zone.Exile {
+			if g.PlottedCards == nil {
+				g.PlottedCards = make(map[id.ID]int)
+			}
+			g.PlottedCards[cardID] = g.Turn.TurnNumber
+		}
+	}}, agents, log)
 }
 
 // legalPlotActions returns the plot special actions available to the player: one

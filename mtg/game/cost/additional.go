@@ -205,6 +205,9 @@ type Additional struct {
 	// paying ability's own source, as required by "another" (e.g. "Sacrifice
 	// another creature").
 	ExcludeSource bool
+	// RequireSource binds a card-zone cost to the activating source card
+	// ("discard this card"), rather than any card in that zone.
+	RequireSource bool
 
 	// TotalPowerAtLeast, when positive, changes an AdditionalTapPermanents cost
 	// from a fixed count to "tap any number of matching permanents with total

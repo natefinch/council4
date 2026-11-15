@@ -66,5 +66,11 @@ func spellAdditionalCosts(card *game.CardDef) []cost.Additional {
 }
 
 func abilityAdditionalCosts(additionalCosts []cost.Additional) []cost.Additional {
-	return append([]cost.Additional(nil), additionalCosts...)
+	costs := append([]cost.Additional(nil), additionalCosts...)
+	for index := range costs {
+		if abilityHasDiscardThisCardCost(costs[index : index+1]) {
+			costs[index].RequireSource = true
+		}
+	}
+	return costs
 }

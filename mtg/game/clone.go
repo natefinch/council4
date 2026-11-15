@@ -32,6 +32,7 @@ import (
 func (g *Game) Clone() *Game {
 	clone := &Game{
 		Execution:                          g.Execution,
+		Mode:                               g.Mode,
 		DrawParticipants:                   g.DrawParticipants,
 		Battlefield:                        cloneSliceFunc(g.Battlefield, clonePermanent),
 		CardInstances:                      clonePtrMap(g.CardInstances, cloneCardInstance),
@@ -97,7 +98,7 @@ func (g *Game) Clone() *Game {
 	}
 
 	seed := g.IDGen.Current()
-	clone.RNG = rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15))
+	clone.setRandom(rand.New(rand.NewPCG(seed, seed^0x9e3779b97f4a7c15)))
 
 	return clone
 }
