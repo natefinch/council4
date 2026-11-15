@@ -17,10 +17,11 @@ import (
 // helpers that operate on *game.Game. One instance is created per payment
 // operation and holds the game pointer for the duration of that call.
 type rulesPaymentState struct {
-	g        *game.Game
-	readOnly bool
-	engine   *Engine
-	log      *TurnLog
+	g                *game.Game
+	readOnly         bool
+	engine           *Engine
+	log              *TurnLog
+	publicZoneOpaque bool
 }
 
 var _ payment.State = (*rulesPaymentState)(nil)

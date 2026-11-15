@@ -123,7 +123,7 @@ func ClassifyManaAbility(body *game.ManaAbility) (ActivationSchema, ManaAbilityC
 			continue
 		}
 		if add, ok := instruction.Primitive.(game.AddMana); ok {
-			if add.Amount.IsDynamic() || len(add.CombinationColors) != 0 || add.Player.Exists || add.EachControlledColor != nil ||
+			if !ResourceManaAmount(add.Amount) || len(add.CombinationColors) != 0 || add.Player.Exists || add.EachControlledColor != nil ||
 				add.ChoiceFrom != "" && !keys[add.ChoiceFrom] {
 				return ActivationSchema{}, OpaqueManaAbility
 			}
@@ -193,4 +193,23 @@ func ClassifyManaAbility(body *game.ManaAbility) (ActivationSchema, ManaAbilityC
 		!schema.production[0].Amount.IsDynamic() && schema.production[0].EntryChoiceFrom == "" &&
 		len(schema.production[0].CombinationColors) == 0
 	return schema, PlannableManaAbility
+}
+
+// ResourceManaAmount recognizes constant mana and public graveyard counts.
+// A public graveyard count is deterministic, including after the cast source
+// leaves that zone. The adapter must reject a projection that could change
+// its cards through an unmodeled zone replacement.
+func ResourceManaAmount(amount game.Quantity) bool {
+	if !amount.IsDynamic() {
+		return amount.Value() >= 0
+	}
+	dynamic := amount.DynamicAmount().Val
+	if dynamic.Kind != game.DynamicAmountCountCardsInZone || dynamic.CardZone != zone.Graveyard ||
+		dynamic.Player == nil || dynamic.Player.Kind() != game.PlayerReferenceController {
+		return false
+	}
+	dynamic.Kind, dynamic.CardZone, dynamic.Player = 0, zone.None, nil
+	dynamic.Multiplier, dynamic.Addend = 0, 0
+	dynamic.Selection = nil
+	return reflect.DeepEqual(dynamic, game.DynamicAmount{})
 }

@@ -155,7 +155,7 @@ func TestReiterateBuybackOptionalPaymentAndResolution(t *testing.T) {
 			obj, _ := g.Stack.Peek()
 			if obj.BuybackPaid != tc.paid || obj.ManaSpentToCast != tc.spent ||
 				g.Players[game.Player1].ManaPool.Total() != tc.generic+2-tc.spent ||
-				len(log.Choices) != tc.choices {
+				len(log.Choices) != tc.choices+1 {
 				t.Fatalf("payment choice or combined cost wrong: object=%+v choices=%+v", obj, log.Choices)
 			}
 			for _, choice := range log.Choices {

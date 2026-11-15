@@ -113,10 +113,11 @@ func TestPhyrexianRedoKeptWithManyLegalTargets(t *testing.T) {
 			wantAttempts int
 			wantInvalid  int
 		}{
-			{lifeFrom: 5, wantAttempts: 3, wantInvalid: 1},
-			{lifeFrom: 99, wantAttempts: 4, wantInvalid: 4},
-			{sampled: true, lifeFrom: 5, wantAttempts: 3},
-			{sampled: true, lifeFrom: 99, wantAttempts: 7, wantInvalid: 6},
+			// CR 601.2b/c/f/h: every announcement has a payment witness.
+			{lifeFrom: 5, wantAttempts: 1},
+			{lifeFrom: 99, wantAttempts: 1},
+			{sampled: true, lifeFrom: 5, wantAttempts: 1},
+			{sampled: true, lifeFrom: 99, wantAttempts: 1},
 		} {
 			name := fmt.Sprintf("%s/%s/life from announcement %d", route,
 				map[bool]string{false: "exhaustive", true: "sampled"}[tc.sampled], tc.lifeFrom)
@@ -347,7 +348,7 @@ func TestPhyrexianRevisedTargetKeepsAnnouncedPayment(t *testing.T) {
 			t.Run(fmt.Sprintf("%s/sampled=%t", route, sampled), func(t *testing.T) {
 				bears, wantAttempts, wantOffered := maxSampledNumericTargetChoices, 1, []bool{false}
 				if sampled {
-					bears, wantAttempts, wantOffered = maxSampledNumericTargetChoices+6, 2, []bool{true, false}
+					bears = maxSampledNumericTargetChoices + 6
 				}
 				s := newRevisedTargetScenario(t, route, largeTargetDismember(cards.NewDefaultRegistry(), sampled), bears, sampled)
 				scion, bear := game.PermanentTarget(s.scion.ObjectID), game.PermanentTarget(s.bears[len(s.bears)-1].ObjectID)
@@ -392,11 +393,11 @@ func TestPhyrexianWithheldTargetOpenWithRevisedPayment(t *testing.T) {
 			s := newRevisedTargetScenario(t, route, largeTargetDismember(cards.NewDefaultRegistry(), true), maxSampledNumericTargetChoices+6, true)
 			scion := game.PermanentTarget(s.scion.ObjectID)
 			agent := &revisedTargetAgent{priorityProbeAgent: &priorityProbeAgent{}, scion: scion,
-				preferred: [][]game.Target{{scion}}, payLife: func(attempt int) bool { return attempt >= 2 }}
+				preferred: [][]game.Target{{scion}}, payLife: func(int) bool { return true }}
 			attempts := s.run(t, route, agent, scion)
 
 			player := s.g.Players[game.Player1]
-			if attempts != 2 || !slices.Equal(agent.scionOffered, []bool{true, true}) || s.g.Execution.InvalidChoices != 0 {
+			if attempts != 1 || !slices.Equal(agent.scionOffered, []bool{true}) || s.g.Execution.InvalidChoices != 0 {
 				t.Fatalf("attempts=%d Scion offered=%v invalid choices=%d, want 2 attempts offering the Scion each time",
 					attempts, agent.scionOffered, s.g.Execution.InvalidChoices)
 			}
@@ -437,7 +438,8 @@ func TestPhyrexianWithheldTargetSetReplacedWithOpenDefault(t *testing.T) {
 			attempts := s.run(t, route, agent, bear)
 
 			player := s.g.Players[game.Player1]
-			if attempts != 2 || !slices.Equal(agent.scionOffered, []bool{true, true}) || s.g.Execution.InvalidChoices != 1 {
+			// A Scion-containing set has no completion with mana announced.
+			if attempts != 1 || slices.Contains(agent.scionOffered, true) || s.g.Execution.InvalidChoices != 0 {
 				t.Fatalf("attempts=%d Scion offered=%v chosen=%v invalid choices=%d, want 2 attempts offering the Scion and the repeated set invalid",
 					attempts, agent.scionOffered, agent.chosen, s.g.Execution.InvalidChoices)
 			}

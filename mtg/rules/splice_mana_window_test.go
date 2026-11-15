@@ -250,11 +250,10 @@ func TestSpliceDeclinedWithPaymentTimeManaAbilityLeavesLandUnused(t *testing.T) 
 	}
 }
 
-// TestUnpaidSpliceReversesCast chooses the splice payable only with
-// Waterlogged Grove but leaves the Grove unused while paying. The locked total
-// can't be partly paid (CR 601.2h), so the whole cast is reversed (CR 733.1):
-// the host returns to hand, the pool is restored, and nothing is spliced.
-func TestUnpaidSpliceReversesCast(t *testing.T) {
+// TestSpliceRequiredManaSourceRetainsCompletion chooses a splice payable only
+// with Waterlogged Grove. Finish is not offered until the entire locked total
+// has a witness (CR 601.2g/h); a policy default completes the selected splice.
+func TestSpliceRequiredManaSourceRetainsCompletion(t *testing.T) {
 	t.Parallel()
 	g, e := newSpliceGame()
 	hostID := addCardToHand(g, game.Player1, cardd.DesperateRitual())
@@ -268,15 +267,15 @@ func TestUnpaidSpliceReversesCast(t *testing.T) {
 
 	outcome, _ := e.attemptActionWithChoices(g, game.Player1, action.CastSpell(hostID, nil, 0, nil), spliceManaAgents(agent), &TurnLog{}, nil)
 
-	if outcome != actionReversed || !agent.spliceOffered("Desperate Ritual") {
-		t.Fatalf("outcome = %v, offers = %v; want the offered splice's cast reversed", outcome, agent.offered)
+	if outcome != actionApplied || !agent.spliceOffered("Desperate Ritual") {
+		t.Fatalf("outcome = %v, offers = %v; want the selected splice completed", outcome, agent.offered)
 	}
-	if g.Stack.Size() != 0 || !p.Hand.Contains(hostID) || !p.Hand.Contains(spliceID) {
-		t.Fatalf("stack = %d, host in hand = %t; want the cast undone", g.Stack.Size(), p.Hand.Contains(hostID))
+	requireSplicedHost(t, g, hostID, 1)
+	if p.Hand.Contains(hostID) || !p.Hand.Contains(spliceID) {
+		t.Fatal("only the host should leave hand")
 	}
-	requireLandsUnused(t, g, life, "Waterlogged Grove")
-	if p.ManaPool.Amount(mana.R) != 2 || p.ManaPool.Amount(mana.C) != 1 {
-		t.Fatalf("pool = %d, want {R}{R}{C} restored", p.ManaPool.Total())
+	if !reboundPermanentNamed(t, g, "Waterlogged Grove").Tapped || p.Life != life-1 || p.ManaPool.Total() != 0 {
+		t.Fatal("the splice's locked total was not paid in full")
 	}
 }
 

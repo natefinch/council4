@@ -77,9 +77,11 @@ func (a *phyrexianWindowAgent) ChooseChoice(_ PlayerObservation, request game.Ch
 	case request.Prompt == "Activate a mana ability while paying?":
 		a.steps = append(a.steps, "window")
 		if a.activated == 0 {
-			if selected := pick(a.ability); selected[0] != 0 {
-				a.activated++
-				return selected
+			for _, option := range request.Options {
+				if a.ability != "" && strings.Contains(option.Label, a.ability) {
+					a.activated++
+					return []int{option.Index}
+				}
 			}
 		}
 		return request.DefaultSelection

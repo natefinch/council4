@@ -100,8 +100,8 @@ func (o PlayerObservation) CostDisclosures() []CostDisclosureView {
 	return result
 }
 
-// AnnouncedCards exposes only cards publicly shown for hidden-zone
-// activations (CR 602.2a), not the contents of those hidden zones.
+// AnnouncedCards exposes cards publicly shown for activations (CR 602.2a)
+// and splice announcements (CR 601.2b), not the contents of hidden zones.
 func (o PlayerObservation) AnnouncedCards() []CardView {
 	var result []CardView
 	for _, event := range o.g.Events {

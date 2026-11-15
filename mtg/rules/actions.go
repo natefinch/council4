@@ -25,13 +25,34 @@ const maxSampledNumericTargetChoices = 64
 // so kicker-scaled target specs offer exactly the legal cardinality.
 func (e *Engine) appendMultikickedCastActions(g *game.Game, playerID game.PlayerID, actions []action.Action, actionBuild actionBuilderType, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, spellDef *game.CardDef, xValue int, modes []int) []action.Action {
 	for count := 1; count <= maxSampledMultikickCount; count++ {
-		result := targetChoicesForSpellWithKickerCount(g, playerID, spellDef, modes, game.CastBranch{Kicked: true, XValue: opt.Val(xValue)}, count)
+		result := e.prioritySpellTargets(g, playerID, cardID, sourceZone, face, spellDef, modes, game.CastBranch{Kicked: true, XValue: opt.Val(xValue)}, count)
 		if result.kind == targetInvalidSpec || result.kind == targetNoLegalChoices {
-			break
+			continue
 		}
 		for _, targets := range result.choices {
 			if e.canCastSpellFaceFromZoneWithMultikick(g, playerID, cardID, sourceZone, face, targets, xValue, modes, count) {
 				actions = append(actions, actionBuild.castMultikickedSpell(cardID, sourceZone, face, targets, xValue, modes, count))
+			}
+		}
+	}
+	return actions
+}
+
+func (e *Engine) appendMutateCastActions(g *game.Game, player game.PlayerID, actions []action.Action, card *game.CardInstance, from zone.Type, def *game.CardDef) []action.Action {
+	manaCost, ok := def.MutateCost()
+	if !ok {
+		return actions
+	}
+	maximum := 0
+	if costHasVariableMana(&manaCost) || additionalCostsUseX(def.AdditionalCosts) {
+		maximum = maxSampledXValue
+	}
+	for x := 0; x <= maximum; x++ {
+		for _, target := range legalMutateTargets(g, player, card.Owner, castSelectionFace(g, player, card.ID, def, false)) {
+			if e.canCastMutateSpellWithX(g, player, card.ID, from, target.ObjectID, x) {
+				cast, _ := actionBuild.castMutateSpell(card.ID, from, target.ObjectID).CastSpellPayload()
+				cast.XValue = x
+				actions = append(actions, action.AnnounceSpell(cast))
 			}
 		}
 	}
@@ -115,7 +136,7 @@ func (e *Engine) legalPreparedSpellActions(g *game.Game, playerID game.PlayerID)
 		}
 		for _, xValue := range preparedSpellXValues(g, playerID, sourceID, spellDef) {
 			for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
-				targetResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{XValue: opt.Val(xValue)})
+				targetResult := e.prioritySpellTargets(g, playerID, sourceID, zone.Battlefield, game.FaceAlternate, spellDef, modes, game.CastBranch{XValue: opt.Val(xValue)})
 				if targetResult.kind == targetInvalidSpec {
 					continue
 				}
@@ -248,17 +269,11 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 			for _, face := range legalCastFacesForZone(g, playerID, card, sourceZone) {
 				spellDef := cardFaceOrDefault(card, face)
 				if face == game.FaceFront && (sourceZone == zone.Hand || sourceZone == zone.Exile || sourceZone == zone.Graveyard || sourceZone == zone.Library) {
-					if _, ok := spellDef.MutateCost(); ok {
-						for _, target := range legalMutateTargets(g, playerID, card.Owner, castSelectionFace(g, playerID, cardID, spellDef, false)) {
-							if e.canCastMutateSpell(g, playerID, cardID, sourceZone, target.ObjectID) {
-								actions = append(actions, actionBuild.castMutateSpell(cardID, sourceZone, target.ObjectID))
-							}
-						}
-					}
+					actions = e.appendMutateCastActions(g, playerID, actions, card, sourceZone, spellDef)
 				}
 				for _, xValue := range zoneCastXValues(g, playerID, card, sourceZone, face, spellDef, false) {
 					for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
-						plainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{XValue: opt.Val(xValue)})
+						plainResult := e.prioritySpellTargets(g, playerID, cardID, sourceZone, face, spellDef, modes, game.CastBranch{XValue: opt.Val(xValue)})
 						if plainResult.kind != targetInvalidSpec {
 							for _, targets := range plainResult.choices {
 								if e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, false) {
@@ -267,7 +282,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 							}
 						}
 						if spellHasGift(spellDef) {
-							giftResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{GiftPromised: true, XValue: opt.Val(xValue)})
+							giftResult := e.prioritySpellTargets(g, playerID, cardID, sourceZone, face, spellDef, modes, game.CastBranch{GiftPromised: true, XValue: opt.Val(xValue)})
 							if giftResult.kind != targetInvalidSpec {
 								for _, targets := range giftResult.choices {
 									if e.canCastGiftSpellFaceFromZone(g, playerID, cardID, sourceZone, face, targets, xValue, modes) {
@@ -279,7 +294,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 							}
 						}
 						if spellHasBargain(spellDef) {
-							bargainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Bargained: true, XValue: opt.Val(xValue)})
+							bargainResult := e.prioritySpellTargets(g, playerID, cardID, sourceZone, face, spellDef, modes, game.CastBranch{Bargained: true, XValue: opt.Val(xValue)})
 							if bargainResult.kind != targetInvalidSpec {
 								for _, targets := range bargainResult.choices {
 									if e.canCastBargainedSpellFaceFromZone(g, playerID, cardID, sourceZone, face, targets, xValue, modes) {
@@ -289,7 +304,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 							}
 						}
 						if spellHasOffspring(spellDef) {
-							offspringResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Offspring: true, XValue: opt.Val(xValue)})
+							offspringResult := e.prioritySpellTargets(g, playerID, cardID, sourceZone, face, spellDef, modes, game.CastBranch{Offspring: true, XValue: opt.Val(xValue)})
 							if offspringResult.kind != targetInvalidSpec {
 								for _, targets := range offspringResult.choices {
 									if e.canCastOffspringSpellFaceFromZone(g, playerID, cardID, sourceZone, face, targets, xValue, modes) {
@@ -299,7 +314,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 							}
 						}
 						if spellHasBestow(spellDef) {
-							bestowResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Bestowed: true, XValue: opt.Val(xValue)})
+							bestowResult := e.prioritySpellTargets(g, playerID, cardID, sourceZone, face, spellDef, modes, game.CastBranch{Bestowed: true, XValue: opt.Val(xValue)})
 							if bestowResult.kind != targetInvalidSpec {
 								for _, targets := range bestowResult.choices {
 									if e.canCastBestowSpellFaceFromZone(g, playerID, cardID, sourceZone, face, targets, xValue, modes) {
@@ -315,7 +330,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 						}
 					} else if spellHasKicker(spellDef) {
 						for _, modes := range modeChoicesForSpellAtBranch(g, playerID, spellDef, game.CastBranch{Kicked: true}) {
-							kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true, XValue: opt.Val(xValue)})
+							kickedResult := e.prioritySpellTargets(g, playerID, cardID, sourceZone, face, spellDef, modes, game.CastBranch{Kicked: true, XValue: opt.Val(xValue)})
 							if kickedResult.kind != targetInvalidSpec {
 								for _, targets := range kickedResult.choices {
 									if e.canCastSpellFaceFromZoneWithKicker(g, playerID, cardID, sourceZone, face, targets, xValue, modes, true) {
@@ -376,17 +391,11 @@ func (e *Engine) legalCommanderCardCastActions(g *game.Game, playerID game.Playe
 	for _, face := range card.Def.LegalCastFacesFromZone(zone.Command) {
 		spellDef := cardFaceOrDefault(card, face)
 		if face == game.FaceFront {
-			if _, ok := spellDef.MutateCost(); ok {
-				for _, target := range legalMutateTargets(g, playerID, card.Owner, castSelectionFace(g, playerID, card.ID, spellDef, false)) {
-					if e.canCastMutateSpell(g, playerID, card.ID, zone.Command, target.ObjectID) {
-						actions = append(actions, actionBuild.castMutateSpell(card.ID, zone.Command, target.ObjectID))
-					}
-				}
-			}
+			actions = e.appendMutateCastActions(g, playerID, actions, card, zone.Command, spellDef)
 		}
 		for _, xValue := range zoneCastXValues(g, playerID, card, zone.Command, face, spellDef, false) {
 			for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
-				plainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{XValue: opt.Val(xValue)})
+				plainResult := e.prioritySpellTargets(g, playerID, card.ID, zone.Command, face, spellDef, modes, game.CastBranch{XValue: opt.Val(xValue)})
 				if plainResult.kind != targetInvalidSpec {
 					for _, targets := range plainResult.choices {
 						if e.canCastSpellFaceFromZoneWithKicker(g, playerID, card.ID, zone.Command, face, targets, xValue, modes, false) {
@@ -395,7 +404,7 @@ func (e *Engine) legalCommanderCardCastActions(g *game.Game, playerID game.Playe
 					}
 				}
 				if spellHasGift(spellDef) {
-					giftResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{GiftPromised: true, XValue: opt.Val(xValue)})
+					giftResult := e.prioritySpellTargets(g, playerID, card.ID, zone.Command, face, spellDef, modes, game.CastBranch{GiftPromised: true, XValue: opt.Val(xValue)})
 					if giftResult.kind != targetInvalidSpec {
 						for _, targets := range giftResult.choices {
 							if e.canCastGiftSpellFaceFromZone(g, playerID, card.ID, zone.Command, face, targets, xValue, modes) {
@@ -407,7 +416,7 @@ func (e *Engine) legalCommanderCardCastActions(g *game.Game, playerID game.Playe
 					}
 				}
 				if spellHasBargain(spellDef) {
-					bargainResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Bargained: true, XValue: opt.Val(xValue)})
+					bargainResult := e.prioritySpellTargets(g, playerID, card.ID, zone.Command, face, spellDef, modes, game.CastBranch{Bargained: true, XValue: opt.Val(xValue)})
 					if bargainResult.kind != targetInvalidSpec {
 						for _, targets := range bargainResult.choices {
 							if e.canCastBargainedSpellFaceFromZone(g, playerID, card.ID, zone.Command, face, targets, xValue, modes) {
@@ -417,7 +426,7 @@ func (e *Engine) legalCommanderCardCastActions(g *game.Game, playerID game.Playe
 					}
 				}
 				if spellHasOffspring(spellDef) {
-					offspringResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Offspring: true, XValue: opt.Val(xValue)})
+					offspringResult := e.prioritySpellTargets(g, playerID, card.ID, zone.Command, face, spellDef, modes, game.CastBranch{Offspring: true, XValue: opt.Val(xValue)})
 					if offspringResult.kind != targetInvalidSpec {
 						for _, targets := range offspringResult.choices {
 							if e.canCastOffspringSpellFaceFromZone(g, playerID, card.ID, zone.Command, face, targets, xValue, modes) {
@@ -433,7 +442,7 @@ func (e *Engine) legalCommanderCardCastActions(g *game.Game, playerID game.Playe
 				}
 			} else if spellHasKicker(spellDef) {
 				for _, modes := range modeChoicesForSpellAtBranch(g, playerID, spellDef, game.CastBranch{Kicked: true}) {
-					kickedResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{Kicked: true, XValue: opt.Val(xValue)})
+					kickedResult := e.prioritySpellTargets(g, playerID, card.ID, zone.Command, face, spellDef, modes, game.CastBranch{Kicked: true, XValue: opt.Val(xValue)})
 					if kickedResult.kind != targetInvalidSpec {
 						for _, targets := range kickedResult.choices {
 							if e.canCastSpellFaceFromZoneWithKicker(g, playerID, card.ID, zone.Command, face, targets, xValue, modes, true) {
@@ -476,8 +485,7 @@ func (e *Engine) applyActionWithChoices(g *game.Game, playerID game.PlayerID, ac
 
 // attemptActionWithChoices takes act for playerID and returns the action taken:
 // act, with a cast's targets as finally chosen (CR 601.2c). A cast or
-// activation the player started but couldn't legally complete is reversed
-// (CR 733.1) and recorded in attempts, which may be nil.
+// activation can be reversed after an opaque payment fails (CR 734.1).
 func (e *Engine) attemptActionWithChoices(g *game.Game, playerID game.PlayerID, act action.Action, agents [game.NumPlayers]PlayerAgent, log *TurnLog, attempts *castAttempts) (actionOutcome, action.Action) {
 	if synchronousSearchOrPayment(g) {
 		return actionFailed, act
@@ -499,6 +507,9 @@ func (e *Engine) attemptActionWithChoices(g *game.Game, playerID game.PlayerID, 
 		outcome, targets := e.attemptCastSpellWithChoices(g, playerID, cast, agents, log, attempts)
 		if outcome == actionApplied {
 			cast.Targets = targets
+			if cast.Mutate && len(targets) == 1 {
+				cast.MutateTargetID = targets[0].PermanentID
+			}
 			act = action.AnnounceSpell(cast)
 		}
 		return outcome, act

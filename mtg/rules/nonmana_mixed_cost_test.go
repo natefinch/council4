@@ -183,7 +183,9 @@ func TestPriorityCastImproviseKeepsAnnouncedPhyrexianPayment(t *testing.T) {
 			wantCast: true, wantLife: 2, wantTapped: 2},
 		{name: "mana with a Plains", agent: &phyrexianWindowAgent{payMana: true}, wellsprings: 2, plains: true,
 			wantCast: true, wantPlains: true, wantMana: 1, wantTapped: 2},
-		{name: "mana without a white source", agent: &phyrexianWindowAgent{payMana: true}, wellsprings: 2},
+		// CR 601.2b/f/h: announce only the completable life payment.
+		{name: "mana without a white source", agent: &phyrexianWindowAgent{payMana: true}, wellsprings: 2,
+			wantCast: true, wantLife: 2, wantTapped: 2},
 		{name: "life with a cost reduction", agent: &phyrexianWindowAgent{payLife: true}, sculptor: true,
 			wantCast: true, wantLife: 2, wantTapped: 1},
 	} {
@@ -303,7 +305,7 @@ func TestConvokePaysPhyrexianAnnouncedAsMana(t *testing.T) {
 		wantTapped int
 	}{
 		{name: "mana with a black creature", agent: &phyrexianWindowAgent{payMana: true}, nighthawk: true, wantCast: true, wantTapped: 2},
-		{name: "mana without a black creature", agent: &phyrexianWindowAgent{payMana: true}},
+		{name: "mana without a black creature", agent: &phyrexianWindowAgent{payMana: true}, wantCast: true, wantLife: 2, wantTapped: 1},
 		{name: "life", agent: &phyrexianWindowAgent{payLife: true}, nighthawk: true, wantCast: true, wantLife: 2, wantTapped: 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -461,8 +463,8 @@ func TestImprovisePaysMonocoloredHybridGenericHalves(t *testing.T) {
 // Worldsoul, Grizzly Bears pays one generic mana and Birds of Paradise taps for
 // {W}. Tapping the mana source for the mechanic too would leave {W/P}
 // unpayable, so the mechanic pays less generic mana and {C} pays the rest (CR
-// 601.2h, 702.51a, 702.126a). Without the {C} the cost can't be paid and the
-// cast is reversed (CR 733.1).
+// 601.2h, 702.51a, 702.126a). Without the {C}, only the life intention has a
+// completion: both permanents pay generic mana through the mechanic instead.
 func TestNonManaTapsLeaveManaSourcesForRemainingCost(t *testing.T) {
 	for _, tc := range []struct {
 		name                      string
@@ -495,23 +497,23 @@ func TestNonManaTapsLeaveManaSourcesForRemainingCost(t *testing.T) {
 
 			cast := castFromHandWithAnnouncements(e, clone, cardID, nil, &phyrexianWindowAgent{payMana: true})
 
-			if cast != tc.floating {
-				t.Fatalf("cast=%t, want %t", cast, tc.floating)
+			if !cast {
+				t.Fatal("a completed mana or life intention was not offered")
 			}
+			spent, wantLife, originalPool := 2, life, 1
 			if !tc.floating {
-				requireCastReversed(t, clone, cardID, life)
-				return
+				spent, wantLife, originalPool = 0, life-2, 0
 			}
-			requireSpellOnStack(t, clone, cardID, 2)
+			requireSpellOnStack(t, clone, cardID, spent)
 			for _, permanent := range []*game.Permanent{tapper, source} {
 				if cloned, ok := clone.PermanentByID(permanent.ObjectID); !ok || !cloned.Tapped {
 					t.Fatalf("permanent %v was not tapped", permanent.ObjectID)
 				}
 			}
-			if clone.Players[game.Player1].Life != life || clone.Players[game.Player1].ManaPool.Total() != 0 {
-				t.Fatalf("life=%d pool=%d, want life %d and the {C} spent", clone.Players[game.Player1].Life, clone.Players[game.Player1].ManaPool.Total(), life)
+			if clone.Players[game.Player1].Life != wantLife || clone.Players[game.Player1].ManaPool.Total() != 0 {
+				t.Fatalf("life=%d pool=%d, want life %d and the exact mana paid", clone.Players[game.Player1].Life, clone.Players[game.Player1].ManaPool.Total(), wantLife)
 			}
-			if tapper.Tapped || source.Tapped || g.Players[game.Player1].ManaPool.Total() != 1 || !g.Players[game.Player1].Hand.Contains(cardID) {
+			if tapper.Tapped || source.Tapped || g.Players[game.Player1].ManaPool.Total() != originalPool || !g.Players[game.Player1].Hand.Contains(cardID) {
 				t.Fatal("casting in the clone changed the original game")
 			}
 		})

@@ -246,7 +246,7 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 		}
 	}
 	schemaAllocation := partial.Allocation != nil && slices.ContainsFunc(partial.Allocation.Activations, func(a ManaActivation) bool { return a.Effects.Players != nil })
-	if restrictions.resourceCompletion == nil && len(partial.ManaAbilities) == 0 && !schemaAllocation && s.OrdinaryManaOnly(playerID) {
+	if restrictions.resourceCompletion == nil && len(partial.ManaAbilities) == 0 && len(partial.ManaOccurrences) == 0 && !schemaAllocation && s.OrdinaryManaOnly(playerID) {
 		return completeOrdinaryMana(s, playerID, manaCost, x, restrictions, ctx, prefs, lifeReserved, spell, cardID, sourceZone, partial)
 	}
 	failed := make(map[string]bool)
@@ -295,6 +295,9 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 		for occurrence := range partial.ManaChoices {
 			seenOccurrences[occurrence] = min(counts[occurrence.ManaAbilityKey], occurrence.Occurrence+1)
 		}
+		for occurrence := range partial.ManaOccurrences {
+			seenOccurrences[occurrence] = min(counts[occurrence.ManaAbilityKey], occurrence.Occurrence+1)
+		}
 		key += fmt.Sprint(seenOccurrences)
 		if failed[key] {
 			return false
@@ -317,6 +320,7 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 		fixed.poolOnly = true
 		fixed.Allocation = nil
 		fixed.ManaAbilities = nil
+		fixed.ManaOccurrences = nil
 		fixed.ManaPayments = nil
 		fixed.ManaChoices = nil
 		var plan paymentPlan
@@ -348,6 +352,9 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 		for _, candidate := range candidates {
 			abilityKey := ManaAbilityKey{Source: candidate.Source, AbilityIndex: candidate.AbilityIndex}
 			activationKey := ManaActivationKey{ManaAbilityKey: abilityKey, Occurrence: counts[abilityKey]}
+			if use, fixed := partial.ManaOccurrences[activationKey]; fixed && !use {
+				continue
+			}
 			if use, fixed := partial.ManaAbilities[abilityKey]; fixed && !use ||
 				restrictions.excluded[candidate.Source] ||
 				restrictions.nonSacrificingOnly[candidate.Source] && candidate.Sacrifice ||
@@ -460,6 +467,21 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 	}
 	candidates := s.ManaActivationCandidates(playerID)
 	limit := len(candidates)
+	required := make(map[ManaAbilityKey]int)
+	for key, use := range partial.ManaOccurrences {
+		if use {
+			required[key.ManaAbilityKey] = max(required[key.ManaAbilityKey], key.Occurrence+1)
+		}
+	}
+	for key := range partial.ManaPayments {
+		required[key.ManaAbilityKey] = max(required[key.ManaAbilityKey], key.Occurrence+1)
+	}
+	for key := range partial.ManaChoices {
+		required[key.ManaAbilityKey] = max(required[key.ManaAbilityKey], key.Occurrence+1)
+	}
+	for _, count := range required {
+		limit += count
+	}
 	player, ok := s.Player(playerID)
 	if !ok {
 		return paymentPlan{}, false

@@ -223,7 +223,7 @@ func TestExactNumericCastingZonesAndFaces(t *testing.T) {
 	}
 }
 
-func TestNumericMultikickerPolicySamplesAreBounded(t *testing.T) {
+func TestNumericMultikickerProposalsAreBounded(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	setMainPhasePriority(g, game.Player1)
@@ -235,11 +235,11 @@ func TestNumericMultikickerPolicySamplesAreBounded(t *testing.T) {
 	g.Players[game.Player1].ManaPool.Add(mana.C, 40)
 	g.Players[game.Player1].ManaPool.Add(mana.R, 1)
 
-	// One X value exercises every sampled kicker count and the target-choice cap.
+	// One witnessed proposal per kicker count; targets are chosen during casting.
 	g.BeginStaticSourceFrame()
 	defer g.EndStaticSourceFrame()
 	candidates := engine.appendMultikickedCastActions(g, game.Player1, nil, actionBuild, card, zone.Hand, game.FaceFront, def, 1, nil)
-	if len(candidates) == 0 || len(candidates) > maxSampledMultikickCount*maxSampledNumericTargetChoices {
+	if len(candidates) == 0 || len(candidates) > maxSampledMultikickCount {
 		t.Fatalf("sampled %d casts, want a nonempty bounded sample", len(candidates))
 	}
 	counts := make(map[int]int)
@@ -250,12 +250,12 @@ func TestNumericMultikickerPolicySamplesAreBounded(t *testing.T) {
 			t.Fatalf("invalid multikicker sample: %+v", cast)
 		}
 		counts[cast.KickerCount]++
-		if counts[cast.KickerCount] > maxSampledNumericTargetChoices {
-			t.Fatal("one kicker count exceeded the target-choice cap")
+		if counts[cast.KickerCount] > 1 {
+			t.Fatal("one kicker count expanded a sample of target sets")
 		}
 	}
-	if len(counts) != maxSampledMultikickCount || counts[1] != maxSampledNumericTargetChoices {
-		t.Fatal("fixture did not exercise every kicker count and fill the target-choice cap")
+	if len(counts) != maxSampledMultikickCount {
+		t.Fatal("fixture did not exercise every witnessed kicker count")
 	}
 }
 

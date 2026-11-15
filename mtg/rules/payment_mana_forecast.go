@@ -18,7 +18,12 @@ import (
 var _ payment.ManaState = (*rulesPaymentState)(nil)
 
 func (s *rulesPaymentState) ProjectResources(p game.ResourceProjection) payment.State {
-	return &rulesPaymentState{g: s.g.ResourceView(p), readOnly: true, engine: s.engine}
+	opaque := s.publicZoneOpaque
+	for _, resource := range p.Permanents {
+		opaque = opaque || resource.Removed
+	}
+	opaque = opaque || len(p.UnavailableCards) > 0
+	return &rulesPaymentState{g: s.g.ResourceView(p), readOnly: true, engine: s.engine, publicZoneOpaque: opaque}
 }
 
 func (s *rulesPaymentState) viewPermanent(p *game.Permanent) *game.Permanent {
@@ -357,6 +362,15 @@ func (s *rulesPaymentState) CounterPlacement(controller game.PlayerID, object id
 }
 
 func (s *rulesPaymentState) ForecastMana(playerID game.PlayerID, candidate payment.ManaActivationCandidate) ([]payment.ManaProduction, game.ResourceProjection, bool) {
+	if s.publicZoneOpaque {
+		for _, mode := range candidate.Body.Content.Modes {
+			for _, instruction := range mode.Sequence {
+				if add, ok := instruction.Primitive.(game.AddMana); ok && add.Amount.IsDynamic() {
+					return nil, game.ResourceProjection{}, false
+				}
+			}
+		}
+	}
 	obj := &game.StackObject{Kind: game.StackActivatedAbility, SourceID: candidate.Source, Controller: playerID, AbilityIndex: candidate.AbilityIndex}
 	if card, ok := s.g.GetCardInstance(candidate.Source); ok && candidate.SourceZone == zone.Hand {
 		obj.SourceCardID = card.ID
@@ -463,7 +477,7 @@ func forecastManaContent(g *game.Game, obj *game.StackObject, content game.Abili
 			}
 		case game.PrimitiveAddMana:
 			prim := instruction.Primitive.(game.AddMana)
-			if len(prim.CombinationColors) != 0 || prim.EachControlledColor != nil || prim.Amount.IsDynamic() {
+			if len(prim.CombinationColors) != 0 || prim.EachControlledColor != nil || !payment.ResourceManaAmount(prim.Amount) {
 				return nil, game.ResourceProjection{}, false
 			}
 			_, recipient, units := evaluateAddMana(r, prim)

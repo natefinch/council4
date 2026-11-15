@@ -324,14 +324,10 @@ func TestPriorityCastPaysWithPaymentTimeManaAbilities(t *testing.T) {
 	}
 }
 
-// TestUnpaidPriorityCastIsReversed casts on each route offered because both
-// lands could pay its two-mana total, but activates only Waterlogged Grove
-// while paying. The total can't then be paid, so the cast is reversed (CR
-// 733.1): the card returns where it was, and the Grove's activation is undone
-// with it, untapping the Grove and restoring the life paid. Declining the
-// window is reversed the same way, and a proposal reversed twice is no longer
-// accepted.
-func TestUnpaidPriorityCastIsReversed(t *testing.T) {
+// TestPriorityCastRequiredManaSourcesRetainCompletion keeps a witnessed total
+// even when the policy stops naming mana sources. Only completing choices
+// remain offered; normal payment never finishes unpaid (CR 601.2g/h).
+func TestPriorityCastRequiredManaSourcesRetainCompletion(t *testing.T) {
 	t.Parallel()
 	for _, route := range priorityCastRoutes() {
 		t.Run(route.name, func(t *testing.T) {
@@ -344,22 +340,23 @@ func TestUnpaidPriorityCastIsReversed(t *testing.T) {
 			if !ok {
 				t.Fatal("cast payable with both lands was not offered")
 			}
-			attempts := &castAttempts{}
-			for i, limit := range []int{1, 0} {
+			// CR 601.2g/h: every mana-source choice retains a completion;
+			// a required source cannot be declined into a normal reversal.
+			for _, limit := range []int{1, 0} {
+				clone := g.Clone()
 				agent := &priorityCastWindowAgent{limit: limit, colors: route.colors}
-				outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, attempts)
-				if outcome != actionReversed || agent.windows == 0 || agent.activated != limit {
-					t.Fatalf("attempt %d: outcome = %v, windows = %d, activated = %d; want a reversed cast", i, outcome, agent.windows, agent.activated)
+				outcome, _ := e.attemptActionWithChoices(clone, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
+				if outcome != actionApplied || agent.windows == 0 {
+					t.Fatalf("outcome = %v, windows = %d; want a completed cast", outcome, agent.windows)
 				}
-				route.undone(t, g, cardID)
-				requireLandsUnused(t, g, life, "Waterlogged Grove", "Nurturing Peatland")
-			}
-			agent := &priorityCastWindowAgent{limit: 0, colors: route.colors}
-			if outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, attempts); outcome != actionReversed {
-				t.Fatalf("third attempt outcome = %v, want reversed", outcome)
-			}
-			if outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, attempts); outcome == actionApplied {
-				t.Fatal("a repeatedly reversed proposal was cast")
+				route.done(t, clone, cardID)
+				wantLife := life - 2
+				if route.name == "Phyrexian announcement" {
+					wantLife -= 2
+				}
+				if clone.Players[game.Player1].Life != wantLife || clone.Players[game.Player1].ManaPool.Total() != 0 {
+					t.Fatal("the completed cast did not pay its exact witness")
+				}
 			}
 			route.undone(t, g, cardID)
 			requireLandsUnused(t, g, life, "Waterlogged Grove", "Nurturing Peatland")
@@ -404,11 +401,12 @@ func TestPriorityCastReversalsInPriorityLoop(t *testing.T) {
 
 	e.runPriorityLoop(g, reboundKickerAgents(agent), &TurnLog{})
 
-	if agent.casts < 2 {
-		t.Fatalf("casts = %d, want repeated reversed attempts", agent.casts)
+	if agent.casts != 1 {
+		t.Fatalf("casts = %d, want one completed cast (CR 601.2h/i)", agent.casts)
 	}
-	route.undone(t, g, cardID)
-	requireLandsUnused(t, g, life, "Waterlogged Grove", "Nurturing Peatland")
+	if permanentByCardID(g, cardID) == nil || g.Players[game.Player1].Life != life-2 {
+		t.Fatal("the completed Sol Ring cast did not pay and resolve")
+	}
 }
 
 // TestFutureSightVillageRitesNotPaidWithMillikin casts Village Rites off the
@@ -505,18 +503,12 @@ const (
 	groveMana    = "Pay 1 life: Add {G} or {U}"
 )
 
-// TestUnpaidPriorityCastReversesManaAroundShuffle casts on each route offered
-// because Waterlogged Grove, Nurturing Peatland and Phyrexian Altar together
-// could pay its total, raised to three mana by another Thalia for a
-// noncreature spell, but activates only the Grove and then the Altar,
-// sacrificing Blightsteel Colossus, while paying. The Altar's ability is a
-// mana ability: the Colossus's replacement effect that shuffles it into its
-// owner's library isn't the Altar's own (CR 605.1a). The total can't be paid,
-// so the cast is reversed (CR 733.1). The shuffle can't be reversed, but the
-// Grove's activation came before it and none of its mana was spent on the
-// Altar, so it is reversed anyway: the Grove untaps and the life is restored,
-// while the Colossus stays in the library and the Altar's mana in the pool.
-func TestUnpaidPriorityCastReversesManaAroundShuffle(t *testing.T) {
+// TestPriorityCastCompletesAfterOpaqueManaShuffle chooses the Grove and
+// Phyrexian Altar sacrificing Blightsteel Colossus. The Altar remains a mana
+// ability because its library movement comes from another replacement
+// (CR 605.1a). After the opaque shuffle, the remaining witness completes the
+// locked total rather than allowing an unpaid finish (601.2f-h).
+func TestPriorityCastCompletesAfterOpaqueManaShuffle(t *testing.T) {
 	t.Parallel()
 	for _, route := range priorityCastRoutes() {
 		t.Run(route.name, func(t *testing.T) {
@@ -539,14 +531,27 @@ func TestUnpaidPriorityCastReversesManaAroundShuffle(t *testing.T) {
 
 			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
 
-			if outcome != actionReversed || order.activated != 2 || agent.sacrifices != 1 {
-				t.Fatalf("outcome = %v, activated = %d, Colossus sacrificed %d times; want a reversed cast after two activations", outcome, order.activated, agent.sacrifices)
+			if outcome != actionApplied || order.activated != 2 || agent.sacrifices != 1 {
+				t.Fatalf("outcome = %v, activated = %d, Colossus sacrificed %d times; want the remaining witness completed", outcome, order.activated, agent.sacrifices)
 			}
-			route.undone(t, g, cardID)
-			requireLandsUnused(t, g, life, "Waterlogged Grove", "Nurturing Peatland")
+			obj, ok := g.Stack.Peek()
+			spent := 3
+			if route.name == "mutate" {
+				spent = 2
+			}
+			if !ok || obj.SourceID != cardID || obj.Casting || obj.ManaSpentToCast != spent {
+				t.Fatalf("stack top = %+v, want the completed locked %d-mana cast", obj, spent)
+			}
+			manaLife := life - p.Life
+			if route.name == "Phyrexian announcement" {
+				manaLife -= 2
+			}
+			if !reboundPermanentNamed(t, g, "Waterlogged Grove").Tapped || manaLife < 1 || manaLife > 2 {
+				t.Fatal("the completed payment lost its legal mana activations")
+			}
 			requireColossusShuffled(t, g, colossus)
-			if got := p.ManaPool.Total(); got != 1 {
-				t.Fatalf("pool = %d, want the Altar's mana kept", got)
+			if got := p.ManaPool.Total(); got != 3-spent {
+				t.Fatalf("pool = %d, want the locked total paid (CR 601.2h)", got)
 			}
 		})
 	}
@@ -573,32 +578,17 @@ func colossusFilterDef() *game.CardDef {
 	}}
 }
 
-// TestUnpaidVillageRitesReversesIndependentMana casts Village Rites off the
-// top of the library with Future Sight under Thalia, a locked {1}{B} total
-// (CR 601.2f), and leaves it unpaid after activating mana abilities while
-// paying (CR 601.2g), so the cast is reversed (CR 733.1). A player may reverse
-// legal mana abilities activated while casting it, unless mana from them was
-// spent on another mana ability that isn't reversed, but not an action that
-// moved a card to a library (CR 733.1), here Blightsteel Colossus shuffled
-// into the library when sacrificed by a mana ability (CR 605.1a):
-//   - Silent Clearing for {W}, Phyrexian Altar sacrificing the Colossus, then
-//     Waterlogged Grove for {G}: both lands are reversed, before and after the
-//     shuffle, and the Altar's activation is kept.
-//   - Silent Clearing for {W}, then Sacrifice Filter spending that {W} and
-//     sacrificing the Colossus: the Filter's activation is kept, so the
-//     Clearing, whose mana it spent, is kept too.
-func TestUnpaidVillageRitesReversesIndependentMana(t *testing.T) {
+// TestVillageRitesCompletesRemainingWitnessAfterManaChoices exercises mana
+// source ordering and filter inputs around a Colossus shuffle. Choices still
+// reserve the final {1}{B} and a separate spell-cost sacrifice (CR 601.2f-h).
+func TestVillageRitesCompletesRemainingWitnessAfterManaChoices(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
-		name     string
-		order    []string
-		reversed []string
-		kept     string
-		life     int
-		pool     int
+		name  string
+		order []string
 	}{
-		{name: "lands around Phyrexian Altar", order: []string{clearingMana, altarMana, groveMana}, reversed: []string{"Silent Clearing", "Waterlogged Grove"}, life: 20, pool: 1},
-		{name: "land spent on Sacrifice Filter", order: []string{clearingMana, "Add {C}{C}"}, reversed: []string{"Waterlogged Grove"}, kept: "Silent Clearing", life: 19, pool: 2},
+		{name: "lands around Phyrexian Altar", order: []string{clearingMana, altarMana, groveMana}},
+		{name: "land spent on Sacrifice Filter", order: []string{clearingMana, "Add {C}{C}"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
@@ -618,20 +608,18 @@ func TestUnpaidVillageRitesReversesIndependentMana(t *testing.T) {
 
 			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
 
-			if outcome != actionReversed || order.activated != len(test.order) || agent.sacrifices != 1 {
-				t.Fatalf("outcome = %v, activated = %d, Colossus sacrificed %d times; want a reversed cast after %d activations", outcome, order.activated, agent.sacrifices, len(test.order))
+			if outcome != actionApplied || order.activated != len(test.order) {
+				t.Fatalf("outcome = %v, activated = %d; want the remaining witness completed after %d choices", outcome, order.activated, len(test.order))
 			}
 			p := g.Players[game.Player1]
-			if top, _ := p.Library.Top(); top != rites {
-				t.Fatalf("library top = %v, want Village Rites back on top", top)
+			obj, _ := g.Stack.Peek()
+			if obj.SourceID != rites || obj.Casting || obj.ManaSpentToCast != 2 || len(obj.SacrificedAsCostIDs) != 1 ||
+				p.Library.Contains(rites) || spellCastEventCount(g) != 1 {
+				t.Fatal("Village Rites did not pay its whole locked mana and sacrifice total")
 			}
 			requireColossusShuffled(t, g, colossus)
-			requireLandsUnused(t, g, test.life, test.reversed...)
-			if test.kept != "" && !reboundPermanentNamed(t, g, test.kept).Tapped {
-				t.Fatalf("%s is untapped, want its activation kept", test.kept)
-			}
-			if got := p.ManaPool.Total(); got != test.pool {
-				t.Fatalf("pool = %d, want %d", got, test.pool)
+			if !reboundPermanentNamed(t, g, "Silent Clearing").Tapped || p.Life >= 20 {
+				t.Fatal("the completed cast lost its chosen legal mana activation")
 			}
 		})
 	}

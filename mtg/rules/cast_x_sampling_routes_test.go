@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -428,7 +429,10 @@ func TestCastXSamplingMultikickedReducedSpell(t *testing.T) {
 	for kicks, limit := range []int{3, 2, 1} {
 		for x := 0; x <= limit; x++ {
 			act := cast(kicks, x)
-			listed := actionsContain(actions, act)
+			listed := slices.ContainsFunc(actions, func(candidate action.Action) bool {
+				cast, ok := candidate.CastSpellPayload()
+				return ok && cast.CardID == storm && cast.XValue == x && cast.KickerCount == kicks
+			})
 			applied := engine.applyAction(g.Clone(), game.Player1, act)
 			want := x < limit
 			if listed != want || applied != want {
