@@ -161,7 +161,7 @@ func (e *Engine) expandPermanentTypePlayActions(g *game.Game, player game.Player
 func (e *Engine) castActionPermissionLegal(g *game.Game, player game.PlayerID, cast action.CastSpellAction, permission game.PlayPermission) bool {
 	sourceZone := normalizedCastSourceZone(cast)
 	if cast.Mutate {
-		return e.canCastMutateSpell(g, player, cast.CardID, sourceZone, cast.MutateTargetID, permission)
+		return e.canCastMutateSpellWithX(g, player, cast.CardID, sourceZone, cast.MutateTargetID, cast.XValue, permission)
 	}
 	return e.canCastSpellFaceFromZoneWithOptions(g, player, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed, cast.Offspring, permission)
 }

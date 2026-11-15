@@ -100,21 +100,6 @@ func graveyardRestoreRoutes() []graveyardRestoreRoute {
 		}
 	}
 	return []graveyardRestoreRoute{
-		{name: "face-down cast through Muldrotha", build: func(t *testing.T) (*game.Game, id.ID, func([game.NumPlayers]PlayerAgent)) {
-			g, e, source := muldrothaGame(t)
-			cardID := addCardToGraveyard(g, game.Player1, productionChoiceCard(t, "War Behemoth"))
-			g.Players[game.Player1].ManaPool.Add(mana.C, 1)
-			cast := action.CastFaceDownFromZone(cardID, zone.Graveyard, game.FaceFront, game.FaceDownMorph).
-				WithPlayPermission(muldrothaPermission(source, types.Creature))
-			return g, cardID, func(agents [game.NumPlayers]PlayerAgent) {
-				if outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, agents, &TurnLog{}, nil); outcome != actionReversed {
-					t.Fatalf("outcome = %v, want the unpaid face-down cast reversed", outcome)
-				}
-				if len(g.PermanentTypePlayUsesThisTurn) != 0 {
-					t.Fatal("the reversed cast spent Muldrotha's permission")
-				}
-			}
-		}},
 		{name: "paid cast through Conduit of Worlds", build: func(t *testing.T) (*game.Game, id.ID, func([game.NumPlayers]PlayerAgent)) {
 			e, g, cardID := conduitPaidCastGame(t, "Sol Ring")
 			thalias(t, g, 1)
@@ -139,9 +124,8 @@ func graveyardRestoreRoutes() []graveyardRestoreRoute {
 }
 
 // TestReversedGraveyardCastKeepsGraveyardOrder casts a card from the middle of
-// its owner's graveyard on each route that opens a payment-time mana ability
-// window: a face-down cast through Muldrotha, a paid cast through Conduit of
-// Worlds and a free cast. Phyrexian Altar and Waterlogged Grove could pay
+// its owner's graveyard on the unmigrated resolution-time routes: a paid cast
+// through Conduit of Worlds and a free cast. Phyrexian Altar and Waterlogged Grove could pay
 // together, so the cast is proposed, but the caster activates only the Altar,
 // sacrificing Homing Golem, which goes on top of its owner's library (CR
 // 601.2g), and the cost goes unpaid. The cast is reversed (CR 733.1): the
@@ -187,14 +171,13 @@ func TestReversedGraveyardCastKeepsGraveyardOrder(t *testing.T) {
 	}
 }
 
-// TestReversedPriorityGraveyardCastKeepsGraveyardOrder casts Vault Skirge
+// TestPriorityGraveyardCastPreservesRemainingOrder casts Vault Skirge
 // ({1}{B/P}) from the middle of its owner's graveyard with priority through
 // Muldrotha, announcing {B} for its Phyrexian symbol with only {C} in pool. The
-// announcement is binding (CR 601.2b, 601.2h), so the cast is reversed (CR
-// 733.1) and the card returns between the cards that were above and below it
-// (CR 404.2) without spending Muldrotha's permission. Paying 2 life on the next
-// attempt casts it.
-func TestReversedPriorityGraveyardCastKeepsGraveyardOrder(t *testing.T) {
+// mana announcement has no completion and isn't offered (CR 601.2b/h).
+// The legal life announcement casts it once, spending Muldrotha's permission,
+// while preserving the remaining graveyard order (CR 404.2).
+func TestPriorityGraveyardCastPreservesRemainingOrder(t *testing.T) {
 	g, e, source := muldrothaGame(t)
 	cardID := addCardToGraveyard(g, game.Player1, productionChoiceCard(t, "Vault Skirge"))
 	above := addCardToGraveyard(g, game.Player1, productionChoiceCard(t, "Grizzly Bears"))
@@ -206,22 +189,17 @@ func TestReversedPriorityGraveyardCastKeepsGraveyardOrder(t *testing.T) {
 	}
 	life := g.Players[game.Player1].Life
 	cast := graveyardCast(cardID, source, types.Creature)
-	var attempts castAttempts
+	outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(&phyrexianWindowAgent{payMana: true}), &TurnLog{}, nil)
 
-	outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(&phyrexianWindowAgent{payMana: true}), &TurnLog{}, &attempts)
-
-	if outcome != actionReversed || g.Stack.Size() != 0 || g.Players[game.Player1].Life != life ||
-		g.Players[game.Player1].ManaPool.Total() != 1 || len(g.PermanentTypePlayUsesThisTurn) != 0 {
-		t.Fatalf("outcome=%v stack=%d life=%d pool=%d permission uses=%d, want the cast with {B} announced reversed",
+	if outcome != actionApplied || g.Stack.Size() != 1 || g.Players[game.Player1].Life != life-2 ||
+		g.Players[game.Player1].ManaPool.Total() != 0 || len(g.PermanentTypePlayUsesThisTurn) != 1 {
+		t.Fatalf("outcome=%v stack=%d life=%d pool=%d permission uses=%d, want one completed life-paid cast",
 			outcome, g.Stack.Size(), g.Players[game.Player1].Life, g.Players[game.Player1].ManaPool.Total(), len(g.PermanentTypePlayUsesThisTurn))
 	}
-	if got, want := graveyard.All(), []id.ID{above, cardID, below}; !slices.Equal(got, want) {
-		t.Fatalf("graveyard after reversal = %v, want %v: the card back in its place (CR 404.2)", got, want)
+	if got, want := graveyard.All(), []id.ID{above, below}; !slices.Equal(got, want) {
+		t.Fatalf("graveyard after casting = %v, want %v (CR 404.2)", got, want)
 	}
-
-	outcome, _ = e.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(&phyrexianWindowAgent{payLife: true}), &TurnLog{}, &attempts)
-
-	if obj, ok := g.Stack.Peek(); outcome != actionApplied || !ok || obj.SourceID != cardID || g.Players[game.Player1].Life != life-2 {
+	if obj, ok := g.Stack.Peek(); !ok || obj.SourceID != cardID || spellCastEventCount(g) != 1 {
 		t.Fatalf("outcome=%v stack top=%+v life=%d, want Vault Skirge cast for {C} and 2 life", outcome, obj, g.Players[game.Player1].Life)
 	}
 }

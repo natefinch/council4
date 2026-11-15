@@ -87,7 +87,7 @@ func (a *manaSourcePickAgent) ChooseChoice(_ PlayerObservation, request game.Cho
 func requireManaSourceOption(t *testing.T, request game.ChoiceRequest, name string, permanent, card id.ID) game.ChoiceOption {
 	t.Helper()
 	var found []game.ChoiceOption
-	for _, option := range request.Options[1:] {
+	for _, option := range request.Options {
 		if option.SourcePermanent == permanent && option.Card.Exists && option.Card.Val.CardID == card {
 			found = append(found, option)
 		}
@@ -212,7 +212,7 @@ func requirePaymentManaActivationsLogged(t *testing.T, log *TurnLog, sources ...
 	var logged []id.ID
 	var entries []ActionLog
 	for _, entry := range log.Entries {
-		if entry.Kind != TurnLogEntryAction || !entry.paymentMana {
+		if entry.Kind != TurnLogEntryAction || !entry.Action.ManaAbility {
 			continue
 		}
 		activation, ok := entry.Action.Action.ActivateAbilityPayload()
@@ -249,30 +249,26 @@ func (a *castOnceAgent) ChooseAction(_ PlayerObservation, legal []action.Action)
 	return action.Pass()
 }
 
-// TestReversedCastLogsKeptPaymentManaActivations runs the priority loop for a
-// player who casts Village Rites off the top of the library with Future Sight
-// under Thalia, activates mana abilities while paying (CR 601.2g), and leaves
-// the cost unpaid, so the cast is reversed (CR 733.1) and the player then
-// passes. The cast and each reversed activation leave the public log, while
-// each activation that can't be or isn't reversed stays logged as performed:
-//   - Silent Clearing, Phyrexian Altar sacrificing Blightsteel Colossus, which
-//     is shuffled into its owner's library, then Waterlogged Grove: only the
-//     Altar's activation is kept.
-//   - Silent Clearing, then Sacrifice Filter spending the Clearing's mana and
-//     sacrificing the Colossus: both are kept.
-func TestReversedCastLogsKeptPaymentManaActivations(t *testing.T) {
+// TestCompletedCastLogsAllPaymentManaActivations exercises the priority loop
+// with normal/filter mana choices and a Colossus shuffle. Every real mana
+// activation and the one completed cast remain publicly logged (CR 601.2g-i).
+func TestCompletedCastLogsAllPaymentManaActivations(t *testing.T) {
 	t.Parallel()
 	for _, test := range []struct {
 		name  string
 		order []string
-		kept  []string
 	}{
-		{name: "lands around Phyrexian Altar", order: []string{clearingMana, altarMana, groveMana}, kept: []string{"Phyrexian Altar"}},
-		{name: "land spent on Sacrifice Filter", order: []string{clearingMana, "Add {C}{C}"}, kept: []string{"Silent Clearing", "Sacrifice Filter"}},
+		{name: "lands around Phyrexian Altar", order: []string{clearingMana, altarMana, groveMana}},
+		{name: "land spent on Sacrifice Filter", order: []string{clearingMana, "Add {C}{C}"}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			g, e, rites, _ := villageRitesLibraryGame(t, "Future Sight", 0)
+			for range 2 {
+				card := addCardToHand(g, game.Player1, registryCardDef(t, "Forest"))
+				g.Players[game.Player1].Hand.Remove(card)
+				g.Players[game.Player1].Library.AddToBottom(card)
+			}
 			addCombatPermanent(g, game.Player2, registryCardDef(t, "Thalia, Guardian of Thraben"))
 			for _, name := range []string{"Silent Clearing", "Waterlogged Grove"} {
 				addCombatPermanent(g, game.Player1, registryCardDef(t, name))
@@ -286,22 +282,32 @@ func TestReversedCastLogsKeptPaymentManaActivations(t *testing.T) {
 
 			e.runPriorityLoop(g, reboundKickerAgents(agent), log)
 
-			if agent.casts != 1 || order.activated != len(test.order) || agent.sacrifices != 1 {
+			if agent.casts != 1 || order.activated != len(test.order) {
 				t.Fatalf("casts = %d, activated = %d, sacrifices = %d; want one cast with every activation", agent.casts, order.activated, agent.sacrifices)
 			}
-			if top, _ := g.Players[game.Player1].Library.Top(); top != rites || !g.Stack.IsEmpty() {
-				t.Fatal("Village Rites wasn't returned to the top of the library")
+			if !g.Players[game.Player1].Graveyard.Contains(rites) || !g.Stack.IsEmpty() || spellCastEventCount(g) != 1 {
+				t.Fatal("Village Rites did not become cast and resolve once")
 			}
-			requireColossusShuffled(t, g, colossus)
-			var kept []id.ID
-			for _, name := range test.kept {
-				kept = append(kept, reboundPermanentNamed(t, g, name).ObjectID)
+			var activated []id.ID
+			shuffled := false
+			for _, event := range g.Events {
+				if event.Kind == game.EventAbilityActivated && event.ManaAbility {
+					activated = append(activated, event.SourceObjectID)
+				}
+				shuffled = shuffled || event.Kind == game.EventZoneChanged && event.CardID == colossus && event.ToZone == zone.Library
 			}
-			requirePaymentManaActivationsLogged(t, log, kept...)
+			if !shuffled || len(activated) < len(test.order) {
+				t.Fatal("the chosen legal mana actions were lost")
+			}
+			requirePaymentManaActivationsLogged(t, log, activated...)
+			casts := 0
 			for _, entry := range log.Entries {
 				if entry.Kind == TurnLogEntryAction && entry.Action.Action.Kind == action.ActionCastSpell {
-					t.Fatalf("reversed cast logged: %+v", entry.Action)
+					casts++
 				}
+			}
+			if casts != 1 {
+				t.Fatal("the completed cast was not logged once")
 			}
 		})
 	}

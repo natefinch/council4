@@ -226,7 +226,7 @@ func TestReturnTheFavorCopyControlledByCasterWithNewTargets(t *testing.T) {
 	}
 
 	agents := [game.NumPlayers]PlayerAgent{
-		game.Player1: &choiceOnlyAgent{choices: [][]int{{1}}},
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}, {1}}},
 	}
 	if !engine.applyCastSpellWithChoices(g, game.Player1, *chosen, agents, &TurnLog{}) {
 		t.Fatal("applying the Return the Favor copy cast failed")

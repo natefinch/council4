@@ -17,13 +17,21 @@ import (
 // helpers that operate on *game.Game. One instance is created per payment
 // operation and holds the game pointer for the duration of that call.
 type rulesPaymentState struct {
-	g        *game.Game
-	readOnly bool
-	engine   *Engine
-	log      *TurnLog
+	g                *game.Game
+	readOnly         bool
+	engine           *Engine
+	log              *TurnLog
+	publicZoneOpaque bool
 }
 
 var _ payment.State = (*rulesPaymentState)(nil)
+
+// BeginPaymentRead reuses derived rules only within a pure query, never across
+// a choice or Apply's mutations.
+func (s *rulesPaymentState) BeginPaymentRead() func() {
+	s.g.BeginStaticSourceFrame()
+	return s.g.EndStaticSourceFrame
+}
 
 func (s *rulesPaymentState) Player(playerID game.PlayerID) (*game.Player, bool) {
 	return playerByID(s.g, playerID)

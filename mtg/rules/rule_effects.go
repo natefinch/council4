@@ -1978,7 +1978,7 @@ func castSpellsFromZonePermitsSomeCast(g *game.Game, playerID game.PlayerID, car
 // (Arcane Adaptation) lets Realmwalker cast a creature card of another type,
 // while a bestowed cast of that card is an Aura spell, not a creature spell
 // (CR 702.103b), and is not permitted.
-func matchingCastSpellsFromZoneEffects(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, bestowed bool) []game.RuleEffect {
+func matchingCastSpellsFromZoneEffects(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, bestowed bool, characteristics ...*game.CardDef) []game.RuleEffect {
 	card, ok := g.GetCardInstance(cardID)
 	if !ok {
 		return nil
@@ -1986,7 +1986,11 @@ func matchingCastSpellsFromZoneEffects(g *game.Game, playerID game.PlayerID, car
 	var faceDef *game.CardDef
 	spellFace := func() *game.CardDef {
 		if faceDef == nil {
-			faceDef = castSelectionFace(g, playerID, card.ID, cardFaceOrDefault(card, face), bestowed)
+			def := cardFaceOrDefault(card, face)
+			if len(characteristics) > 0 {
+				def = characteristics[0]
+			}
+			faceDef = castSelectionFace(g, playerID, card.ID, def, bestowed)
 		}
 		return faceDef
 	}

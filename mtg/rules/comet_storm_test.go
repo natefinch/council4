@@ -140,8 +140,13 @@ func TestCometStormLegalActionsIncludeMultipleKicks(t *testing.T) {
 		nil,
 		2,
 	)
-	if !containsAction(engine.legalActions(g, game.Player1), want) {
-		t.Fatal("legal actions do not include Comet Storm kicked twice with three targets")
+	offered := false
+	for _, act := range engine.legalActions(g, game.Player1) {
+		cast, ok := act.CastSpellPayload()
+		offered = offered || ok && cast.CardID == spellID && cast.KickerCount == 2 && cast.XValue == 1 && len(cast.Targets) == 3
+	}
+	if !offered || !engine.applyAction(g, game.Player1, want) {
+		t.Fatal("the twice-kicked proposal or its different three-target announcement was rejected")
 	}
 }
 

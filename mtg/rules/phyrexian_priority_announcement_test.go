@@ -67,7 +67,8 @@ func TestPriorityPhyrexianAnnouncedBeforeTargetDependentCost(t *testing.T) {
 	}{
 		{name: "announcing 2 life", agent: &phyrexianWindowAgent{payLife: true}, wantCast: true},
 		{name: "default announcements", agent: &phyrexianWindowAgent{}, wantCast: true},
-		{name: "announcing mana", agent: &phyrexianWindowAgent{payMana: true}},
+		// CR 601.2b/f/h: the unpayable mana announcement is not offered.
+		{name: "unpayable mana announcement filtered", agent: &phyrexianWindowAgent{payMana: true}, wantCast: true},
 		{name: "announcing 2 life then trying to target the Bears", agent: &phyrexianWindowAgent{payLife: true}, chooseBears: true, wantCast: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -170,7 +171,7 @@ func TestPriorityPhyrexianAnnouncedBeforeTargets(t *testing.T) {
 		{name: "mana", payMana: true, poolU: 1, wantCast: true, wantMana: 1},
 		{name: "default announcement with blue mana", poolU: 1, wantCast: true, wantMana: 1},
 		{name: "default announcement without blue mana", wantCast: true, wantLifeLost: 2},
-		{name: "announced mana is binding", payMana: true},
+		{name: "unpayable mana announcement filtered", payMana: true, wantCast: true, wantLifeLost: 2},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e, g := newEffectiveCascadeGame()
@@ -380,20 +381,19 @@ func TestPreparedCopyPhyrexianAnnouncedBeforeTargets(t *testing.T) {
 		var attempts castAttempts
 
 		outcome, _ := e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, &attempts)
-		if outcome != actionReversed || !token.Prepared || !g.Stack.IsEmpty() || g.Players[game.Player1].Life != life ||
+		// Only the completable life announcement is offered (CR 601.2b/f/h).
+		if outcome != actionApplied || token.Prepared || g.Stack.Size() != 1 || g.Players[game.Player1].Life != life-2 ||
 			g.Execution.InvalidChoices != 0 {
-			t.Fatalf("outcome=%v prepared=%t stack=%d life=%d invalid=%d, want the cast reversed",
+			t.Fatalf("outcome=%v prepared=%t stack=%d life=%d invalid=%d, want one completed cast",
 				outcome, token.Prepared, g.Stack.Size(), g.Players[game.Player1].Life, g.Execution.InvalidChoices)
 		}
-
-		outcome, _ = e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, &attempts)
 		obj, _ := g.Stack.Peek()
-		if outcome != actionApplied || token.Prepared || g.Players[game.Player1].Life != life-2 || g.Execution.InvalidChoices != 1 ||
+		if outcome != actionApplied || token.Prepared || g.Players[game.Player1].Life != life-2 || g.Execution.InvalidChoices != 0 ||
 			obj == nil || obj.SourceID != token.ObjectID || !slices.Equal(obj.Targets, []game.Target{game.PlayerTarget(game.Player2)}) {
 			t.Fatalf("outcome=%v prepared=%t life=%d invalid=%d stack top=%+v, want the redo offered only 2 life and cast at Player2",
 				outcome, token.Prepared, g.Players[game.Player1].Life, g.Execution.InvalidChoices, obj)
 		}
-		if !slices.Equal(agent.steps, []string{"phyrexian", "target", "phyrexian", "target"}) {
+		if !slices.Equal(agent.steps, []string{"phyrexian", "target"}) {
 			t.Fatalf("steps=%v, want each attempt to announce the {U/P} before its target", agent.steps)
 		}
 	})
@@ -479,8 +479,8 @@ func TestPriorityLoopReversesUnpayablePhyrexianAnnouncement(t *testing.T) {
 		wantCasts   int
 		wantInvalid int
 	}{
-		{name: "redo announcing life", maxCasts: 2, lifeFrom: 2, wantCasts: 2},
-		{name: "repeating the mana announcement", maxCasts: 99, lifeFrom: 99, wantCasts: 2, wantInvalid: 1},
+		{name: "only life offered", maxCasts: 2, lifeFrom: 2, wantCasts: 1},
+		{name: "unpayable announcement never offered", maxCasts: 99, lifeFrom: 99, wantCasts: 1},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e, g := newEffectiveCascadeGame()

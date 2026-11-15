@@ -86,6 +86,39 @@ Engine. Planning uses structural activation schemas and a resource-only
 copy-on-write evaluation view, not `Game.Clone` or speculative activation.
 The view resets transient evaluation/choice frames; the payment adapter
 rejects mutations and translates permanent references by ObjectID.
+`Complete` and `Options` enter an adapter-owned pure-read frame so repeated
+cost, life and mana queries reuse the same derived static rules. Exact pending
+target searches also share one read frame across their candidate payments.
+These frames end before any agent callback or payment mutation; `Apply` scopes
+only its read-only revalidation, not activation or spending. Resource projections
+retain their own independent frames. No target-dependent payment result or
+failed target prefix is cached across choices. A bounded-allocation regression
+exercises all 78 target pairs, including the payable pair beyond the old sample,
+and freshness scenarios verify that later cost changes remain visible.
+Activation-search nodes and their cost-paid, instruction and mana-trigger
+projections enter separate read frames too; no projection borrows its parent's
+derived rules. At one immutable resource node, output alternatives with identical
+source, component selections and input mana/life reuse the same cost-paid view.
+Each output still forecasts its own production, effects and triggers. These views
+are discarded with that node, never shared across occurrences or agent choices.
+Required sacrifice occurrences are also checked against a certified stable
+selection domain minus subjects reserved for the outer cost. An impossible
+reservation is rejected before forecasting; an uncertified domain retains the
+full search. The mana window asks only for the use-source witness it offers,
+rather than also solving an unused decline branch.
+An exact payment from present resources is checked before enumerating mana
+abilities at all. When contextual effects rule out the ordinary-only fast path, a direct
+automatic-source allocation can still supply a candidate history. The search
+revalidates every cost, production and effect through the canonical resource
+forecast before accepting that history. A rejected candidate falls through to
+the complete search; it never proves unpayability. Exact allocation receipts
+are revalidated only at their fixed activation count, not after enumerating
+shorter histories that cannot match the receipt. Iterative deepening also stops
+when no branch reaches its depth: the reachable resource graph is then fully
+exhausted, independent of the conservative maximum activation count.
+This avoids subset enumeration
+for ordinary land payments under unrelated continuous effects while preserving
+strategic sources, occurrence choices and opaque-context rejection.
 
 Plans retain exact activation costs, bounded choices, production units and
 spend riders. The shared canonical production, life, counter-replacement and
@@ -127,8 +160,8 @@ rules-specific commit data for permanent/general/equip/loyalty, hand,
 graveyard, cycling, ninjutsu and hand-mana activations. Suspend, foretell, plot
 and turn-face-up special actions use the same descriptor/procedure. The existing
 action kinds contain no other mana-costed special action; land plays retain
-their existing entry/replacement decisions. Casting procedures are unchanged
-pending #3722.
+their existing entry/replacement decisions. Resolution-time casting remains
+pending #3723; priority casting uses the procedure described below.
 
 Nonmana abilities are on the stack before any announcement/payment callback
 (CR 602.2a). Hidden-zone activation sources are publicly revealed first;
@@ -141,12 +174,20 @@ characteristics, which remain face down until the commit.
 Action/X enumeration requires `Complete`, not a manual-mana heuristic or clone
 probe. `Options` supplies a complete witness for every normal payment decision,
 including sequential object/counter selections, a selected mana source's
-payment components and its bounded output choices. Source-use choices remain
-identity-based, while `ManaActivationKey` binds costs and outputs to each
-zero-based occurrence of that ability. Repeated Altar activations can therefore
+payment components and its bounded output choices. `Partial.ManaAbilities`
+retains identity-level use/avoid preferences. The procedure uses
+`Partial.ManaOccurrences` with `ManaActivation` on `StepManaAbility` steps to choose or
+decline one zero-based occurrence; declining the next occurrence does not
+cancel earlier selected uses. `ManaActivationKey` also binds costs and outputs
+to each occurrence of that ability. Repeated Altar activations can therefore
 sacrifice different creatures and choose different colors; each occurrence's
 choices see the resources left by its predecessors. Fixed occurrence choices
 cannot disappear from a completion or move to another activation.
+Each next reusable activation is offered when it retains a completion, even
+when an automatic land could instead supply the remaining mana. The Baleful
+Strix scenario chooses Altar twice, sacrificing two Bears for black then blue
+while keeping Island untapped; the Crystal cycling scenarios still cover
+required repeated activations and their resource-dependent costs.
 `Plan.Request` retains the
 locked total across resource changes; channel does not recalculate its reducer
 after sacrificing a legendary creature. Special-action source reservations
@@ -179,6 +220,76 @@ SHA-256 `524f5195a1e5f54bb13c735edf399ac717a4458e2713f398d1a3e6877186b829`.
 Sections: 601.2a–i, 602.2a–b, 605.1a–b/605.3a, 116.2b/f/h/k/116.3,
 701.40b/701.58b, 702.37e/702.168d, 702.49a–d, 702.29a–f, and 734.1–2
 (the current reversal section is 734, not the historical 733).
+
+### Priority spell casting (#3722)
+
+Hand, command-zone, graveyard, exile and library-top casts, permission-specific
+alternative costs (including foretell, plot, flashback and escape), mutate,
+prepared copies and face-down morph/disguise casts use `Engine.costedAction`.
+The descriptor captures source permissions before the transition. The shared
+procedure moves the source and pushes its `Casting` object at CR 601.2a, before
+cost/Phyrexian announcements or any target callback. Timing is checked at the
+start, not against the stack after this transition. That same object becomes
+cast at 601.2i; permission usage and cast events are committed only then.
+Face-down permission filters and cost modifiers use the face-down spell's
+characteristics, including when casting a morph land under a creature-spell
+permission. `Casting` objects are excluded from stack-target candidates
+(CR 115.5). Prepared sources retain their designation until commit.
+
+Availability uses a read-only resource view with the source removed and the
+proposed object on the stack. Cost options and binding Phyrexian intentions
+are admitted only if some exact target completion has a `Complete` witness.
+An effect allowing life for a colored mana cost, such as K'rrik, remains a
+separate payment choice, not a fallback that reopens the Phyrexian intention.
+Plans retain those original announcements, rather than inferring them from
+the final symbol receipt after color-to-life effects.
+
+Numeric actions have a bounded X/kicker policy domain, but exact supplied
+values remain valid beyond that domain. Combinatorial numeric target domains
+use a witnessed provisional set, not the first 64 target sets. During casting,
+the target count is fixed before target objects are chosen (601.2c). Every next
+target, including an opponent's target decision, extends the fixed prefix to
+a payable whole set. Generation constrains that prefix directly rather than
+enumerating unrelated combinations and filtering afterward. Splice selection
+also requires a joint host/splice-target witness; all selected cards are publicly
+revealed together before any host or spliced target is announced
+(601.2b, 702.47a–d). Spliced text uses the host's characteristics.
+
+Payment uses the locked request, occurrence-specific mana-activation decisions
+and the shared `Apply` operation. Source sacrifices, life and counters are
+reserved jointly, including valid mana effects that enable later nonmana costs.
+Spell mana-spend riders consume `ApplyResult.ManaBefore`, which includes planned
+production. Normal choices cannot decline a required source into an unpaid
+cast. Only a selected opaque activation opens the shared whole-world/RNG/log
+checkpoint; canceling it also cancels the source transition or prepared copy
+(734.1–2). Priority no longer withholds proposals or exhausted actions.
+Resolution-time proposal/probe/reversal machinery remains for #3723; final
+dead-helper removal remains #3725.
+
+Folded issue interpretation under the **2026-11-06** rules:
+
+- #3702: registered Dismember with `{C}` and four life observes the topmost
+  same object during both Phyrexian announcements and the Grizzly Bears target;
+  graveyard/exile/library and mutate paths have equivalent observations.
+- #3678: the payable two-Bears pair after eleven opposing Elderwood Scions
+  is found on hand and prepared-copy routes without a target sample or empty
+  cost proposal.
+- #3705: registered Desperate Ritual and Glacial Ray exercise multiple splice
+  reveals visible to an opponent before the host's and spliced text's targets.
+- #3570: priority Phyrexian symbols, including kicker, are binding before
+  targets. The free/resolution-time portion remains #3723.
+- #3632/#3633: planned valid mana sources enable X and counter/life additional
+  costs. Millikin and Deranged Assistant are **nonmana activated abilities**
+  under 605.1a, not payment-time sources. Underworld Breach/Sol Ring escape is
+  rejected with Millikin as its proposed payment source; activating and resolving
+  Millikin separately makes the resulting escape legal.
+- #3628: the old library-moving “Milling Prism” mana-ability example is not
+  legal under 605.1a. Existing standalone activation/resolution and enclosing
+  library-top window behavior is retained; no illegal nested activation is
+  enabled or claimed fixed by that example.
+
+Additional sections read in the official rules cited above: 601.3,
+702.47a–e, 702.140a–f, 708.4–6, 702.37a–g, 401.5 and 734.1–2.
 
 Follow the ordered sub-issues of #3718: planner plans and completion queries,
 mana-ability schemas, abilities and special actions (proving the procedure

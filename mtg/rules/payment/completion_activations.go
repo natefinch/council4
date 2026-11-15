@@ -237,7 +237,39 @@ func bindManaCostOccurrence(partial Partial, plan Plan) (Partial, bool) {
 	return partial, true
 }
 
+func requiredManaOccurrences(partial Partial) map[ManaAbilityKey]int {
+	required := make(map[ManaAbilityKey]int)
+	for key, use := range partial.ManaAbilities {
+		if use {
+			required[key] = 1
+		}
+	}
+	for key, use := range partial.ManaOccurrences {
+		if use {
+			required[key.ManaAbilityKey] = max(required[key.ManaAbilityKey], key.Occurrence+1)
+		}
+	}
+	for key := range partial.ManaPayments {
+		required[key.ManaAbilityKey] = max(required[key.ManaAbilityKey], key.Occurrence+1)
+	}
+	for key := range partial.ManaChoices {
+		required[key.ManaAbilityKey] = max(required[key.ManaAbilityKey], key.Occurrence+1)
+	}
+	return required
+}
+
 func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost.Mana, x int, restrictions manaSourceRestrictions, ctx spendContext, prefs *Preferences, lifeReserved int, spell *spellCostOption, cardID id.ID, sourceZone zone.Type, partial Partial) (paymentPlan, bool) {
+	// A complete payment using only present resources needs no activation
+	// inventory or history search, even under contextual continuous effects.
+	if restrictions.resourceCompletion == nil {
+		present := partial
+		present.joint, present.poolOnly = false, true
+		if plan, ok := completeMana(s, playerID, manaCost, x, restrictions, ctx, prefs, lifeReserved, nil, cardID, sourceZone, present); ok &&
+			(restrictions.resourceValid == nil || restrictions.resourceValid(s)) &&
+			jointPaymentReady(s, playerID, plan, reservedAdditional(restrictions, playerID)) {
+			return plan, true
+		}
+	}
 	if view, ok := s.(interface{ ManaAbilityUnreachable(ManaAbilityKey) bool }); ok {
 		for key, use := range partial.ManaAbilities {
 			if use && view.ManaAbilityUnreachable(key) {
@@ -246,7 +278,7 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 		}
 	}
 	schemaAllocation := partial.Allocation != nil && slices.ContainsFunc(partial.Allocation.Activations, func(a ManaActivation) bool { return a.Effects.Players != nil })
-	if restrictions.resourceCompletion == nil && len(partial.ManaAbilities) == 0 && !schemaAllocation && s.OrdinaryManaOnly(playerID) {
+	if restrictions.resourceCompletion == nil && len(partial.ManaAbilities) == 0 && len(partial.ManaOccurrences) == 0 && !schemaAllocation && s.OrdinaryManaOnly(playerID) {
 		return completeOrdinaryMana(s, playerID, manaCost, x, restrictions, ctx, prefs, lifeReserved, spell, cardID, sourceZone, partial)
 	}
 	failed := make(map[string]bool)
@@ -264,16 +296,22 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 	}
 	var result paymentPlan
 	depth := 0
+	var guide []ManaActivation
+	reachedDepth := false
 	var search func(game.ResourceProjection, []ManaActivation) bool
 	search = func(projection game.ResourceProjection, activations []ManaActivation) bool {
 		current := s
 		if len(activations) != 0 {
 			current = s.ProjectResources(projection).(ManaState)
 		}
+		if state, ok := current.(interface{ BeginPaymentRead() func() }); ok {
+			defer state.BeginPaymentRead()()
+		}
 		player, ok := current.Player(playerID)
 		if !ok {
 			return false
 		}
+		reachedDepth = reachedDepth || len(activations) == depth
 		counts := manaOccurrenceCounts(activations)
 		key := fmt.Sprint(depth-len(activations), player.Life, player.EnergyCounters, player.ManaPool.Units(), player.ManaRiders, projection.Permanents, projection.Used, projection.UnavailableCards, projection.SpentDelayed)
 		if historySensitive {
@@ -293,6 +331,9 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 			seenOccurrences[occurrence] = min(counts[occurrence.ManaAbilityKey], occurrence.Occurrence+1)
 		}
 		for occurrence := range partial.ManaChoices {
+			seenOccurrences[occurrence] = min(counts[occurrence.ManaAbilityKey], occurrence.Occurrence+1)
+		}
+		for occurrence := range partial.ManaOccurrences {
 			seenOccurrences[occurrence] = min(counts[occurrence.ManaAbilityKey], occurrence.Occurrence+1)
 		}
 		key += fmt.Sprint(seenOccurrences)
@@ -317,6 +358,7 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 		fixed.poolOnly = true
 		fixed.Allocation = nil
 		fixed.ManaAbilities = nil
+		fixed.ManaOccurrences = nil
 		fixed.ManaPayments = nil
 		fixed.ManaChoices = nil
 		var plan paymentPlan
@@ -336,6 +378,17 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 			return false
 		}
 		candidates := current.ManaActivationCandidates(playerID)
+		type paidManaCost struct {
+			delta game.ResourceProjection
+			state ManaState
+		}
+		paidCosts := make(map[string]paidManaCost)
+		var closeReads []func()
+		defer func() {
+			for index := len(closeReads) - 1; index >= 0; index-- {
+				closeReads[index]()
+			}
+		}()
 		slices.SortStableFunc(candidates, func(a, b ManaActivationCandidate) int {
 			if a.Automatic != b.Automatic {
 				if a.Automatic {
@@ -346,8 +399,17 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 			return 0
 		})
 		for _, candidate := range candidates {
+			if guide != nil {
+				expected := guide[len(activations)]
+				if candidate.Source != expected.Source || candidate.AbilityIndex != expected.AbilityIndex {
+					continue
+				}
+			}
 			abilityKey := ManaAbilityKey{Source: candidate.Source, AbilityIndex: candidate.AbilityIndex}
 			activationKey := ManaActivationKey{ManaAbilityKey: abilityKey, Occurrence: counts[abilityKey]}
+			if use, fixed := partial.ManaOccurrences[activationKey]; fixed && !use {
+				continue
+			}
 			if use, fixed := partial.ManaAbilities[abilityKey]; fixed && !use ||
 				restrictions.excluded[candidate.Source] ||
 				restrictions.nonSacrificingOnly[candidate.Source] && candidate.Sacrifice ||
@@ -368,7 +430,6 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 					continue
 				}
 			}
-			costState := current
 			ability := candidate.Request.ability
 			if ability.SourceCardID != 0 && restrictions.reserved != nil && slices.Contains(restrictions.reserved.discards, ability.SourceCardID) {
 				continue
@@ -404,28 +465,50 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 						return false
 					}
 				}
-				pool := player.ManaPool.Units()
-				for unit, amount := range input.poolSpend {
-					pool[unit] -= amount
+				// Output colors fork after identical costs. Keep this immutable
+				// cost-paid view only within the current resource-search node.
+				costKey := fmt.Sprint(abilityKey, w.components, w.groups, input.poolSpend, input.lifePayment)
+				paid, exists := paidCosts[costKey]
+				if !exists {
+					pool := player.ManaPool.Units()
+					for unit, amount := range input.poolSpend {
+						pool[unit] -= amount
+					}
+					delta, good := projectActivationCosts(current, playerID, w, tap, candidate.Source, pool, input.lifePayment)
+					if !good {
+						return false
+					}
+					resources := delta.Players[playerID]
+					resources.Riders = current.RidersAfterInput(playerID, candidate.Source, input.poolSpend)
+					delta.Players[playerID] = resources
+					if resources.Life < lifeReserved {
+						return false
+					}
+					paid = paidManaCost{delta: delta, state: current.ProjectResources(delta).(ManaState)}
+					if state, ok := paid.state.(interface{ BeginPaymentRead() func() }); ok {
+						closeReads = append(closeReads, state.BeginPaymentRead())
+					}
+					paidCosts[costKey] = paid
 				}
-				delta, good := projectActivationCosts(current, playerID, w, tap, candidate.Source, pool, input.lifePayment)
-				if !good {
-					return false
-				}
-				resources := delta.Players[playerID]
-				resources.Riders = current.RidersAfterInput(playerID, candidate.Source, input.poolSpend)
-				delta.Players[playerID] = resources
-				if resources.Life < lifeReserved {
-					return false
-				}
-				costState = current.ProjectResources(delta).(ManaState)
-				production, effects, ok := costState.ForecastMana(playerID, candidate)
+				production, effects, ok := paid.state.ForecastMana(playerID, candidate)
 				if !ok {
 					return false
 				}
-				next := mergeProjection(projection, delta)
+				if guide != nil {
+					expected := guide[len(activations)]
+					amount := 0
+					for _, produced := range production {
+						if produced.Unit == (mana.Unit{Color: expected.Color, Snow: expected.Snow, FromCreature: expected.FromCreature}) {
+							amount += produced.Amount
+						}
+					}
+					if amount < expected.Amount {
+						return false
+					}
+				}
+				next := mergeProjection(projection, paid.delta)
 				next = mergeProjection(next, effects)
-				resources = next.Players[playerID]
+				resources := next.Players[playerID]
 				for _, produced := range production {
 					resources.Mana[produced.Unit] += produced.Amount
 					if produced.Rider != nil {
@@ -458,8 +541,80 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 		failed[key] = true
 		return false
 	}
+	// A fixed allocation cannot complete at any other activation count.
+	if partial.Allocation != nil && restrictions.resourceCompletion == nil {
+		depth = len(partial.Allocation.Activations)
+		if search(game.ResourceProjection{}, nil) {
+			return result, true
+		}
+		return result, false
+	}
 	candidates := s.ManaActivationCandidates(playerID)
+	required := requiredManaOccurrences(partial)
+	if state, ok := s.(interface{ ResourceSelectionStable(cost.Additional) bool }); ok {
+		checked := make(map[ManaAbilityKey]bool)
+		for _, candidate := range candidates {
+			key := ManaAbilityKey{Source: candidate.Source, AbilityIndex: candidate.AbilityIndex}
+			if required[key] == 0 || checked[key] {
+				continue
+			}
+			checked[key] = true
+			for _, additional := range candidate.Body.AdditionalCosts {
+				if additional.Kind != cost.AdditionalSacrifice || !state.ResourceSelectionStable(additional) {
+					continue
+				}
+				source, _ := s.PermanentByObjectID(candidate.Source)
+				available := 0
+				for _, permanent := range CandidatePermanentsForCost(s, playerID, additional, source) {
+					if !restrictions.excluded[permanent.ObjectID] && !restrictions.nonSacrificingOnly[permanent.ObjectID] {
+						available++
+					}
+				}
+				// A stable domain cannot grow during these modeled activations.
+				// Reserved spell/ability subjects cannot also fund a mana cost.
+				if amount := AdditionalCostAmount(additional); amount > 0 && required[key] > available/amount {
+					return result, false
+				}
+			}
+		}
+	}
+	if len(candidates) == 0 && restrictions.resourceCompletion == nil {
+		// With no activations, only the present pool and cost mechanics remain.
+		if search(game.ResourceProjection{}, nil) {
+			return result, true
+		}
+		return result, false
+	}
+	// Use a direct automatic-mana allocation as a candidate history, not as evidence
+	// about effects. Replay it through the canonical cost/forecast search and
+	// accept only a whole witness. Contextual bonuses or other resources may
+	// invalidate this history; in that case the full search still runs.
+	if restrictions.resourceCompletion == nil {
+		direct := partial
+		direct.joint = false
+		direct.ManaAbilities, direct.ManaOccurrences = nil, nil
+		direct.ManaPayments, direct.ManaChoices = nil, nil
+		if seed, ok := completeMana(s, playerID, manaCost, x, restrictions, ctx, prefs, lifeReserved, spell, cardID, sourceZone, direct); ok {
+			history := freezeMana(seed).Activations
+			if !slices.ContainsFunc(history, func(activation ManaActivation) bool {
+				return !slices.ContainsFunc(candidates, func(candidate ManaActivationCandidate) bool {
+					return candidate.Automatic && candidate.Source == activation.Source && candidate.AbilityIndex == activation.AbilityIndex
+				})
+			}) {
+				guide = history
+				depth = len(guide)
+				if search(game.ResourceProjection{}, nil) {
+					return result, true
+				}
+				guide = nil
+				failed = make(map[string]bool)
+			}
+		}
+	}
 	limit := len(candidates)
+	for _, count := range required {
+		limit += count
+	}
 	player, ok := s.Player(playerID)
 	if !ok {
 		return paymentPlan{}, false
@@ -492,8 +647,14 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 	}
 	for depth = 0; depth <= limit; depth++ {
 		failed = make(map[string]bool)
+		reachedDepth = false
 		if search(game.ResourceProjection{}, nil) {
 			return result, true
+		}
+		// No branch was truncated at this depth: the complete reachable
+		// resource graph is exhausted, so a larger limit adds no histories.
+		if !reachedDepth {
+			break
 		}
 	}
 	return result, false

@@ -14,6 +14,8 @@ import (
 type manaRequirement struct {
 	symbol    cost.Symbol
 	phyrexian int
+	index     int
+	colorLife bool
 }
 
 type manaPaymentBranch struct {
@@ -50,17 +52,24 @@ func completeMana(s State, playerID game.PlayerID, manaCost *cost.Mana, x int, r
 	}
 	var requirements []manaRequirement
 	phyrexian := 0
-	for _, symbol := range symbols {
+	for position, symbol := range symbols {
 		index := -1
-		if symbol.Kind == cost.PhyrexianSymbol || symbol.Kind == cost.PhyrexianGenericSymbol {
+		original := (*manaCost)[position]
+		if original.Kind == cost.PhyrexianSymbol || original.Kind == cost.PhyrexianGenericSymbol {
 			index = phyrexian
 			phyrexian++
 		}
-		requirements = append(requirements, manaRequirement{symbol: symbol, phyrexian: index})
+		requirements = append(requirements, manaRequirement{symbol: symbol, phyrexian: index, index: position,
+			colorLife: s.PayLifeForManaColor(playerID, original.Color)})
 	}
 	for index := range partial.Phyrexian {
 		if index < 0 || index >= phyrexian {
 			return paymentPlan{}, false
+		}
+		for index := range partial.ColorLife {
+			if index < 0 || index >= len(symbols) {
+				return paymentPlan{}, false
+			}
 		}
 	}
 	// Leave flexible and generic requirements until after constrained mana.
@@ -100,6 +109,9 @@ func completeMana(s State, playerID game.PlayerID, manaCost *cost.Mana, x int, r
 		}
 		req := requirements[index]
 		for _, branch := range manaBranches(req, x, prefs, partial.Phyrexian) {
+			if life, fixed := partial.ColorLife[req.index]; fixed && (branch.life > 0 != life || life && !req.colorLife) {
+				continue
+			}
 			if branch.amount < 0 || plan.lifePayment+branch.life+lifeReserved > player.Life || branch.life > 0 && !s.CanPayLife(playerID) {
 				continue
 			}
@@ -258,7 +270,10 @@ func manaBranches(req manaRequirement, x int, prefs *Preferences, fixed map[int]
 	case cost.TwobridSymbol:
 		return []manaPaymentBranch{colored(symbol.Color, game.SymbolPaymentMonoHybridColor), generic(2, game.SymbolPaymentMonoHybridGeneric)}
 	case cost.PhyrexianSymbol, cost.PhyrexianGenericSymbol:
-		payLife, manaOnly := prefs.phyrexianChoiceAt(req.phyrexian)
+		payLife, manaOnly := false, false
+		if req.phyrexian >= 0 {
+			payLife, manaOnly = prefs.phyrexianChoiceAt(req.phyrexian)
+		}
 		if selected, set := fixed[req.phyrexian]; set {
 			payLife, manaOnly = selected, !selected
 		}
@@ -270,7 +285,7 @@ func manaBranches(req manaRequirement, x int, prefs *Preferences, fixed map[int]
 		if symbol.Kind == cost.PhyrexianGenericSymbol {
 			branch = generic(symbol.Generic, game.SymbolPaymentPhyrexianMana)
 		}
-		if manaOnly {
+		if manaOnly && !req.colorLife {
 			return []manaPaymentBranch{branch}
 		}
 		return []manaPaymentBranch{branch, life}

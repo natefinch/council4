@@ -161,15 +161,11 @@ func TestPreparedCopyOnStackWhilePaying(t *testing.T) {
 	}
 }
 
-// TestReversedPreparedCopyLeavesStack offers Enroot's prepared copy because
-// both lands could pay its locked {1}{G}, but leaves the total unpaid while
-// paying: activating only Waterlogged Grove, or declining every window. The
-// copy was on the stack while paying, and the unpaid cast is reversed (CR
-// 733.1): the copy leaves the stack, the Cultivator stays prepared, the
-// Grove's activation is undone, no cast event is emitted and Young Pyromancer
-// doesn't trigger. The player keeps priority and a redo paying with both lands
-// casts it (CR 733.2).
-func TestReversedPreparedCopyLeavesStack(t *testing.T) {
+// TestPreparedCopyDefaultsRetainCompletion offers Enroot's copy with a witnessed
+// {1}{G} total. A policy stopping its scripted mana choices still completes
+// both required sources: an unpaid finish isn't offered (CR 601.2g/h). The
+// same copy becomes cast once, and Young Pyromancer triggers only then.
+func TestPreparedCopyDefaultsRetainCompletion(t *testing.T) {
 	t.Parallel()
 	for _, limit := range []int{1, 0} {
 		t.Run(fmt.Sprintf("activating %d", limit), func(t *testing.T) {
@@ -178,38 +174,20 @@ func TestReversedPreparedCopyLeavesStack(t *testing.T) {
 			castsBefore := spellCastEventCount(g)
 			life := g.Players[game.Player1].Life
 			cast := action.CastSpellFaceFromZone(cardID, zone.Battlefield, game.FaceAlternate, nil, 0, nil)
-			attempts := &castAttempts{}
-
 			agent := &preparedStackWindowAgent{priorityCastWindowAgent: &priorityCastWindowAgent{limit: limit}, g: g, permanent: permanent}
-			outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, attempts)
-			if outcome != actionReversed || agent.activated != limit {
-				t.Fatalf("outcome = %v, activated = %d; want the cast reversed", outcome, agent.activated)
-			}
-			requireEnrootOnStackWhilePaying(t, agent, castsBefore)
-			if !g.Stack.IsEmpty() || !permanent.Prepared || spellCastEventCount(g) != castsBefore {
-				t.Fatalf("stack = %d, prepared = %t, cast events = %d; want the copy off the stack, the Cultivator prepared and no cast",
-					g.Stack.Size(), permanent.Prepared, spellCastEventCount(g))
-			}
-			requireLandsUnused(t, g, life, "Waterlogged Grove", "Nurturing Peatland")
-			e.putTriggeredAbilitiesOnStack(g)
-			if got := triggeredAbilitiesFrom(g, pyromancer.ObjectID); got != 0 || !g.Stack.IsEmpty() {
-				t.Fatalf("Young Pyromancer triggers = %d, stack = %d; want no trigger from a reversed cast", got, g.Stack.Size())
-			}
-
-			agent = &preparedStackWindowAgent{priorityCastWindowAgent: &priorityCastWindowAgent{limit: -1}, g: g, permanent: permanent}
-			outcome, _ = e.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, attempts)
-			if outcome != actionApplied || agent.activated != 2 {
-				t.Fatalf("redo outcome = %v, activated = %d; want the cast applied with both lands", outcome, agent.activated)
+			outcome, _ := e.attemptActionWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, nil)
+			if outcome != actionApplied {
+				t.Fatalf("outcome = %v; want both required sources to complete the cast (CR 601.2h)", outcome)
 			}
 			copyID := requireEnrootOnStackWhilePaying(t, agent, castsBefore)
 			if obj, ok := g.Stack.Peek(); !ok || g.Stack.Size() != 1 || obj.ID != copyID || permanent.Prepared ||
 				spellCastEventCount(g) != castsBefore+1 || g.Players[game.Player1].Life != life-2 {
-				t.Fatalf("stack top = %+v (size %d), prepared = %t, life = %d; want only the redone copy cast and paid",
+				t.Fatalf("stack top = %+v (size %d), prepared = %t, life = %d; want the same copy cast once and paid",
 					obj, g.Stack.Size(), permanent.Prepared, g.Players[game.Player1].Life)
 			}
 			e.putTriggeredAbilitiesOnStack(g)
 			if got := triggeredAbilitiesFrom(g, pyromancer.ObjectID); got != 1 {
-				t.Fatalf("Young Pyromancer triggers = %d, want 1 for the redone cast", got)
+				t.Fatalf("Young Pyromancer triggers = %d, want 1 for the completed cast", got)
 			}
 		})
 	}
@@ -282,14 +260,10 @@ func TestPreparedCopyPhyrexianAnnouncementOnStackWhilePaying(t *testing.T) {
 	}
 }
 
-// TestReversedPreparedCopyAnnouncedOnStack announces {U} for the {U/P} of a
-// prepared token's Gitaxian Probe copy and chooses Player2 as its target with
-// the copy already on the stack (CR 601.2a-c), then declines to activate
-// Waterlogged Grove, leaving the announced {U} unpaid. The cast is reversed
-// (CR 733.1): the copy seen during announcement leaves the stack, the token
-// stays prepared, no life is paid and no cast event is emitted. The player
-// keeps priority and a redo casts a new copy from the same token (CR 733.2).
-func TestReversedPreparedCopyAnnouncedOnStack(t *testing.T) {
+// TestPreparedCopyManaIntentionUsesRequiredSource announces {U} before the
+// target (CR 601.2a-c). The default mana choice must complete that intention
+// with Waterlogged Grove, not finish unpaid or fall back to Phyrexian life.
+func TestPreparedCopyManaIntentionUsesRequiredSource(t *testing.T) {
 	t.Parallel()
 	e, g := newEffectiveCascadeGame()
 	token := phyrexianPreparedToken(t, g)
@@ -298,32 +272,19 @@ func TestReversedPreparedCopyAnnouncedOnStack(t *testing.T) {
 	castsBefore := spellCastEventCount(g)
 	cast := action.CastSpellAction{CardID: token.ObjectID, SourceZone: zone.Battlefield, Face: game.FaceAlternate,
 		Targets: []game.Target{game.PlayerTarget(game.Player2)}}
-	attempts := &castAttempts{}
 	agent := &preparedPhyrexianWindowAgent{phyrexianWindowAgent: &phyrexianWindowAgent{payMana: true}, g: g, token: token}
 
-	outcome, _ := e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, attempts)
+	outcome, _ := e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, nil)
 
-	if outcome != actionReversed || agent.activated != 0 ||
+	if outcome != actionApplied ||
 		!slices.Equal(agent.steps, []string{"phyrexian", "target", "window"}) {
-		t.Fatalf("outcome = %v, activated = %d, steps = %v; want {U} announced, the target chosen and the cast reversed unpaid",
+		t.Fatalf("outcome = %v, activated = %d, steps = %v; want {U} announced, target chosen, then its witnessed payment",
 			outcome, agent.activated, agent.steps)
-	}
-	requirePreparedCopyOnStackWhilePaying(t, agent.stacks, agent.prepared, agent.castsSeen, "Prepared Spell", castsBefore)
-	if !g.Stack.IsEmpty() || !token.Prepared || spellCastEventCount(g) != castsBefore || g.Players[game.Player1].Life != life {
-		t.Fatalf("stack = %d, prepared = %t, cast events = %d, life = %d; want the copy off the stack, the token prepared and nothing paid",
-			g.Stack.Size(), token.Prepared, spellCastEventCount(g), g.Players[game.Player1].Life)
-	}
-	requireLandsUnused(t, g, life, "Waterlogged Grove")
-
-	agent = &preparedPhyrexianWindowAgent{phyrexianWindowAgent: &phyrexianWindowAgent{payLife: true}, g: g, token: token}
-	outcome, _ = e.attemptCastSpellWithChoices(g, game.Player1, cast, reboundKickerAgents(agent), &TurnLog{}, attempts)
-	if outcome != actionApplied {
-		t.Fatalf("redo outcome = %v, want the cast applied paying 2 life", outcome)
 	}
 	copyID := requirePreparedCopyOnStackWhilePaying(t, agent.stacks, agent.prepared, agent.castsSeen, "Prepared Spell", castsBefore)
 	if obj, ok := g.Stack.Peek(); !ok || g.Stack.Size() != 1 || obj.ID != copyID || token.Prepared ||
-		spellCastEventCount(g) != castsBefore+1 || g.Players[game.Player1].Life != life-2 {
-		t.Fatalf("stack top = %+v (size %d), prepared = %t, life = %d; want only the redone copy cast for 2 life",
+		spellCastEventCount(g) != castsBefore+1 || g.Players[game.Player1].Life != life-1 || obj.ManaSpentToCast != 1 {
+		t.Fatalf("stack top = %+v (size %d), prepared = %t, life = %d; want the same copy paid with {U}, not Phyrexian life",
 			obj, g.Stack.Size(), token.Prepared, g.Players[game.Player1].Life)
 	}
 }
