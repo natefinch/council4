@@ -260,7 +260,10 @@ type ControlledTriggerDoublerSnapshot struct {
 // changes happen. Events are data, not behavior: card definitions and reports
 // may refer to this vocabulary, while mtg/rules owns emission and consumers.
 type Event struct {
-	Kind EventKind
+	// ManaTriggersResolved keeps immediately resolved CR 605.1b abilities out
+	// of the later ordinary-trigger stack-placement pass.
+	ManaTriggersResolved bool
+	Kind                 EventKind
 
 	// SourceID is the source card instance ID when there is one.
 	SourceID id.ID
@@ -650,6 +653,7 @@ func cloneEvent(event Event) Event {
 	for i := range event.TriggeredAbilities {
 		event.TriggeredAbilities[i].EntryChoices = cloneComparableMap(event.TriggeredAbilities[i].EntryChoices)
 	}
+
 	if event.ChosenTypeTriggerDoublers != nil {
 		snapshot := ChosenTypeTriggerDoublerSnapshot{
 			Doublers: append([]ChosenTypeTriggerDoubler(nil), event.ChosenTypeTriggerDoublers.Doublers...),
@@ -675,3 +679,6 @@ func cloneEvent(event Event) Event {
 	}
 	return event
 }
+
+// Copy returns an independent event record, retaining immutable card definitions.
+func (event Event) Copy() Event { return cloneEvent(event) }

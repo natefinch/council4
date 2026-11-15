@@ -20,7 +20,17 @@ type paymentOrchestratorType struct{}
 var paymentOrch paymentOrchestratorType
 
 func (paymentOrchestratorType) planner(g *game.Game) payment.Planner {
-	return payment.New(&rulesPaymentState{g: g})
+	return NewEngine(nil).PaymentPlanner(g)
+}
+
+// PaymentPlanner binds complete payment application to this game's executing
+// engine. Forecasting never runs the engine or consumes its random stream.
+func (e *Engine) PaymentPlanner(g *game.Game, logs ...*TurnLog) payment.Planner {
+	state := &rulesPaymentState{g: g, engine: e}
+	if len(logs) != 0 {
+		state.log = logs[0]
+	}
+	return payment.New(state)
 }
 
 // canPaySpellCosts reports whether the player can currently pay all costs for

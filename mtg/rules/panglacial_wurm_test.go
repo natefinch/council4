@@ -165,13 +165,12 @@ func TestPanglacialWurmDeclineAndFailedPaymentAreAtomic(t *testing.T) {
 	}
 }
 
-func TestPanglacialWurmManaAbilityChangesLiveSearchCandidatesAndLocksCost(t *testing.T) {
+func TestPanglacialWurmManaAbilitySacrificeLocksCost(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	g.Turn.PriorityPlayer = game.Player3
 	engine := NewEngine(nil)
 	wurm := addCardToLibrary(g, game.Player1, authored.PanglacialWurm.New())
 	remaining := addCardToLibrary(g, game.Player1, vanillaCreature("Still searchable", 2, 2))
-	drawn := addCardToLibrary(g, game.Player1, vanillaCreature("Drawn during payment", 2, 2))
 	source := addComplexManaAbilityPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
 		Name: "Cost-reducing mana source", Types: []types.Card{types.Artifact},
 		StaticAbilities: []game.StaticAbility{{RuleEffects: []game.RuleEffect{{
@@ -179,11 +178,10 @@ func TestPanglacialWurmManaAbilityChangesLiveSearchCandidatesAndLocksCost(t *tes
 			CostModifier: game.CostModifier{GenericReduction: 5},
 		}}}},
 	}}, &game.ManaAbility{
-		Text:            "Sacrifice this artifact: Add G and draw a card.",
+		Text:            "Sacrifice this artifact: Add G.",
 		AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalSacrificeSource, Amount: 1}},
 		Content: game.Mode{Sequence: []game.Instruction{
 			{Primitive: game.AddMana{Player: opt.Val(game.ControllerReference()), ManaColor: mana.G, Amount: game.Fixed(1)}},
-			{Primitive: game.Draw{Player: game.ControllerReference(), Amount: game.Fixed(1)}},
 		}}.Ability(),
 	})
 	g.Players[game.Player1].ManaPool.Add(mana.G, 1)
@@ -207,7 +205,7 @@ func TestPanglacialWurmManaAbilityChangesLiveSearchCandidatesAndLocksCost(t *tes
 		if request.Kind == game.ChoiceSearch {
 			for _, option := range request.Options {
 				if option.Card.Exists && option.Card.Val.CardID != remaining {
-					t.Fatal("search candidates were cached before payment changed the library")
+					t.Fatal("search candidates retained the cast card")
 				}
 			}
 		}
@@ -215,7 +213,7 @@ func TestPanglacialWurmManaAbilityChangesLiveSearchCandidatesAndLocksCost(t *tes
 	}}
 	found := engine.searchLibraryRevealOnlyCards(g, &game.StackObject{Controller: game.Player1}, policies, &TurnLog{},
 		game.Player1, game.SearchSpec{RevealOnly: true}, 1)
-	if !activated || !slices.Equal(found, []id.ID{remaining}) || !g.Players[game.Player1].Hand.Contains(drawn) ||
+	if !activated || !slices.Equal(found, []id.ID{remaining}) ||
 		!g.Players[game.Player1].Graveyard.Contains(source.CardInstanceID) || g.Players[game.Player1].ManaPool.Total() != 0 {
 		t.Fatal("manual payment did not use its locked two-mana cost and resume the actual library")
 	}
@@ -418,7 +416,9 @@ func TestPanglacialWurmUnpaidProposalReversesReversibleManaAbilities(t *testing.
 	}
 }
 
-func TestPanglacialWurmUnpaidProposalKeepsIrreversibleManaEffects(t *testing.T) {
+// CR 605.1a (effective 2026-11-06): an ability that moves a card from a
+// library, even alongside AddMana, is not available in a mana payment window.
+func TestPanglacialWurmPaymentWindowRejectsLibraryMovingAbility(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	remaining := addCardToLibrary(g, game.Player1, vanillaCreature("Remaining bottom", 1, 1))
 	wurm := addCardToLibrary(g, game.Player1, authored.PanglacialWurm.New())
@@ -453,11 +453,11 @@ func TestPanglacialWurmUnpaidProposalKeepsIrreversibleManaEffects(t *testing.T) 
 	}}
 	NewEngine(nil).searchLibraryRevealOnlyCards(g, &game.StackObject{Controller: game.Player1}, policies, &TurnLog{},
 		game.Player1, game.SearchSpec{RevealOnly: true, FailToFindPolicy: game.SearchMayFailToFind}, 1)
-	if !slices.Equal(g.Players[game.Player1].Library.All(), []id.ID{wurm, remaining}) ||
-		!g.Players[game.Player1].Hand.Contains(drawn) || !drawSource.Tapped || painSource.Tapped ||
-		g.Players[game.Player1].Life != 40 || g.Players[game.Player1].ManaPool.Total() != 1 || g.Stack.Size() != 0 ||
+	if !slices.Equal(g.Players[game.Player1].Library.All(), []id.ID{drawn, wurm, remaining}) ||
+		g.Players[game.Player1].Hand.Contains(drawn) || drawSource.Tapped || painSource.Tapped ||
+		g.Players[game.Player1].Life != 40 || g.Players[game.Player1].ManaPool.Total() != 0 || g.Stack.Size() != 0 ||
 		len(g.ManaPaymentScopes) != 0 {
-		t.Fatal("illegal-cast reversal either undid a forbidden draw or retained later reversible costs")
+		t.Fatal("payment window admitted a library-moving ability or retained reversible costs")
 	}
 }
 

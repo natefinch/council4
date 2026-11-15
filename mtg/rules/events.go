@@ -542,7 +542,11 @@ func emitManaProducedEvent(g *game.Game, src manaProducedSource, recipient game.
 	if amount <= 0 || len(colors) == 0 {
 		return
 	}
-	emitEvent(g, game.Event{
+	emitEvent(g, manaProducedEvent(src, recipient, colors, amount, tappedForMana))
+}
+
+func manaProducedEvent(src manaProducedSource, recipient game.PlayerID, colors []mana.Color, amount int, tappedForMana bool) game.Event {
+	return game.Event{
 		Kind:               game.EventManaProduced,
 		SourceID:           src.sourceID,
 		SourceObjectID:     src.objectID,
@@ -556,7 +560,7 @@ func emitManaProducedEvent(g *game.Game, src manaProducedSource, recipient game.
 		ManaAbility:        true,
 		TokenName:          src.tokenName,
 		TokenDef:           src.tokenDef,
-	})
+	}
 }
 
 func emitTargetEvents(g *game.Game, obj *game.StackObject) {
@@ -705,7 +709,11 @@ func cardInOpponentGraveyard(g *game.Game, controller game.PlayerID, cardID id.I
 }
 
 func emitAbilityActivatedEvent(g *game.Game, obj *game.StackObject, permanentID game.ObjectID, manaAbility bool) {
-	emitEvent(g, game.Event{
+	emitEvent(g, abilityActivatedEvent(obj, permanentID, manaAbility))
+}
+
+func abilityActivatedEvent(obj *game.StackObject, permanentID game.ObjectID, manaAbility bool) game.Event {
+	return game.Event{
 		Kind:           game.EventAbilityActivated,
 		SourceID:       obj.SourceCardID,
 		SourceObjectID: permanentID,
@@ -717,5 +725,5 @@ func emitAbilityActivatedEvent(g *game.Game, obj *game.StackObject, permanentID 
 		CardID:         obj.SourceCardID,
 		PermanentID:    permanentID,
 		TokenDef:       obj.SourceTokenDef,
-	})
+	}
 }

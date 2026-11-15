@@ -138,7 +138,37 @@ func handleDestroy(r *effectResolver, prim game.Destroy) effectResolved {
 // itself, or for an ability the source of that ability (CR 106.3, with an
 // ability's source identified by CR 113.7).
 func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
+	res, recipientID, production := evaluateAddMana(r, prim)
+	player, ok := playerByID(r.game, recipientID)
+	if !ok || player.Eliminated {
+		return res
+	}
+	for _, produced := range production {
+		if produced.unit.Persistent {
+			player.ManaPool.AddPersistentUnit(produced.unit, produced.amount)
+		} else {
+			player.ManaPool.AddUnit(produced.unit, produced.amount)
+		}
+		if produced.rider != nil {
+			for range produced.amount {
+				player.ManaRiders = append(player.ManaRiders, *produced.rider)
+			}
+		}
+	}
+	return res
+}
+
+type manaProducedUnit struct {
+	unit   mana.Unit
+	amount int
+	rider  *game.ManaRiderInstance
+}
+
+// evaluateAddMana shares the canonical production arithmetic with the resource
+// planner. Its caller must preselect combination choices before pure evaluation.
+func evaluateAddMana(r *effectResolver, prim game.AddMana) (effectResolved, game.PlayerID, []manaProducedUnit) {
 	res := effectResolved{accepted: true, amount: r.quantity(prim.Amount)}
+	var production []manaProducedUnit
 	if res.amount <= 0 && !prim.Amount.IsDynamic() {
 		res.amount = 1
 	}
@@ -146,22 +176,18 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	if prim.Player.Exists {
 		resolved, ok := r.resolvePlayer(prim.Player.Val)
 		if !ok {
-			return res
+			return res, recipientID, nil
 		}
 		recipientID = resolved
 	}
 	player, ok := playerByID(r.game, recipientID)
 	if !ok || player.Eliminated {
-		return res
+		return res, recipientID, nil
 	}
 	fromCreature := stackObjectSourceIsCreature(r.game, r.obj)
 	addToPool := func(c mana.Color, amount int, snow bool) {
 		unit := mana.Unit{Color: c, Snow: snow, FromCreature: fromCreature, Persistent: prim.PersistUntilEndOfTurn}
-		if prim.PersistUntilEndOfTurn {
-			player.ManaPool.AddPersistentUnit(unit, amount)
-		} else {
-			player.ManaPool.AddUnit(unit, amount)
-		}
+		production = append(production, manaProducedUnit{unit: unit, amount: amount})
 	}
 	if multiplier := tappedForManaProductionMultiplier(r.game, r.obj, recipientID); multiplier > 1 {
 		res.amount *= multiplier
@@ -172,7 +198,7 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 			addToPool(c, res.amount, snow)
 			res.succeeded = true
 		}
-		return res
+		return res, recipientID, production
 	}
 	if len(prim.CombinationColors) != 0 {
 		snow := stackObjectSourceIsSnow(r.game, r.obj)
@@ -180,7 +206,7 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 			addToPool(c, 1, snow)
 			res.succeeded = true
 		}
-		return res
+		return res, recipientID, production
 	}
 	manaColor := prim.ManaColor
 	if choice, ok := linkedResolutionChoice(r.obj, string(prim.ChoiceFrom)); ok && choice.Kind == game.ResolutionChoiceMana {
@@ -189,7 +215,7 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	if prim.EntryChoiceFrom != "" {
 		choice, ok := linkedResolutionChoice(r.obj, string(prim.EntryChoiceFrom))
 		if !ok || choice.Kind != game.ResolutionChoiceMana {
-			return res
+			return res, recipientID, nil
 		}
 		manaColor = choice.Color
 	}
@@ -198,7 +224,7 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 		if key := prim.SpendRider.Val.ChosenSubtypeFrom; key != "" {
 			choice, ok := linkedResolutionChoice(r.obj, string(key))
 			if !ok || choice.Kind != game.ResolutionChoiceSubtype {
-				return res
+				return res, recipientID, nil
 			}
 			chosenSubtype = choice.Subtype
 		}
@@ -207,19 +233,17 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 	addToPool(manaColor, res.amount, snow)
 	if prim.SpendRider.Exists {
 		unit := mana.Unit{Color: manaColor, Snow: snow, FromCreature: fromCreature, Persistent: prim.PersistUntilEndOfTurn}
-		for i := 0; i < res.amount; i++ {
-			player.ManaRiders = append(player.ManaRiders, game.ManaRiderInstance{
-				Unit:           unit,
-				Controller:     r.obj.Controller,
-				SourceID:       r.obj.SourceCardID,
-				SourceObjectID: r.obj.SourceID,
-				ChosenSubtype:  chosenSubtype,
-				Rider:          prim.SpendRider.Val,
-			})
+		production[len(production)-1].rider = &game.ManaRiderInstance{
+			Unit:           unit,
+			Controller:     r.obj.Controller,
+			SourceID:       r.obj.SourceCardID,
+			SourceObjectID: r.obj.SourceID,
+			ChosenSubtype:  chosenSubtype,
+			Rider:          prim.SpendRider.Val,
 		}
 	}
 	res.succeeded = true
-	return res
+	return res, recipientID, production
 }
 
 // tappedForManaProductionMultiplier returns the factor by which an activated
@@ -238,8 +262,15 @@ func tappedForManaProductionMultiplier(g *game.Game, obj *game.StackObject, reci
 		return 1
 	}
 	permanent, ok := permanentByObjectID(g, obj.SourceID)
-	if !ok || !permanent.Tapped || effectiveController(g, permanent) != recipientID {
-		return 1
+	if ok {
+		if !permanent.Tapped || effectiveController(g, permanent) != recipientID {
+			return 1
+		}
+	} else {
+		snapshot, known := lastKnownObject(g, obj.SourceID)
+		if !known || snapshot.Controller != recipientID {
+			return 1
+		}
 	}
 	if !permanentTappedForManaIsCurrent(g, obj.SourceID) {
 		return 1

@@ -79,6 +79,43 @@ random.
   must stay deterministic and fail closed: an unrecognized shape is opaque,
   never approximated.
 
+## Mana-schema implementation
+
+`Engine.PaymentPlanner(game)` binds `Complete` and `Apply` to the executing
+Engine. Planning uses structural activation schemas and a resource-only
+copy-on-write evaluation view, not `Game.Clone` or speculative activation.
+The view resets transient evaluation/choice frames; the payment adapter
+rejects mutations and translates permanent references by ObjectID.
+
+Plans retain exact activation costs, bounded choices, production units and
+spend riders. The shared canonical production, life, counter-replacement and
+trigger-matching evaluators are used for forecasting. Ordinary tap sources
+retain a fast path; other supported activations reserve their input mana,
+life, counters and source jointly, including effects that make a later
+nonmana cost payable. Unrecognized effects, selectable replacement ordering,
+finite damage shields/redirection, optional mana-trigger bodies and
+non-deterministic mana-trigger choices remain opaque. Conditions outside
+battlefield/resource predicates, bounded trigger-use policies and cyclic
+mana-trigger graphs also remain explicit modeling boundaries rather than
+assumed successes.
+
+`Partial.ManaAbilities` and `StepManaAbility` preserve the choice to use or
+avoid an identified source; `Options` enumerates component choices across
+projected resources and retains only alternatives with a joint completion.
+`Apply` revalidates the exact witness before activating through the normal
+Engine mana operation. CR 605.1b mana triggers resolve immediately, once,
+without a residual stack object, using normal triggered-body optional decisions
+and resolution-time intervening-condition checks. Library-moving abilities are
+excluded under CR 605.1a (official rules effective 2026-11-06).
+An optional `TurnLog` supplied to `PaymentPlanner` records each planned
+activation through the normal source-labelled payment-mana log.
+
+`ApplyResult.ManaBefore` is the pool immediately before the final payment,
+including planned production. Spell-commit rider consumers must use this
+receipt with `Spell.PoolSpend`, rather than a snapshot captured before
+activation. Input/filter and non-spell rider consumption is handled during
+application. Existing payment callers retain their APIs pending migration.
+
 ## Migration
 
 Follow the ordered sub-issues of #3718: planner plans and completion queries,

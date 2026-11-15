@@ -17,7 +17,10 @@ import (
 // helpers that operate on *game.Game. One instance is created per payment
 // operation and holds the game pointer for the duration of that call.
 type rulesPaymentState struct {
-	g *game.Game
+	g        *game.Game
+	readOnly bool
+	engine   *Engine
+	log      *TurnLog
 }
 
 var _ payment.State = (*rulesPaymentState)(nil)
@@ -87,46 +90,57 @@ func (s *rulesPaymentState) Battlefield() []*game.Permanent {
 }
 
 func (s *rulesPaymentState) EffectiveController(p *game.Permanent) game.PlayerID {
+	p = s.viewPermanent(p)
 	return effectiveController(s.g, p)
 }
 
 func (s *rulesPaymentState) PermanentCardDef(p *game.Permanent) (*game.CardDef, bool) {
+	p = s.viewPermanent(p)
 	return permanentCardDef(s.g, p)
 }
 
 func (s *rulesPaymentState) IsCommanderPermanent(p *game.Permanent) bool {
+	p = s.viewPermanent(p)
 	return len(sourceCommanderIDs(s.g, p)) > 0
 }
 
 func (s *rulesPaymentState) PermanentHasKeyword(p *game.Permanent, keyword game.Keyword) bool {
+	p = s.viewPermanent(p)
 	return hasKeyword(s.g, p, keyword)
 }
 
 func (s *rulesPaymentState) PermanentEffectiveAbilities(p *game.Permanent) []game.Ability {
+	p = s.viewPermanent(p)
 	return permanentEffectiveAbilitiesView(s.g, p)
 }
 
 func (s *rulesPaymentState) PermanentHasType(p *game.Permanent, t types.Card) bool {
+	p = s.viewPermanent(p)
 	return permanentHasType(s.g, p, t)
 }
 
 func (s *rulesPaymentState) PermanentSummoningSick(p *game.Permanent) bool {
+	p = s.viewPermanent(p)
 	return permanentSummoningSick(s.g, p)
 }
 
 func (s *rulesPaymentState) PermanentHasSupertype(p *game.Permanent, supertype types.Super) bool {
+	p = s.viewPermanent(p)
 	return permanentHasSupertype(s.g, p, supertype)
 }
 
 func (s *rulesPaymentState) PermanentHasSubtype(p *game.Permanent, subtype types.Sub) bool {
+	p = s.viewPermanent(p)
 	return permanentHasSubtype(s.g, p, subtype)
 }
 
 func (s *rulesPaymentState) PermanentEffectiveColors(p *game.Permanent) []color.Color {
+	p = s.viewPermanent(p)
 	return permanentEffectiveColors(s.g, p)
 }
 
 func (s *rulesPaymentState) PermanentMatchesSelection(p *game.Permanent, sel game.Selection) bool {
+	p = s.viewPermanent(p)
 	return permanentMatchesCostSelection(s.g, p, sel)
 }
 
@@ -139,6 +153,7 @@ func (s *rulesPaymentState) GraveyardCastGrantedAlternatives(playerID game.Playe
 }
 
 func (s *rulesPaymentState) ActivationConditionSatisfied(playerID game.PlayerID, permanent *game.Permanent, condition opt.V[game.Condition]) bool {
+	permanent = s.viewPermanent(permanent)
 	return activationConditionSatisfied(s.g, playerID, permanent, condition)
 }
 
@@ -152,6 +167,7 @@ func (s *rulesPaymentState) PermanentByObjectID(objectID id.ID) (*game.Permanent
 }
 
 func (s *rulesPaymentState) PermanentPower(p *game.Permanent) int {
+	p = s.viewPermanent(p)
 	return effectivePower(s.g, p)
 }
 
@@ -342,14 +358,17 @@ func cardPaysLifeForCommanderTax(card *game.CardDef) bool {
 }
 
 func (s *rulesPaymentState) SetTapped(p *game.Permanent, tapped bool) {
+	s.assertWritable()
 	setPermanentTapped(s.g, p, tapped)
 }
 
 func (s *rulesPaymentState) SetTappedForMana(p *game.Permanent) {
+	s.assertWritable()
 	setPermanentTappedForMana(s.g, p)
 }
 
 func (s *rulesPaymentState) RecordManaProduced(source *game.Permanent, recipient game.PlayerID, isLand bool, c mana.Color, amount int, tappedForMana bool) {
+	s.assertWritable()
 	emitManaProducedEvent(s.g, manaProducedSource{
 		sourceID:   source.CardInstanceID,
 		objectID:   source.ObjectID,
@@ -361,10 +380,12 @@ func (s *rulesPaymentState) RecordManaProduced(source *game.Permanent, recipient
 }
 
 func (s *rulesPaymentState) RecordManaAbilityUse(p *game.Permanent, abilityIndex int, timing game.TimingRestriction) {
+	s.assertWritable()
 	recordActivatedAbilityUse(s.g, p.ObjectID, abilityIndex, timing)
 }
 
 func (s *rulesPaymentState) RemoveCounters(playerID game.PlayerID, p *game.Permanent, kind counter.Kind, amount int) bool {
+	s.assertWritable()
 	if p == nil || p.Counters.Get(kind) < amount {
 		return false
 	}
@@ -372,10 +393,12 @@ func (s *rulesPaymentState) RemoveCounters(playerID game.PlayerID, p *game.Perma
 }
 
 func (s *rulesPaymentState) AddCounters(playerID game.PlayerID, p *game.Permanent, kind counter.Kind, amount int) bool {
+	s.assertWritable()
 	return addCountersToPermanentControlledBy(s.g, playerID, p, kind, amount)
 }
 
-func (*rulesPaymentState) ExertPermanent(p *game.Permanent) bool {
+func (s *rulesPaymentState) ExertPermanent(p *game.Permanent) bool {
+	s.assertWritable()
 	if p == nil {
 		return false
 	}
@@ -384,6 +407,7 @@ func (*rulesPaymentState) ExertPermanent(p *game.Permanent) bool {
 }
 
 func (s *rulesPaymentState) MillCards(playerID game.PlayerID, amount int) {
+	s.assertWritable()
 	for range amount {
 		player, ok := playerByID(s.g, playerID)
 		if !ok {
@@ -397,10 +421,12 @@ func (s *rulesPaymentState) MillCards(playerID game.PlayerID, amount int) {
 }
 
 func (s *rulesPaymentState) LoseLife(playerID game.PlayerID, amount int) {
+	s.assertWritable()
 	loseLife(s.g, playerID, amount)
 }
 
 func (s *rulesPaymentState) SetPlayerEnergyCounters(playerID game.PlayerID, amount int) bool {
+	s.assertWritable()
 	player, ok := playerByID(s.g, playerID)
 	if !ok || amount < 0 {
 		return false
@@ -410,10 +436,12 @@ func (s *rulesPaymentState) SetPlayerEnergyCounters(playerID game.PlayerID, amou
 }
 
 func (s *rulesPaymentState) EmitZoneChange(event game.Event) {
+	s.assertWritable()
 	emitZoneChangeEvent(s.g, event)
 }
 
 func (s *rulesPaymentState) EmitCardReveal(playerID game.PlayerID, sourceCardID, cardID id.ID, from zone.Type) {
+	s.assertWritable()
 	emitEvent(s.g, game.Event{
 		Kind:       game.EventCardRevealed,
 		SourceID:   sourceCardID,
@@ -426,17 +454,21 @@ func (s *rulesPaymentState) EmitCardReveal(playerID game.PlayerID, sourceCardID,
 }
 
 func (s *rulesPaymentState) MovePermanentToZone(p *game.Permanent, dest zone.Type) bool {
+	s.assertWritable()
 	return movePermanentToZone(s.g, p, dest)
 }
 
 func (s *rulesPaymentState) SacrificePermanent(p *game.Permanent) bool {
+	s.assertWritable()
 	return sacrificePermanent(s.g, p)
 }
 
 func (s *rulesPaymentState) DiscardAtRandom(playerID game.PlayerID, amount int) bool {
+	s.assertWritable()
 	return len(discardCardsAtRandomFromHand(s.g, playerID, amount)) == amount
 }
 
 func (s *rulesPaymentState) MoveCard(playerID game.PlayerID, cardID id.ID, from, to zone.Type) bool {
+	s.assertWritable()
 	return moveCardBetweenZones(s.g, playerID, cardID, from, to)
 }
