@@ -98,9 +98,10 @@ func (o paymentOrchestratorType) payAbilityCosts(g *game.Game, req payment.Abili
 	}, true
 }
 
-// canPayGenericCost reports whether the player can pay the mana cost described by req.
+// canPayGenericCost checks a complete rule/effect payment without mutation.
 func (o paymentOrchestratorType) canPayGenericCost(g *game.Game, req payment.GenericRequest) bool {
-	return o.planner(g).CanPayGenericCost(req)
+	_, ok, _ := o.planner(g).Complete(payment.ForGeneric(req), payment.Partial{})
+	return ok
 }
 
 // canPaySpellManaCost reports whether the player could pay req.Cost as the
@@ -122,7 +123,8 @@ func (o paymentOrchestratorType) spellCostOptions(g *game.Game, req payment.Spel
 // payment is a spell cast and any tagged mana spent must be evaluated against
 // the qualifying spell rather than dropped without firing.
 func (o paymentOrchestratorType) payGenericCostForSpell(g *game.Game, req payment.GenericRequest) (poolSpend map[mana.Unit]int, ok bool) {
-	return o.planner(g).PayGenericCost(req)
+	paid, _, ok := NewEngine(nil).genericPayment(g, req, "", [game.NumPlayers]PlayerAgent{}, nil)
+	return paid.Spell.PoolSpend, ok
 }
 
 // payGenericCost builds, validates, and applies the mana cost described by req.
@@ -130,13 +132,25 @@ func (o paymentOrchestratorType) payGenericCostForSpell(g *game.Game, req paymen
 // consumes are dropped without firing, keeping rider provenance exact for later
 // payments.
 func (o paymentOrchestratorType) payGenericCost(g *game.Game, req payment.GenericRequest) bool {
-	before, hasRiders := manaSpendRiderSnapshot(g, req.PlayerID)
-	poolSpend, ok := o.planner(g).PayGenericCost(req)
-	if !ok {
-		return false
+	_, _, ok := NewEngine(nil).genericPayment(g, req, "", [game.NumPlayers]PlayerAgent{}, nil)
+	return ok
+}
+
+// genericPayment supplies only the locked rule/effect cost and optional consent.
+// All resource choices, mana activations and application belong to costedAction.
+// An empty prompt means the caller has already chosen to pay.
+func (e *Engine) genericPayment(g *game.Game, req payment.GenericRequest, prompt string, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (paid payment.ApplyResult, accepted, succeeded bool) {
+	descriptor := costedAction{
+		cost:    genericRequestCost(req, func(*game.Game) bool { return true }),
+		consent: prompt,
+		announcements: func(*game.Game, [game.NumPlayers]PlayerAgent, *TurnLog) bool {
+			accepted = true
+			return true
+		},
+		commit: func(_ *game.Game, result payment.ApplyResult, _ [game.NumPlayers]PlayerAgent, _ *TurnLog, _ int) {
+			paid = result
+		},
 	}
-	if hasRiders {
-		consumeManaSpendRidersForPayment(g, req.PlayerID, nil, before, poolSpend)
-	}
-	return true
+	succeeded = e.costedAction(g, req.PlayerID, descriptor, agents, log) == actionApplied
+	return paid, accepted, succeeded
 }

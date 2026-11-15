@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -9,6 +10,66 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
+
+func TestWardPlansTreasurePaymentOrLeavesSourcesAlone(t *testing.T) {
+	for _, scenario := range []string{"pay", "decline", "unpayable"} {
+		t.Run(scenario, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			warded := addCombatPermanent(g, game.Player2, registryCardDef(t, "Tolarian Terror"))
+			spellID := addCardToHand(g, game.Player1, targetCreatureInstant())
+			g.Turn.PriorityPlayer = game.Player1
+			if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, []game.Target{game.PermanentTarget(warded.ObjectID)}, 0, nil)) ||
+				!engine.putTriggeredAbilitiesOnStack(g) {
+				t.Fatal("targeting spell or ward trigger failed")
+			}
+			count := 2
+			if scenario == "unpayable" {
+				count = 1
+			}
+			for range count {
+				if _, ok := createTokenPermanent(g, game.Player1, recklessLackeyTreasure(t)); !ok {
+					t.Fatal("Treasure creation failed")
+				}
+			}
+			consent, windows := 0, 0
+			agent := &costedObservationAgent{t: t, choose: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+				if req.Kind == game.ChoiceMay {
+					consent++
+					if req.Prompt != "Pay ward cost?" || countTokenPermanentsNamed(g, "Treasure") != count {
+						t.Fatal("ward availability consumed a resource or lost its prompt")
+					}
+					if scenario == "decline" {
+						return []int{0}
+					}
+				}
+				if req.Prompt == "Activate a mana ability while paying?" {
+					windows++
+					for _, option := range req.Options {
+						if !strings.Contains(option.Label, "Treasure") {
+							t.Fatalf("ward offered an uncompletable mana choice: %+v", req.Options)
+						}
+					}
+				}
+				return req.DefaultSelection
+			}}
+			log := &TurnLog{}
+			engine.resolveTopOfStackWithChoices(g, reboundKickerAgents(agent), log)
+			if scenario == "pay" {
+				if consent != 1 || windows != 2 || countTokenPermanentsNamed(g, "Treasure") != 0 ||
+					g.Stack.Size() != 1 || g.Players[game.Player1].ManaPool.Total() != 0 {
+					t.Fatalf("ward payment failed: consent=%d windows=%d stack=%d", consent, windows, g.Stack.Size())
+				}
+			} else if windows != 0 || countTokenPermanentsNamed(g, "Treasure") != count ||
+				!g.Players[game.Player1].Graveyard.Contains(spellID) || consent != map[bool]int{true: 1}[scenario == "decline"] {
+				t.Fatal("declined/unpayable ward activated a source, offered an impossible payment or spared the spell")
+			}
+			if scenario == "decline" && (len(log.Choices) != 1 || log.Choices[0].Selected[0] != 0) {
+				t.Fatal("ward decline was not retained in the log")
+			}
+		})
+	}
+}
 
 func TestWardCountersSpellWhenCostIsNotPaid(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

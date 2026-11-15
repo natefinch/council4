@@ -10,6 +10,44 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
+func TestWardReservesSacrificeAndManaJointly(t *testing.T) {
+	for _, extra := range []bool{false, true} {
+		t.Run(map[bool]string{false: "conflict", true: "spare artifact"}[extra], func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			warded := addCompositeWardPermanent(g, game.Player2, cost.Mana{cost.O(1)},
+				[]cost.Additional{{Kind: cost.AdditionalSacrifice, Amount: 1, MatchPermanentType: true, PermanentType: types.Artifact}})
+			spellID := addCardToHand(g, game.Player1, targetCreatureInstant())
+			g.Turn.PriorityPlayer = game.Player1
+			if !engine.applyAction(g, game.Player1, action.CastSpell(spellID, []game.Target{game.PermanentTarget(warded.ObjectID)}, 0, nil)) ||
+				!engine.putTriggeredAbilitiesOnStack(g) {
+				t.Fatal("spell/ward setup failed")
+			}
+			if _, ok := createTokenPermanent(g, game.Player1, recklessLackeyTreasure(t)); !ok {
+				t.Fatal("Treasure creation failed")
+			}
+			var spare *game.Permanent
+			if extra {
+				spare = addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Spare artifact", Types: []types.Card{types.Artifact}}})
+			}
+			seen := 0
+			agent := &costedObservationAgent{t: t, choose: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+				seen++
+				return req.DefaultSelection
+			}}
+			engine.resolveTopOfStackWithChoices(g, reboundKickerAgents(agent), &TurnLog{})
+			if extra {
+				if seen == 0 || g.Stack.Size() != 1 || countTokenPermanentsNamed(g, "Treasure") != 0 ||
+					!g.Players[game.Player1].Graveyard.Contains(spare.CardInstanceID) {
+					t.Fatal("ward did not reserve the spare artifact separately from its Treasure mana")
+				}
+			} else if seen != 0 || g.Stack.Size() != 0 || countTokenPermanentsNamed(g, "Treasure") != 1 {
+				t.Fatal("one Treasure was offered/used for both ward components")
+			}
+		})
+	}
+}
+
 func addCompositeWardPermanent(g *game.Game, controller game.PlayerID, manaCost cost.Mana, additional []cost.Additional) *game.Permanent {
 	pt := game.PT{Value: 2}
 	return addCombatPermanent(g, controller, &game.CardDef{CardFace: game.CardFace{Name: "Composite Ward Creature",

@@ -627,7 +627,8 @@ func (p Planner) Apply(plan Plan) (ApplyResult, bool, string) {
 			before[unit] += amount
 		}
 	}
-	if state, ok := p.s.(ManaState); ok && plan.request.kind != spellPayment {
+	spellSpend := plan.request.kind == spellPayment || plan.request.kind == genericPayment && plan.request.generic.Spell != nil
+	if state, ok := p.s.(ManaState); ok && !spellSpend {
 		state.ConsumePaymentRiders(current.player, current.source, before, current.mana.poolSpend)
 	}
 	if current.tapSource && !tapForAbility(p.s, current.source, current.forMana) {

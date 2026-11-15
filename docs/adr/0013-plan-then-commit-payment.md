@@ -348,6 +348,49 @@ The current illegal-action section is **734**, not the issue's historical 733.
 CR 605.1a's library-movement boundary is unchanged: Millikin and Deranged
 Assistant are nonmana abilities, never payment-window fixtures.
 
+### Rule/effect and attack payments (#3724)
+
+Ward, pay-or/unless-pays effects, resolution payments (including repeated
+payments and cumulative upkeep), pending-entry payments and attack taxes use
+`Engine.costedAction`. The generic-payment descriptor supplies the materialized
+cost and, for optional payments, consent. Availability uses pure `Complete`
+before offering consent; declining leaves mana sources untouched and retains
+the decision in the log. Subsequent component, Phyrexian and strategic mana
+choices use the procedure's completion-preserving `Options`, followed by the
+same exact, atomic `Apply`. Legacy generic-payment helper entry points also
+delegate to this procedure, rather than applying a separate payment plan.
+
+Dynamic resolution costs are materialized once. Cumulative-upkeep mana costs
+retain each repeated non-generic symbol, including independent payment choices,
+and are paid together or not at all. An entrant is not a battlefield resource:
+its dynamic costs are materialized from its pending entry, then only its card
+identity accompanies the payment request. Existing entry replacement ordering,
+cohort resource sharing and optional-payment behavior are preserved.
+
+Attack declarations reserve all chosen attackers through the existing joint
+mana-source exclusions. The total attack tax is locked before the mana window,
+not recomputed after sacrificing resources. The descriptor also checks that
+the attackers survive untapped under their controller; if an opaque activation
+loses that invariant or the payment witness, only the shared opaque checkpoint
+can reverse it. Combat then permits a fresh declaration, without withholding
+choices. No route-specific checkpoint, clone probe or affordability heuristic
+is introduced.
+
+Nonspell payments consume spend riders once through `Apply`; the compatibility
+generic casting-context entry point retains its exact receipt and riders for
+spell commit. The registered Tolarian Terror, Smothering Tithe, Mystic Remora
+and Propaganda scenarios exercise Treasure-funded payments, decline/inability
+and no partial consumption. Registered Ashnod's Altar proves attacker/sacrifice
+reservations and no double use; Waterlogged Grove proves side-effecting
+resolution and pending-entry payments. Structural and contextual opacity share
+the existing reversal and random-stream restoration, including a combat retry.
+
+Rules read: official Comprehensive Rules effective **2026-11-06**, using the
+Wizards source and SHA-256 recorded above. Sections **605.3a, 608.2g,
+702.21a–b, 508.1g–j, 702.24a–b, 118.12a–b and 734.1–2**. The current
+illegal-action section is **734**, not 733; CR 605.1a's library-movement
+boundary remains unchanged.
+
 Follow the ordered sub-issues of #3718: planner plans and completion queries,
 mana-ability schemas, abilities and special actions (proving the procedure
 and the opaque fallback), priority spell casting, resolution-time casts,

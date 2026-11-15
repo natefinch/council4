@@ -1,12 +1,246 @@
 package rules
 
 import (
+	"math/rand/v2"
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
+
+func TestAttackTaxOpaqueReversalCanRedeclare(t *testing.T) {
+	g, engine, _, _ := costedOpaqueFixture(t, rand.New(&costedOpaqueSource{word: 37}), "battlefield")
+	ce := combatEngine{engine}
+	addBasicLandPermanent(g, game.Player1, types.Island)
+	addCombatPermanent(g, game.Player2, registryCardDef(t, "Propaganda"))
+	attacker := addCombatPermanent(g, game.Player1, registryCardDef(t, "Grizzly Bears"))
+	attacker.SummoningSick = false
+	g.Combat = &game.CombatState{}
+	g.Turn.Phase, g.Turn.Step, g.Turn.ActivePlayer = game.PhaseCombat, game.StepDeclareAttackers, game.Player1
+	declared, opaque := 0, 0
+	agent := &controlScript{
+		action: func(_ PlayerObservation, legal []action.Action) action.Action {
+			declared++
+			for _, candidate := range legal {
+				if declare, ok := candidate.DeclareAttackersPayload(); ok && len(declare.Attackers) == 1 &&
+					declare.Attackers[0].Attacker == attacker.ObjectID && declare.Attackers[0].Target.Player == game.Player2 {
+					return candidate
+				}
+			}
+			t.Fatal("validated declaration was withheld after opaque reversal")
+			return action.Pass()
+		},
+		choice: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+			if declared == 1 {
+				for _, option := range req.Options {
+					if strings.Contains(option.Label, "(opaque)") {
+						opaque++
+						return []int{option.Index}
+					}
+				}
+			}
+			return req.DefaultSelection
+		},
+	}
+	ce.declareAttackers(g, reboundKickerAgents(agent), &TurnLog{})
+	if declared != 2 || opaque != 1 || !g.Combat.AttackDeclarationComplete || len(g.Combat.Attackers) != 1 ||
+		!attacker.Tapped || g.Players[game.Player1].Life != 39 || g.Players[game.Player1].ManaPool.Total() != 0 ||
+		countTokenPermanentsNamed(g, "Opaque token") != 0 {
+		t.Fatal("attack declaration did not reuse the shared opaque rollback and then complete normally")
+	}
+}
+
+func TestRegisteredAttackTaxPlansTreasurePayment(t *testing.T) {
+	for _, scenario := range []string{"pay", "decline attack", "unpayable"} {
+		t.Run(scenario, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			ce := combatEngine{engine}
+			attacker := addCombatPermanent(g, game.Player1, registryCardDef(t, "Grizzly Bears"))
+			attacker.SummoningSick = false
+			addCombatPermanent(g, game.Player2, registryCardDef(t, "Propaganda"))
+			count := 2
+			if scenario == "unpayable" {
+				count = 1
+			}
+			for range count {
+				if _, ok := createTokenPermanent(g, game.Player1, recklessLackeyTreasure(t)); !ok {
+					t.Fatal("Treasure creation failed")
+				}
+			}
+			g.Combat = &game.CombatState{}
+			g.Turn.Phase, g.Turn.Step, g.Turn.ActivePlayer = game.PhaseCombat, game.StepDeclareAttackers, game.Player1
+			declarations := []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}}
+			if scenario == "decline attack" {
+				declarations = nil
+			}
+			declare := action.DeclareAttackersAction{Attackers: declarations}
+			payable := scenario != "unpayable"
+			if ce.attackersLegal(g, game.Player1, declare) != payable || countTokenPermanentsNamed(g, "Treasure") != count || attacker.Tapped {
+				t.Fatal("attack availability lost its witness or mutated resources")
+			}
+			windows := 0
+			agent := &costedObservationAgent{t: t, choose: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+				if req.Kind == game.ChoiceMay {
+					t.Fatal("mandatory attack tax offered optional payment")
+				}
+				if req.Prompt == "Activate a mana ability while paying?" {
+					windows++
+					for _, option := range req.Options {
+						if !strings.Contains(option.Label, "Treasure") {
+							t.Fatal("attack tax offered an unpaid finish")
+						}
+					}
+				}
+				return req.DefaultSelection
+			}}
+			if ce.applyAttackersWithChoices(g, game.Player1, declare, reboundKickerAgents(agent), &TurnLog{}) != payable {
+				t.Fatal("attack-tax application disagreed with the pure witness")
+			}
+			if scenario == "pay" {
+				if windows != 2 || !attacker.Tapped || len(g.Combat.Attackers) != 1 || countTokenPermanentsNamed(g, "Treasure") != 0 ||
+					g.Players[game.Player1].ManaPool.Total() != 0 {
+					t.Fatal("attack tax was not paid with both planned Treasures")
+				}
+			} else if windows != 0 || attacker.Tapped || len(g.Combat.Attackers) != 0 || countTokenPermanentsNamed(g, "Treasure") != count {
+				t.Fatal("unpaid/declined attack activated a source or declared an attacker")
+			}
+		})
+	}
+}
+
+func TestAttackTaxReservesAttackersJointlyWithManaSacrifices(t *testing.T) {
+	for _, scenario := range []string{"attacker alone", "spare creature", "two attackers"} {
+		t.Run(scenario, func(t *testing.T) {
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			engine := NewEngine(nil)
+			ce := combatEngine{engine}
+			addCombatPermanent(g, game.Player1, registryCardDef(t, "Ashnod's Altar"))
+			addCombatPermanent(g, game.Player2, registryCardDef(t, "Propaganda"))
+			attacker := addCombatPermanent(g, game.Player1, registryCardDef(t, "Grizzly Bears"))
+			attacker.SummoningSick = false
+			declarations := []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}}
+			var spare *game.Permanent
+			if scenario != "attacker alone" {
+				spare = addCombatPermanent(g, game.Player1, registryCardDef(t, "Grizzly Bears"))
+			}
+			if scenario == "two attackers" {
+				second := addCombatPermanent(g, game.Player1, registryCardDef(t, "Grizzly Bears"))
+				second.SummoningSick = false
+				declarations = append(declarations, game.AttackDeclaration{Attacker: second.ObjectID, Target: game.AttackTarget{Player: game.Player2}})
+			}
+			g.Combat = &game.CombatState{}
+			g.Turn.Phase, g.Turn.Step, g.Turn.ActivePlayer = game.PhaseCombat, game.StepDeclareAttackers, game.Player1
+			declare := action.DeclareAttackersAction{Attackers: declarations}
+			if legal := ce.attackersLegal(g, game.Player1, declare); legal != (scenario == "spare creature") {
+				t.Fatalf("attack legality = %v; attacker or spare was double-used", legal)
+			}
+			prompts := 0
+			agent := &costedObservationAgent{t: t, choose: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+				prompts++
+				for _, option := range req.Options {
+					for _, target := range option.Targets {
+						for _, declaration := range declarations {
+							if target.PermanentID == declaration.Attacker {
+								t.Fatal("declared attacker was offered to fund its own tax")
+							}
+						}
+					}
+				}
+				return req.DefaultSelection
+			}}
+			paid := ce.applyAttackersWithChoices(g, game.Player1, declare, reboundKickerAgents(agent), &TurnLog{})
+			if scenario == "spare creature" {
+				if !paid || prompts == 0 || !attacker.Tapped || !g.Players[game.Player1].Graveyard.Contains(spare.CardInstanceID) ||
+					g.Players[game.Player1].Graveyard.Contains(attacker.CardInstanceID) || g.Players[game.Player1].ManaPool.Total() != 0 {
+					t.Fatal("Altar did not sacrifice only the spare creature to pay the whole tax")
+				}
+			} else if paid || prompts != 0 || attacker.Tapped || g.Players[game.Player1].Graveyard.Size() != 0 {
+				t.Fatal("impossible joint payment prompted or consumed a creature")
+			}
+		})
+	}
+}
+
+func TestAttackTaxTotalStaysLockedWhileManaSourcesLeave(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	ce := combatEngine{engine}
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	// A resource-dependent tax makes any accidental recalculation observable:
+	// sacrificing the payer's Treasures must not reduce the locked {2} total.
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name: "Artifact-count attack tax", Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{RuleEffects: []game.RuleEffect{{
+			Kind: game.RuleEffectAttackTaxPerCreature, AffectedPlayer: game.PlayerYou,
+			CardSelection: game.Selection{RequiredTypes: []types.Card{types.Artifact}, Controller: game.ControllerOpponent},
+		}}}},
+	}})
+	for range 2 {
+		if _, ok := createTokenPermanent(g, game.Player1, recklessLackeyTreasure(t)); !ok {
+			t.Fatal("Treasure creation failed")
+		}
+	}
+	g.Combat = &game.CombatState{}
+	g.Turn.Phase, g.Turn.Step, g.Turn.ActivePlayer = game.PhaseCombat, game.StepDeclareAttackers, game.Player1
+	declare := action.DeclareAttackersAction{Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}}}
+	if !ce.applyAttackersWithChoices(g, game.Player1, declare, [game.NumPlayers]PlayerAgent{}, &TurnLog{}) ||
+		countTokenPermanentsNamed(g, "Treasure") != 0 || g.Players[game.Player1].ManaPool.Total() != 0 || !attacker.Tapped {
+		t.Fatal("changing the resource-dependent tax changed the locked payment")
+	}
+}
+
+func TestAttackTaxTotalStaysLockedWhileOpaqueSourceLeaves(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	engine := NewEngine(nil)
+	ce := combatEngine{engine}
+	attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
+	grove := addCombatPermanent(g, game.Player1, registryCardDef(t, "Waterlogged Grove"))
+	island := addBasicLandPermanent(g, game.Player1, types.Island)
+	opaque := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Opaque token-maker", Types: []types.Card{types.Artifact},
+		ManaAbilities: []game.ManaAbility{{
+			AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalSacrificeSource, Amount: 1}},
+			Content: game.Mode{Sequence: []game.Instruction{
+				{Primitive: game.CreateToken{Amount: game.Fixed(1), Source: game.TokenDef(vanillaCreature("Mana companion", 1, 1))}},
+				{Primitive: game.AddMana{Amount: game.Fixed(2), ManaColor: mana.C}},
+			}}.Ability(),
+		}},
+	}})
+	addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Spare artifact", Types: []types.Card{types.Artifact}}})
+	addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+		Name: "Artifact-count attack tax", Types: []types.Card{types.Enchantment},
+		StaticAbilities: []game.StaticAbility{{RuleEffects: []game.RuleEffect{{
+			Kind: game.RuleEffectAttackTaxPerCreature, AffectedPlayer: game.PlayerYou,
+			CardSelection: game.Selection{RequiredTypes: []types.Card{types.Artifact}, Controller: game.ControllerOpponent},
+		}}}},
+	}})
+	g.Combat = &game.CombatState{}
+	g.Turn.Phase, g.Turn.Step, g.Turn.ActivePlayer = game.PhaseCombat, game.StepDeclareAttackers, game.Player1
+	declare := action.DeclareAttackersAction{Attackers: []game.AttackDeclaration{{Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2}}}}
+	selected := 0
+	agent := &costedObservationAgent{t: t, choose: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+		for _, option := range req.Options {
+			if strings.Contains(option.Label, "Opaque token-maker") && strings.Contains(option.Label, "(opaque)") {
+				selected++
+				return []int{option.Index}
+			}
+		}
+		return req.DefaultSelection
+	}}
+	if !ce.applyAttackersWithChoices(g, game.Player1, declare, reboundKickerAgents(agent), &TurnLog{}) || selected != 1 ||
+		!attacker.Tapped || grove.Tapped || island.Tapped || !g.Players[game.Player1].Graveyard.Contains(opaque.CardInstanceID) ||
+		g.Players[game.Player1].ManaPool.Total() != 0 || countTokenPermanentsNamed(g, "Mana companion") != 1 {
+		t.Fatal("opaque activation changed the locked attack total or spent unchosen sources")
+	}
+	if current, ok := ce.attackTaxCost(g, declare.Attackers); !ok || current.String() != "{1}" {
+		t.Fatal("fixture did not reduce the live tax after locking it at {2}")
+	}
+}
 
 // addScaledEnchantmentAttackTaxPermanent adds the Sphere of Safety static: a
 // creature can't attack the controller or a planeswalker they control unless its

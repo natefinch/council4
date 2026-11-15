@@ -5,7 +5,6 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
-	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
@@ -21,29 +20,19 @@ func (e *Engine) resolveResolutionPaymentValue(g *game.Game, obj *game.StackObje
 		return false, false
 	}
 	source := resolutionPaymentSource(g, obj)
-	if !canPayResolutionPayment(g, playerID, source, stackObjectSourceID(obj), res) {
-		return false, false
-	}
 	prompt := res.Prompt
 	if prompt == "" {
 		prompt = "Pay resolution cost?"
 	}
-	if !e.chooseMay(g, agents, playerID, prompt, log) {
-		return false, false
-	}
-	prefs := e.paymentPreferencesForPermanentCost(g, playerID, source, manaCostPtr(res.ManaCost), res.AdditionalCosts, res.XValue, agents, log)
-	if !paymentOrch.payGenericCost(g, payment.GenericRequest{
+	_, accepted, succeeded = e.genericPayment(g, payment.GenericRequest{
 		PlayerID:        playerID,
 		Source:          source,
 		SourceCardID:    stackObjectSourceID(obj),
 		Cost:            manaCostPtr(res.ManaCost),
 		XValue:          res.XValue,
 		AdditionalCosts: res.AdditionalCosts,
-		Prefs:           prefs,
-	}) {
-		return true, false
-	}
-	return true, true
+	}, prompt, agents, log)
+	return accepted, succeeded
 }
 
 func materializeResolutionPayment(g *game.Game, obj *game.StackObject, source *game.Permanent, res *game.ResolutionPayment) (game.ResolutionPayment, bool) {
@@ -140,20 +129,6 @@ func resolutionPaymentPayer(g *game.Game, obj *game.StackObject, res *game.Resol
 		return resolvePlayerReference(g, obj, res.Payer.Val)
 	}
 	return stackObjectController(obj), true
-}
-
-func canPayResolutionPayment(g *game.Game, playerID game.PlayerID, source *game.Permanent, sourceCardID id.ID, res *game.ResolutionPayment) bool {
-	if res == nil {
-		return true
-	}
-	return paymentOrch.canPayGenericCost(g, payment.GenericRequest{
-		PlayerID:        playerID,
-		Source:          source,
-		SourceCardID:    sourceCardID,
-		Cost:            manaCostPtr(res.ManaCost),
-		XValue:          res.XValue,
-		AdditionalCosts: res.AdditionalCosts,
-	})
 }
 
 func resolutionPaymentSource(g *game.Game, obj *game.StackObject) *game.Permanent {

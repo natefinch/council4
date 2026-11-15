@@ -20,6 +20,7 @@ import (
 type costedAction struct {
 	cost          activationCost
 	available     func(*game.Game) bool
+	consent       string
 	object        *game.StackObject
 	spellSource   *costedSpellSource
 	usesStack     bool
@@ -38,6 +39,9 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 		available = func(g *game.Game) bool { return e.costedActionAvailable(g, player, descriptor.cost) }
 	}
 	if !available(g) {
+		return actionFailed
+	}
+	if descriptor.consent != "" && !e.chooseMay(g, agents, player, descriptor.consent, log) {
 		return actionFailed
 	}
 	defer g.OpenLibraryTopWindow()()
