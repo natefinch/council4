@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 // foretellExileCost is the fixed generic cost paid to foretell a card
@@ -29,7 +30,7 @@ func foretellCostForCard(card *game.CardDef) (cost.Mana, bool) {
 // foretell cost payable now or with payment-time mana abilities (CR 605.3a).
 // Unlike Plot, foretelling is not restricted to sorcery speed.
 func (e *Engine) canForetellCard(g *game.Game, playerID game.PlayerID, cardID id.ID) bool {
-	return e.activationFeasible(g, playerID, foretellCost(g, playerID, cardID))
+	return e.costedActionAvailable(g, playerID, foretellCost(g, playerID, cardID))
 }
 
 // foretellCost is the cost of foretelling the hand card cardID, or the zero
@@ -51,7 +52,7 @@ func foretellCost(g *game.Game, playerID game.PlayerID, cardID id.ID) activation
 		return activationCost{}
 	}
 	exileCost := foretellExileCost()
-	return specialActionCost(playerID, &exileCost, handCardPresent(playerID, cardID))
+	return handSpecialActionCost(playerID, cardID, &exileCost)
 }
 
 // applyForetellCard resolves a foretell special action: the player pays the fixed
@@ -59,30 +60,26 @@ func foretellCost(g *game.Game, playerID game.PlayerID, cardID id.ID) activation
 // exiles the card from hand face down, recording the foretell turn so the card
 // may be cast from exile for its foretell cost on a later turn (CR 702.143a).
 func (e *Engine) applyForetellCard(g *game.Game, playerID game.PlayerID, cardID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
-	defer g.OpenLibraryTopWindow()()
 	c := foretellCost(g, playerID, cardID)
-	if !e.activationFeasible(g, playerID, c) {
+	if !e.costedActionAvailable(g, playerID, c) {
 		return actionFailed
 	}
 	card, _ := g.GetCardInstance(cardID)
-	exileCost := foretellExileCost()
-	if outcome := e.paySpecialActionCost(g, playerID, c, &exileCost, agents, log); outcome != actionApplied {
-		return outcome
-	}
-	destination, moved := moveCardBetweenZonesWithEvent(g, game.Event{
-		Controller: playerID, Player: card.Owner, CardID: cardID,
-		FromZone: zone.Hand, ToZone: zone.Exile,
-	}, zoneMoveOptions{faceDownExile: true})
-	if !moved {
-		return actionFailed
-	}
-	if destination == zone.Exile {
-		if g.ForetoldCards == nil {
-			g.ForetoldCards = make(map[id.ID]int)
+	return e.costedAction(g, playerID, costedAction{cost: c, commit: func(g *game.Game, _ payment.ApplyResult, _ [game.NumPlayers]PlayerAgent, _ *TurnLog, _ int) {
+		destination, moved := moveCardBetweenZonesWithEvent(g, game.Event{
+			Controller: playerID, Player: card.Owner, CardID: cardID,
+			FromZone: zone.Hand, ToZone: zone.Exile,
+		}, zoneMoveOptions{faceDownExile: true})
+		if !moved {
+			panic("completed foretell source disappeared")
 		}
-		g.ForetoldCards[cardID] = g.Turn.TurnNumber
-	}
-	return actionApplied
+		if destination == zone.Exile {
+			if g.ForetoldCards == nil {
+				g.ForetoldCards = make(map[id.ID]int)
+			}
+			g.ForetoldCards[cardID] = g.Turn.TurnNumber
+		}
+	}}, agents, log)
 }
 
 // legalForetellActions returns the foretell special actions available to the

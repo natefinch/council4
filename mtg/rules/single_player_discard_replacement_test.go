@@ -45,6 +45,9 @@ func progenitusDiscardAgents(recorder replacementChoiceRecorder) [game.NumPlayer
 			if len(picks) == 0 {
 				return req.DefaultSelection
 			}
+			if len(picks) > req.MaxChoices {
+				picks = picks[:req.MaxChoices]
+			}
 			return picks
 		}}
 	}

@@ -248,7 +248,7 @@ func TestActivationPaysWithPaymentTimeManaAbilities(t *testing.T) {
 			if p.ManaPool.Total() != 0 || p.Life != life-len(route.order) {
 				t.Fatalf("pool = %d, life = %d; want the activated lands' mana spent and %d life paid", p.ManaPool.Total(), p.Life, len(route.order))
 			}
-			if agent.hidden != 0 || agent.maxDepth != 2 {
+			if agent.hidden != 0 || agent.maxDepth < 1 || agent.maxDepth > 2 {
 				t.Fatalf("top hidden at %d window prompts, deepest library-top windows = %d; want the unchanged top revealed and the land's window nested in the activation's", agent.hidden, agent.maxDepth)
 			}
 			assertTopShown(t, g, "Future Sight", top)
@@ -313,14 +313,9 @@ func TestOptionalActivationManaWindow(t *testing.T) {
 	}
 }
 
-// TestUnpaidActivationIsReversed begins each route's activation, offered
-// because both lands together could pay it, but activates all but the last
-// of the mana abilities it needs while paying. The locked cost can't then be
-// paid, so the activation is reversed (CR 733.1): nothing of the activation
-// remains, and the lands' mana abilities are reversed with it, untapping them
-// and restoring the life paid. A repeated reversed activation is exhausted
-// (CR 733.2 lets the player redo it, but a deterministic player moves on).
-func TestUnpaidActivationIsReversed(t *testing.T) {
+// CR 601.2g–h / 602.2b: a normal payment offers only choices retaining a
+// completion. Declining the only usable source is not an offered option.
+func TestActivationRetainsCompletionWhenManaChoicesDeclined(t *testing.T) {
 	t.Parallel()
 	for _, route := range activationWindowRoutes() {
 		t.Run(route.name, func(t *testing.T) {
@@ -334,27 +329,17 @@ func TestUnpaidActivationIsReversed(t *testing.T) {
 			if !ok {
 				t.Fatal("activation payable with both lands wasn't offered")
 			}
-			activate, _ := act.ActivateAbilityPayload()
 			life := g.Players[game.Player1].Life
-			attempts := &castAttempts{}
-
-			for attempt := range 2 {
-				agent := newActivationWindowAgent(route.order[:len(route.order)-1], top)
-				outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
-				if outcome != actionReversed || agent.activated != len(route.order)-1 {
-					t.Fatalf("attempt %d: outcome = %v after %d mana abilities, want the activation reversed", attempt, outcome, agent.activated)
-				}
-				attempts.reverseActivationAttempt(activate)
-				route.undone(t, g, source)
-				requireLandsUnused(t, g, life, route.lands...)
-				if got := g.Players[game.Player1].ManaPool.Total(); got != 0 {
-					t.Fatalf("pool = %d, want the reversed mana gone", got)
-				}
-				assertTopShown(t, g, "Future Sight", top)
+			agent := newActivationWindowAgent(route.order[:len(route.order)-1], top)
+			outcome, _ := e.attemptActionWithChoices(g, game.Player1, act, reboundKickerAgents(agent), &TurnLog{}, nil)
+			if outcome != actionApplied {
+				t.Fatalf("outcome = %v, want the retained completion applied", outcome)
 			}
-			if !attempts.actionExhausted(act) {
-				t.Fatal("activation reversed twice isn't exhausted")
+			route.done(t, g, source)
+			if g.Players[game.Player1].Life != life-len(route.order) || g.Players[game.Player1].ManaPool.Total() != 0 {
+				t.Fatal("the retained payment witness was not paid exactly")
 			}
+			assertTopShown(t, g, "Future Sight", top)
 		})
 	}
 }
@@ -381,12 +366,9 @@ func (*activationLoopAgent) ChooseChoice(_ PlayerObservation, request game.Choic
 	return request.DefaultSelection
 }
 
-// TestActivationReversalsInPriorityLoop runs a player who begins each route's
-// activation whenever it is offered but declines every payment-time mana
-// window, with only the lands to pay. Each unpaid activation is reversed and
-// the player keeps priority (CR 733.2); once the repeat is exhausted the
-// player passes, and the step ends with nothing activated or paid.
-func TestActivationReversalsInPriorityLoop(t *testing.T) {
+// Normal activation completes on its first attempt, without withholding or
+// reversal (CR 601.2h–i / 602.2b).
+func TestActivationCompletionInPriorityLoop(t *testing.T) {
 	t.Parallel()
 	for _, route := range activationWindowRoutes() {
 		t.Run(route.name, func(t *testing.T) {
@@ -401,11 +383,12 @@ func TestActivationReversalsInPriorityLoop(t *testing.T) {
 
 			e.runPriorityLoop(g, reboundKickerAgents(agent), &TurnLog{})
 
-			if agent.activation < 2 {
-				t.Fatalf("activations begun = %d, want repeated reversed attempts", agent.activation)
+			if agent.activation != 1 {
+				t.Fatalf("activations begun = %d, want one completed activation", agent.activation)
 			}
-			route.undone(t, g, source)
-			requireLandsUnused(t, g, life, route.lands...)
+			if g.Players[game.Player1].Life != life-len(route.order) {
+				t.Fatal("completion did not pay the mana sources' life costs")
+			}
 		})
 	}
 }

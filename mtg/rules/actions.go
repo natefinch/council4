@@ -512,15 +512,11 @@ func (e *Engine) attemptActionWithChoices(g *game.Game, playerID game.PlayerID, 
 		case actionApplied:
 			countAbilityActivation(g, activate)
 		case actionReversed:
-			attempts.reverseActivationAttempt(activate)
 		case actionFailed:
 		}
 		return outcome, act
 	}
 	if outcome, ok := e.attemptSpecialAction(g, playerID, act, agents, log); ok {
-		if outcome == actionReversed {
-			attempts.reverseSpecialActionAttempt(act)
-		}
 		return outcome, act
 	}
 	return outcomeOf(e.applyNonCastAction(g, playerID, act, agents, log)), act
@@ -584,24 +580,27 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 			if body, ok := ability.(*game.ManaAbility); ok {
 				if !payment.IsAutomaticManaAbility(body) &&
 					!containsEquivalentManaAbility(seenManualMana, body) &&
-					canActivateManaAbility(g, playerID, permanent, body, idx) {
-					actions = append(actions, actionBuild.activateAbility(permanent.ObjectID, idx, nil, 0))
-					seenManualMana = append(seenManualMana, body)
+					manaAbilityAnnouncementLegal(g, playerID, permanent, body, idx) {
+					activation, _ := actionBuild.activateAbility(permanent.ObjectID, idx, nil, 0).ActivateAbilityPayload()
+					if descriptor, ok := e.describeActivation(g, playerID, activation); ok && e.costedActionAvailable(g, playerID, descriptor.cost) {
+						actions = append(actions, actionBuild.activateAbility(permanent.ObjectID, idx, nil, 0))
+						seenManualMana = append(seenManualMana, body)
+					}
 				}
 				continue
 			}
 			if body, ok := ability.(*game.ActivatedAbility); ok {
 				sourceCard, _ := g.GetCardInstance(permanent.CardInstanceID)
 				effectiveCost := effectiveActivatedAbilityCost(g, playerID, sourceCard, body)
-				for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(effectiveCost), body.AdditionalCosts) {
+				for _, xValue := range costedAbilityXValues(body, manaCostPtr(effectiveCost)) {
 					for _, modes := range modeChoicesForBody(body) {
 						targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, game.Event{}, body, modes, xValue)
 						if targetResult.kind == targetInvalidSpec {
 							continue
 						}
 						for choiceIndex, targets := range targetResult.choices {
-							if e.activationFeasible(g, playerID, equipActivation(g, playerID, permanent, body, idx, targets, xValue, modes)) ||
-								e.activationFeasible(g, playerID, generalActivation(g, playerID, permanent, body, idx, targets, xValue, modes)) {
+							if e.costedActionAvailable(g, playerID, equipActivation(g, playerID, permanent, body, idx, targets, xValue, modes)) ||
+								e.costedActionAvailable(g, playerID, generalActivation(g, playerID, permanent, body, idx, targets, xValue, modes)) {
 								actions = append(actions, actionBuild.activateAbilityWithModes(permanent.ObjectID, idx, append([]game.Target(nil), targets...), targetResult.targetCounts[choiceIndex], xValue, modes))
 							}
 						}
@@ -646,14 +645,14 @@ func (e *Engine) legalHandActivateAbilityActions(g *game.Game, playerID game.Pla
 		for i := range effectiveAbilities {
 			indexed := &effectiveAbilities[i]
 			body := &indexed.body
-			for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
+			for _, xValue := range costedAbilityXValues(body, manaCostPtr(body.ManaCost)) {
 				for _, modes := range modeChoicesForBody(body) {
 					targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, def, 0, game.Event{}, body, modes, xValue)
 					if targetResult.kind == targetInvalidSpec {
 						continue
 					}
 					for choiceIndex, targets := range targetResult.choices {
-						if e.activationFeasible(g, playerID, handActivation(g, playerID, cardID, body, indexed.index, targets, xValue, modes)) {
+						if e.costedActionAvailable(g, playerID, handActivation(g, playerID, cardID, body, indexed.index, targets, xValue, modes)) {
 							actions = append(actions, actionBuild.activateAbilityWithModes(cardID, indexed.index, append([]game.Target(nil), targets...), targetResult.targetCounts[choiceIndex], xValue, modes))
 						}
 					}
@@ -679,14 +678,14 @@ func (e *Engine) legalGraveyardActivateAbilityActions(g *game.Game, playerID gam
 		for i := range def.ActivatedAbilities {
 			body := &def.ActivatedAbilities[i]
 			idx := def.ActivatedAbilityIndex(i)
-			for _, xValue := range legalXValuesForCostAndAdditional(g, playerID, manaCostPtr(body.ManaCost), body.AdditionalCosts) {
+			for _, xValue := range costedAbilityXValues(body, manaCostPtr(body.ManaCost)) {
 				for _, modes := range modeChoicesForBody(body) {
 					targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, def, 0, game.Event{}, body, modes, xValue)
 					if targetResult.kind == targetInvalidSpec {
 						continue
 					}
 					for choiceIndex, targets := range targetResult.choices {
-						if e.activationFeasible(g, playerID, graveyardActivation(g, playerID, cardID, body, idx, targets, xValue, modes)) {
+						if e.costedActionAvailable(g, playerID, graveyardActivation(g, playerID, cardID, body, idx, targets, xValue, modes)) {
 							actions = append(actions, actionBuild.activateAbilityWithModes(cardID, idx, append([]game.Target(nil), targets...), targetResult.targetCounts[choiceIndex], xValue, modes))
 						}
 					}
@@ -777,7 +776,7 @@ func (e *Engine) legalCyclingActions(g *game.Game, playerID game.PlayerID) []act
 		effectiveAbilities := effectiveHandActivatedAbilities(g, playerID, card)
 		for i := range effectiveAbilities {
 			effective := &effectiveAbilities[i]
-			if e.activationFeasible(g, playerID, cyclingActivation(g, playerID, cardID, &effective.body, effective.index, nil, 0)) {
+			if e.costedActionAvailable(g, playerID, cyclingActivation(g, playerID, cardID, &effective.body, effective.index, nil, 0)) {
 				actions = append(actions, actionBuild.activateAbility(cardID, effective.index, nil, 0))
 			}
 		}
@@ -803,7 +802,7 @@ func (e *Engine) legalNinjutsuActions(g *game.Game, playerID game.PlayerID) []ac
 		for i := range frontDef.ActivatedAbilities {
 			body := &frontDef.ActivatedAbilities[i]
 			idx := frontDef.ActivatedAbilityIndex(i)
-			if e.activationFeasible(g, playerID, ninjutsuActivation(g, playerID, cardID, body, idx, nil, 0)) {
+			if e.costedActionAvailable(g, playerID, ninjutsuActivation(g, playerID, cardID, body, idx, nil, 0)) {
 				actions = append(actions, actionBuild.activateAbility(cardID, idx, nil, 0))
 			}
 		}

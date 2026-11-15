@@ -168,12 +168,15 @@ const (
 	// that clash, and ClashWon reports whether Player won it (CR 701.30d).
 	// Both players' events from one clash share a SimultaneousID.
 	EventClashed
+	// EventActionCostAnnounced publicly discloses a special action's cost.
+	// CardID is present only when the rules also require showing the card.
+	EventActionCostAnnounced
 )
 
 // EventKindCount is the number of EventKind values, including EventUnknown. It
 // is appended at the end of the const block so existing wire values are
 // preserved; new kinds must be added immediately before this sentinel.
-const EventKindCount = int(EventClashed) + 1
+const EventKindCount = int(EventActionCostAnnounced) + 1
 
 // DamageRecipientKind identifies what received damage. Values are flags so a
 // trigger pattern can match either kind.
@@ -260,6 +263,9 @@ type ControlledTriggerDoublerSnapshot struct {
 // changes happen. Events are data, not behavior: card definitions and reports
 // may refer to this vocabulary, while mtg/rules owns emission and consumers.
 type Event struct {
+	AnnouncedManaCost string
+	// Announcement marks a public hidden-zone activation disclosure.
+	Announcement bool
 	// ManaTriggersResolved keeps immediately resolved CR 605.1b abilities out
 	// of the later ordinary-trigger stack-placement pass.
 	ManaTriggersResolved bool

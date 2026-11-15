@@ -402,8 +402,9 @@ func turnableFaceDown(g *game.Game, playerID game.PlayerID, permanentID id.ID) (
 // turnFaceUpCost is the activationCost of turning permanentID face up for
 // manaCost. Its payment requires the permanent to remain face down under the
 // player's control after any payment-time mana abilities.
-func turnFaceUpCost(playerID game.PlayerID, permanentID id.ID, manaCost *cost.Mana) activationCost {
-	return specialActionCost(playerID, manaCost, func(g *game.Game) bool {
+func turnFaceUpCost(g *game.Game, playerID game.PlayerID, permanentID id.ID, manaCost *cost.Mana) activationCost {
+	permanent, _ := permanentByObjectID(g, permanentID)
+	return genericRequestCost(payment.GenericRequest{PlayerID: playerID, Cost: manaCost, Source: permanent}, func(g *game.Game) bool {
 		_, ok := turnableFaceDown(g, playerID, permanentID)
 		return ok
 	})
@@ -429,7 +430,7 @@ func (e *Engine) feasibleTurnFaceUpCosts(g *game.Game, playerID game.PlayerID, p
 					break
 				}
 			}
-			if !duplicate && e.activationFeasible(g, playerID, turnFaceUpCost(playerID, permanentID, &manaCost)) {
+			if !duplicate && e.costedActionAvailable(g, playerID, turnFaceUpCost(g, playerID, permanentID, &manaCost)) {
 				costs = append(costs, manaCost)
 			}
 		}
@@ -441,32 +442,43 @@ func (e *Engine) feasibleTurnFaceUpCosts(g *game.Game, playerID game.PlayerID, p
 // action: the player chooses a turn-face-up cost and pays it, activating mana
 // abilities while paying if they choose (CR 605.3a).
 func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID, permanentID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) actionOutcome {
-	defer g.OpenLibraryTopWindow()()
 	costs := e.feasibleTurnFaceUpCosts(g, playerID, permanentID)
 	manaCost, ok := e.chooseFaceDownCostOptions(g, playerID, costs, agents, log)
 	if !ok {
 		return actionFailed
 	}
-	c := turnFaceUpCost(playerID, permanentID, &manaCost)
-	if outcome := e.paySpecialActionCost(g, playerID, c, &manaCost, agents, log); outcome != actionApplied {
-		return outcome
-	}
-	permanent, _ := permanentByObjectID(g, permanentID)
-	permanent.Face = permanent.FaceDownFace
-	permanent.FaceDown = false
-	permanent.FaceDownKind = game.FaceDownNone
-	permanent.FaceDownCharacteristics = opt.V[game.FaceDownCharacteristics]{}
-	emitFaceDownRevealEvent(g, permanent)
-	emitMergedTurnFaceUpRevealEvents(g, permanent)
-	emitEvent(g, game.Event{
-		Kind:        game.EventPermanentTurnedFaceUp,
-		Controller:  playerID,
-		Player:      permanent.Owner,
-		CardID:      permanent.CardInstanceID,
-		Face:        permanent.Face,
-		PermanentID: permanent.ObjectID,
-	})
-	return actionApplied
+	c := turnFaceUpCost(g, playerID, permanentID, &manaCost)
+	return e.costedAction(g, playerID, costedAction{cost: c, disclose: func(g *game.Game) {
+		permanent, _ := permanentByObjectID(g, permanentID)
+		event := game.Event{Kind: game.EventActionCostAnnounced, Controller: playerID, Player: playerID,
+			PermanentID: permanentID, AnnouncedManaCost: manaCost.String()}
+		if permanent.FaceDownKind == game.FaceDownManifest || permanent.FaceDownKind == game.FaceDownCloak {
+			// A morph/disguise payment on a manifested card shows only that
+			// cost; the creature-card payment shows the underlying card.
+			faces := faceDownTurnUpFaces(g, permanent)
+			if len(faces) == 1 && faces[0].HasType(types.Creature) && faces[0].ManaCost.Exists && slices.Equal(faces[0].ManaCost.Val, manaCost) {
+				emitFaceDownRevealEvent(g, permanent)
+				event.CardID, event.Face = permanent.CardInstanceID, permanent.FaceDownFace
+			}
+		}
+		emitEvent(g, event)
+	}, commit: func(g *game.Game, _ payment.ApplyResult, _ [game.NumPlayers]PlayerAgent, _ *TurnLog, _ int) {
+		permanent, _ := permanentByObjectID(g, permanentID)
+		permanent.Face = permanent.FaceDownFace
+		permanent.FaceDown = false
+		permanent.FaceDownKind = game.FaceDownNone
+		permanent.FaceDownCharacteristics = opt.V[game.FaceDownCharacteristics]{}
+		emitFaceDownRevealEvent(g, permanent)
+		emitMergedTurnFaceUpRevealEvents(g, permanent)
+		emitEvent(g, game.Event{
+			Kind:        game.EventPermanentTurnedFaceUp,
+			Controller:  playerID,
+			Player:      permanent.Owner,
+			CardID:      permanent.CardInstanceID,
+			Face:        permanent.Face,
+			PermanentID: permanent.ObjectID,
+		})
+	}}, agents, log)
 }
 
 func payableFaceDownCosts(g *game.Game, playerID game.PlayerID, face *game.CardDef, kind game.FaceDownKind) []cost.Mana {

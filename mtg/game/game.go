@@ -324,7 +324,9 @@ type Game struct {
 
 	// RNG is consumed by runtime rules that require randomization after setup,
 	// such as replacement effects that shuffle a card into a library.
-	RNG *rand.Rand
+	RNG        *rand.Rand
+	random     *randomSource
+	randomRand *rand.Rand
 
 	// staticFrame is a transient read-only cache used by the rules layer to
 	// avoid rescanning the battlefield for static-ability sources on every
@@ -440,6 +442,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		},
 		RNG: rng,
 	}
+	g.setRandom(rng)
 
 	for i, cfg := range configs {
 		pid := PlayerID(i)

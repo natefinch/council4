@@ -145,11 +145,6 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 	if pattern.SelfWasCast {
 		return false
 	}
-	// Payment-time mana activations do not emit this event yet, so an
-	// unrestricted pattern would silently under-trigger.
-	if pattern.Event == game.EventAbilityActivated && !pattern.ExcludeManaAbility {
-		return false
-	}
 	if pattern.Event == game.EventZoneChanged && event.PermanentID == 0 && event.CardID == 0 {
 		return false
 	}

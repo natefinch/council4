@@ -53,11 +53,11 @@ inconclusive search treated as payable).
    *opaque*. If a player activates one during payment (CR 605.3a), the
    procedure takes one whole-game snapshot before it. If the payment then
    can't complete, the snapshot is restored, including object IDs, RNG and
-   logs, and the player keeps priority (CR 733.1–2). No other path rewinds.
+   logs, and the player keeps priority (current CR 734.1–2). No other path rewinds.
 
 ## Why this is enough
 
-Under the rules effective 2026-09-25, abilities whose cost or effect moves a
+Under the rules effective 2026-11-06, abilities whose cost or effect moves a
 card to or from a library are not mana abilities (CR 605.1a). Research for
 #3718 found no engine mana ability with random or hidden output. Opaque
 abilities are therefore an engine-modeling limit, not a common rules case.
@@ -117,6 +117,68 @@ activation. Input/filter and non-spell rider consumption is handled during
 application. Existing payment callers retain their APIs pending migration.
 
 ## Migration
+
+### Activated abilities and costed special actions (#3721)
+
+`Engine.costedAction` owns proposal setup, announcement choices, targets, the
+locked `payment.Request`, completion-preserving cost and mana decisions,
+application, and commit. `describeActivation` supplies source identity and the
+rules-specific commit data for permanent/general/equip/loyalty, hand,
+graveyard, cycling, ninjutsu and hand-mana activations. Suspend, foretell, plot
+and turn-face-up special actions use the same descriptor/procedure. The existing
+action kinds contain no other mana-costed special action; land plays retain
+their existing entry/replacement decisions. Casting procedures are unchanged
+pending #3722.
+
+Nonmana abilities are on the stack before any announcement/payment callback
+(CR 602.2a). Hidden-zone activation sources are publicly revealed first;
+`PlayerObservation.AnnouncedCards` exposes only these disclosures, not a hidden
+zone. Manifest/cloak creature-card payments disclose the underlying creature
+and cost before payment. Morph/disguise payments disclose only their cost.
+`CostDisclosures` exposes this public information separately from battlefield
+characteristics, which remain face down until the commit.
+
+Action/X enumeration requires `Complete`, not a manual-mana heuristic or clone
+probe. `Options` supplies a complete witness for every normal payment decision,
+including sequential object/counter selections, a selected mana source's
+payment components and its bounded output choices. Source-use choices remain
+identity-based, while `ManaActivationKey` binds costs and outputs to each
+zero-based occurrence of that ability. Repeated Altar activations can therefore
+sacrifice different creatures and choose different colors; each occurrence's
+choices see the resources left by its predecessors. Fixed occurrence choices
+cannot disappear from a completion or move to another activation.
+`Plan.Request` retains the
+locked total across resource changes; channel does not recalculate its reducer
+after sacrificing a legendary creature. Special-action source reservations
+participate in the joint search, so mana payment cannot consume the object
+whose special action it is completing. Generic sacrifice mana costs (including
+Phyrexian Altar) backtrack through their subjects as part of that same search.
+
+Only selecting an opaque mana activation opens a whole-world checkpoint.
+Opacity includes both structural classification and a failed context forecast,
+including an otherwise automatic tap source with an optional mana trigger.
+Intrinsic library-moving activated abilities remain nonmana, not opaque.
+The checkpoint repairs live player/card/permanent/stack references by ID,
+restores the ID counter with `Restore`, and preserves synchronous caller scopes.
+A game-owned `rand.Source` delegates to the caller's arbitrary `Rand.Uint64`
+and journals words only during that checkpoint; restoration replays those
+words before continuing the original upstream stream. Normal `Game.Clone`
+still forks an independent search RNG. No random-source serialization,
+reflection, reseeding, or normal-path world snapshot is used.
+
+Failed reversible opaque payments cancel the announcement/stack object as well
+as the mana effects and logs. CR 734.1's irreversible library boundaries retain
+the legal mana actions and their surviving identities rather than replaying
+them; the failed proposal is canceled. Repeated failures do not withhold an
+action: legally distinct retries remain available (CR 734.2), while a
+nonprogressing policy terminates under the execution decision budget.
+
+Rules read: official Comprehensive Rules effective **2026-11-06**,
+[Wizards source](https://media.wizards.com/2026/downloads/MagicCompRules%2020261106.txt),
+SHA-256 `524f5195a1e5f54bb13c735edf399ac717a4458e2713f398d1a3e6877186b829`.
+Sections: 601.2a–i, 602.2a–b, 605.1a–b/605.3a, 116.2b/f/h/k/116.3,
+701.40b/701.58b, 702.37e/702.168d, 702.49a–d, 702.29a–f, and 734.1–2
+(the current reversal section is 734, not the historical 733).
 
 Follow the ordered sub-issues of #3718: planner plans and completion queries,
 mana-ability schemas, abilities and special actions (proving the procedure

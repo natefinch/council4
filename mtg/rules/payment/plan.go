@@ -75,6 +75,7 @@ type manaSourceRestrictions struct {
 	reservedGraveyardCardIDs map[id.ID]bool
 	reserved                 *additionalCostPlan
 	resourceCompletion       func(State, []ManaActivation, game.ResourceProjection) (paymentPlan, bool)
+	resourceValid            func(State) bool
 }
 
 // paymentColors is the deterministic ordering used when spending mana. Callers
@@ -729,6 +730,7 @@ func cloneUnitCounts(units map[mana.Unit]int) map[mana.Unit]int {
 
 func cloneManaSourceRestrictions(restrictions manaSourceRestrictions) manaSourceRestrictions {
 	clone := manaSourceRestrictions{
+		resourceValid:            restrictions.resourceValid,
 		excluded:                 make(map[id.ID]bool, len(restrictions.excluded)),
 		nonSacrificingOnly:       make(map[id.ID]bool, len(restrictions.nonSacrificingOnly)),
 		reservedGraveyardCardIDs: make(map[id.ID]bool, len(restrictions.reservedGraveyardCardIDs)),
