@@ -134,6 +134,7 @@ func (s *rulesPaymentState) ResourceSelectionStable(additional cost.Additional) 
 }
 
 func (s *rulesPaymentState) ManaSourceSnapshot(object id.ID) game.ObjectSnapshot {
+	defer s.BeginPaymentRead()()
 	permanent, _ := permanentByObjectID(s.g, object)
 	return snapshotPermanent(s.g, permanent, zone.Battlefield)
 }
@@ -362,6 +363,7 @@ func (s *rulesPaymentState) CounterPlacement(controller game.PlayerID, object id
 }
 
 func (s *rulesPaymentState) ForecastMana(playerID game.PlayerID, candidate payment.ManaActivationCandidate) ([]payment.ManaProduction, game.ResourceProjection, bool) {
+	defer s.BeginPaymentRead()()
 	if s.publicZoneOpaque {
 		for _, mode := range candidate.Body.Content.Modes {
 			for _, instruction := range mode.Sequence {
@@ -405,6 +407,8 @@ func (s *rulesPaymentState) ForecastMana(playerID game.PlayerID, candidate payme
 	}
 	eventResources.Players[playerID] = resources
 	eventView := s.g.ResourceView(eventResources)
+	eventView.BeginStaticSourceFrame()
+	defer eventView.EndStaticSourceFrame()
 	var events []game.Event
 	tapped := slices.ContainsFunc(candidate.Body.AdditionalCosts, func(additional cost.Additional) bool { return additional.Kind == cost.AdditionalTap })
 	for index := len(s.g.Events) - 1; tapped && index >= 0; index-- {
@@ -463,6 +467,8 @@ func forecastManaContent(g *game.Game, obj *game.StackObject, content game.Abili
 			return nil, game.ResourceProjection{}, false
 		}
 		view := g.ResourceView(effects)
+		view.BeginStaticSourceFrame()
+		defer view.EndStaticSourceFrame()
 		r := &effectResolver{game: view, obj: obj}
 		player, ok := playerByID(view, obj.Controller)
 		if !ok {
@@ -608,5 +614,6 @@ func damageReplacementAmount(replacement game.ReplacementEffect, amount int) int
 }
 
 func (s *rulesPaymentState) PrepareManaEvent(event game.Event) game.Event {
+	defer s.BeginPaymentRead()()
 	return prepareEvent(s.g, event)
 }

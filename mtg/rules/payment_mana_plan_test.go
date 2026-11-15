@@ -22,12 +22,16 @@ import (
 
 type countedManaHistoryState struct {
 	payment.ManaState
-	forecasts   *int
-	inventories *int
+	forecasts        *int
+	inventories      *int
+	costPreparations *int
 }
 
 func (s countedManaHistoryState) ProjectResources(resources game.ResourceProjection) payment.State {
-	return countedManaHistoryState{ManaState: s.ManaState.ProjectResources(resources).(payment.ManaState), forecasts: s.forecasts, inventories: s.inventories}
+	return countedManaHistoryState{
+		ManaState: s.ManaState.ProjectResources(resources).(payment.ManaState),
+		forecasts: s.forecasts, inventories: s.inventories, costPreparations: s.costPreparations,
+	}
 }
 
 func (s countedManaHistoryState) ManaActivationCandidates(player game.PlayerID) []payment.ManaActivationCandidate {
@@ -40,6 +44,134 @@ func (s countedManaHistoryState) ManaActivationCandidates(player game.PlayerID) 
 func (s countedManaHistoryState) ForecastMana(player game.PlayerID, candidate payment.ManaActivationCandidate) ([]payment.ManaProduction, game.ResourceProjection, bool) {
 	*s.forecasts++
 	return s.ManaState.ForecastMana(player, candidate)
+}
+
+func (s countedManaHistoryState) ResourceSelectionStable(additional cost.Additional) bool {
+	state, ok := s.ManaState.(interface{ ResourceSelectionStable(cost.Additional) bool })
+	return ok && state.ResourceSelectionStable(additional)
+}
+
+func (s countedManaHistoryState) PrepareManaEvent(event game.Event) game.Event {
+	if s.costPreparations != nil && event.Kind == game.EventPermanentTapped {
+		*s.costPreparations++
+	}
+	return s.ManaState.PrepareManaEvent(event)
+}
+
+func TestManaOutputBranchesReuseOnlyIdenticalCostStates(t *testing.T) {
+	e, g := newEffectiveCascadeGame()
+	for range 2 {
+		treasure := addTreasureTokenPermanent(g, game.Player1)
+		treasure.TokenDef = testTreasureToken()
+	}
+	forecasts, preparations := 0, 0
+	state := countedManaHistoryState{
+		ManaState: &rulesPaymentState{g: g, engine: e}, forecasts: &forecasts, costPreparations: &preparations,
+	}
+	manaCost := cost.Mana{cost.U, cost.U, cost.U}
+	request := payment.ForGeneric(payment.GenericRequest{PlayerID: game.Player1, Cost: &manaCost})
+	before := g.Clone()
+	if _, ok, _ := payment.New(state).Complete(request, payment.Partial{}); ok {
+		t.Fatal("two Treasures paid for three mana")
+	}
+	// Each source's five outputs follow the same cost. Both sources and every
+	// deeper resource node still need their own independent cost-paid views.
+	t.Logf("output branches: %d forecasts, %d cost preparations", forecasts, preparations)
+	if preparations > 40 {
+		t.Fatalf("output branches used %d forecasts and %d cost preparations", forecasts, preparations)
+	}
+	if !reflect.DeepEqual(g.Clone(), before) {
+		t.Fatal("reusing cost-paid views changed the live game")
+	}
+}
+
+func TestManaOccurrenceSacrificesReserveOuterCostBeforeSearch(t *testing.T) {
+	for _, test := range []struct {
+		creatures, activations int
+		payable                bool
+	}{{3, 2, true}, {3, 3, false}, {4, 3, true}} {
+		t.Run(fmt.Sprintf("%d creatures/%d activations", test.creatures, test.activations), func(t *testing.T) {
+			e, g := newEffectiveCascadeGame()
+			altar := addCombatPermanent(g, game.Player1, registryCardDef(t, "Phyrexian Altar"))
+			island := addCombatPermanent(g, game.Player1, registryCardDef(t, "Island"))
+			var creatures []*game.Permanent
+			for range test.creatures {
+				creatures = append(creatures, addCombatPermanent(g, game.Player1, registryCardDef(t, "Grizzly Bears")))
+			}
+			manaCost := cost.Mana{cost.O(1), cost.B}
+			request := payment.ForGeneric(payment.GenericRequest{
+				PlayerID: game.Player1, Cost: &manaCost,
+				AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalSacrifice, Amount: 1, MatchPermanentType: true, PermanentType: types.Creature}},
+			})
+			partial := payment.Partial{
+				Components:      map[int]payment.ComponentChoice{0: {Objects: []id.ID{creatures[0].ObjectID}, Finished: true}},
+				ManaAbilities:   map[payment.ManaAbilityKey]bool{{Source: island.ObjectID, AbilityIndex: 0}: false},
+				ManaOccurrences: make(map[payment.ManaActivationKey]bool),
+			}
+			for occurrence := range test.activations {
+				partial.ManaOccurrences[payment.ManaActivationKey{
+					ManaAbilityKey: payment.ManaAbilityKey{Source: altar.ObjectID, AbilityIndex: 0}, Occurrence: occurrence,
+				}] = true
+			}
+			forecasts := 0
+			state := countedManaHistoryState{ManaState: &rulesPaymentState{g: g, engine: e}, forecasts: &forecasts}
+			before := g.Clone()
+			plan, ok, reason := payment.New(state).Complete(request, partial)
+			if ok != test.payable || !reflect.DeepEqual(g.Clone(), before) {
+				t.Fatalf("Complete=%t (%s), want %t without changing the game", ok, reason, test.payable)
+			}
+			if !ok {
+				if forecasts != 0 {
+					t.Fatalf("an impossible consuming reservation explored %d mana forecasts", forecasts)
+				}
+				return
+			}
+			if len(plan.Mana().Activations) != test.activations {
+				t.Fatal("a strategic occurrence disappeared from the witness")
+			}
+			if _, applied, reason := e.PaymentPlanner(g).Apply(plan); !applied {
+				t.Fatal(reason)
+			}
+			if island.Tapped || g.Players[game.Player1].Graveyard.Size() != test.activations+1 ||
+				g.Players[game.Player1].ManaPool.Total() != test.activations-2 {
+				t.Fatal("mana sacrifices reused the reserved outer subject or lost an optional occurrence")
+			}
+		})
+	}
+}
+
+func TestManaOccurrenceSacrificeDomainMayGrowAfterManaEffect(t *testing.T) {
+	e, g := newEffectiveCascadeGame()
+	body := game.TapManaAbility(mana.C)
+	body.Content.Modes[0].Sequence = append(body.Content.Modes[0].Sequence,
+		game.Instruction{Primitive: game.AddCounter{Object: game.SourcePermanentReference(), CounterKind: counter.Charge, Amount: game.Fixed(1)}})
+	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+		Name: "Awakening mana artifact", Types: []types.Card{types.Artifact}, ManaAbilities: []game.ManaAbility{body},
+		StaticAbilities: []game.StaticAbility{{
+			Condition: opt.Val(game.Condition{SourceCounterKindKnown: true, SourceCounterKind: counter.Charge, SourceCountersAtLeast: 1}),
+			ContinuousEffects: []game.ContinuousEffect{{
+				Layer: game.LayerType, AffectedSource: true, AddTypes: []types.Card{types.Creature},
+			}},
+		}},
+	}})
+	altar := addCombatPermanent(g, game.Player1, registryCardDef(t, "Phyrexian Altar"))
+	manaCost := cost.Mana{cost.C, cost.B}
+	request := payment.ForGeneric(payment.GenericRequest{PlayerID: game.Player1, Cost: &manaCost})
+	partial := payment.Partial{ManaAbilities: map[payment.ManaAbilityKey]bool{{Source: altar.ObjectID, AbilityIndex: 0}: true}}
+	before := g.Clone()
+	plan, ok, reason := e.PaymentPlanner(g).Complete(request, partial)
+	if !ok {
+		t.Fatal("the current empty sacrifice domain was treated as a permanent impossibility:", reason)
+	}
+	if !reflect.DeepEqual(g.Clone(), before) || permanentHasType(g, source, types.Creature) {
+		t.Fatal("the projected type change escaped into the live game")
+	}
+	if _, applied, reason := e.PaymentPlanner(g).Apply(plan); !applied {
+		t.Fatal(reason)
+	}
+	if g.Players[game.Player1].ManaPool.Total() != 0 || !g.Players[game.Player1].Graveyard.Contains(source.CardInstanceID) {
+		t.Fatal("the enabling counter/type effect and subsequent sacrifice were not applied")
+	}
 }
 
 func TestManaHistoryPresentResourcesNeedNoActivationSearch(t *testing.T) {

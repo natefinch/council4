@@ -494,6 +494,8 @@ func (e *Engine) choosePaymentStep(g *game.Game, player game.PlayerID, planner p
 // costedManaOptions preserves each strategic source choice with a witness.
 // Opaque activations alone are intentionally outside the planner's contract.
 func (e *Engine) costedManaOptions(g *game.Game, player game.PlayerID, request payment.Request, partial payment.Partial) ([]payment.Step, []payment.Choice, []action.Action) {
+	g.BeginStaticSourceFrame()
+	defer g.EndStaticSourceFrame()
 	planner := e.PaymentPlanner(g)
 	state := &rulesPaymentState{g: g, engine: e}
 	var steps []payment.Step
@@ -527,10 +529,10 @@ func (e *Engine) costedManaOptions(g *game.Game, player game.PlayerID, request p
 		if step.ManaActivation.Val.Occurrence > 0 && !candidate.Reusable {
 			continue
 		}
-		for _, choice := range planner.Options(request, partial, step) {
-			if choice.UseManaAbility {
-				steps, choices, opaque = append(steps, step), append(choices, choice), append(opaque, action.Action{})
-			}
+		choice := payment.Choice{UseManaAbility: true}
+		if plan, ok, _ := planner.Complete(request, partial.With(step, choice)); ok {
+			choice.Plan = plan
+			steps, choices, opaque = append(steps, step), append(choices, choice), append(opaque, action.Action{})
 		}
 	}
 	for _, act := range e.costedPaymentManaActions(g, player) {

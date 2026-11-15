@@ -95,6 +95,17 @@ retain their own independent frames. No target-dependent payment result or
 failed target prefix is cached across choices. A bounded-allocation regression
 exercises all 78 target pairs, including the payable pair beyond the old sample,
 and freshness scenarios verify that later cost changes remain visible.
+Activation-search nodes and their cost-paid, instruction and mana-trigger
+projections enter separate read frames too; no projection borrows its parent's
+derived rules. At one immutable resource node, output alternatives with identical
+source, component selections and input mana/life reuse the same cost-paid view.
+Each output still forecasts its own production, effects and triggers. These views
+are discarded with that node, never shared across occurrences or agent choices.
+Required sacrifice occurrences are also checked against a certified stable
+selection domain minus subjects reserved for the outer cost. An impossible
+reservation is rejected before forecasting; an uncertified domain retains the
+full search. The mana window asks only for the use-source witness it offers,
+rather than also solving an unused decline branch.
 An exact payment from present resources is checked before enumerating mana
 abilities at all. When contextual effects rule out the ordinary-only fast path, a direct
 automatic-source allocation can still supply a candidate history. The search
