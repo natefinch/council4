@@ -26,6 +26,13 @@ type rulesPaymentState struct {
 
 var _ payment.State = (*rulesPaymentState)(nil)
 
+// BeginPaymentRead reuses derived rules only within a pure query, never across
+// a choice or Apply's mutations.
+func (s *rulesPaymentState) BeginPaymentRead() func() {
+	s.g.BeginStaticSourceFrame()
+	return s.g.EndStaticSourceFrame
+}
+
 func (s *rulesPaymentState) Player(playerID game.PlayerID) (*game.Player, bool) {
 	return playerByID(s.g, playerID)
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/mtg/rules/payment"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -198,6 +199,46 @@ func TestPriorityPhyrexianOptionBeyondTargetSample(t *testing.T) {
 				t.Fatal("the exact two-Bears payment was not committed")
 			}
 		})
+	}
+}
+
+func TestPriorityTargetCompletionWorkIsBounded(t *testing.T) {
+	e, g := newEffectiveCascadeGame()
+	def := *registryCardDef(t, "Dismember")
+	def.ManaCost = opt.Val(append(cost.Mana{cost.X}, def.ManaCost.Val...))
+	mode := def.SpellAbility.Val.Modes[0]
+	mode.Targets = slices.Clone(mode.Targets)
+	mode.Targets[0].MinTargets, mode.Targets[0].MaxTargets = 2, 2
+	def.SpellAbility = opt.Val(mode.Ability())
+	for range 11 {
+		addCombatPermanent(g, game.Player2, registryCardDef(t, "Elderwood Scion"))
+	}
+	for range 2 {
+		addCombatPermanent(g, game.Player2, registryCardDef(t, "Grizzly Bears"))
+	}
+	card := addCardToHand(g, game.Player1, &def)
+	g.Players[game.Player1].ManaPool.Add(mana.B, 2)
+	g.Players[game.Player1].ManaPool.Add(mana.C, 1)
+	view := priorityCastView(g, &game.StackObject{
+		Kind: game.StackSpell, SourceID: card, Controller: game.Player1, SourceZone: zone.Hand,
+	})
+	request := payment.SpellRequest{PlayerID: game.Player1, CardID: card, SourceZone: zone.Hand, Card: &def}
+	complete := e.pendingSpellPayment(view, &def, action.CastSpellAction{})
+	partial := payment.Partial{Phyrexian: map[int]bool{0: false, 1: false}}
+	allocations := testing.AllocsPerRun(3, func() {
+		plan, ok := complete(request, partial)
+		if !ok || plan.Mana().Life != 0 || totalManaSpent(plan.Mana().PoolSpend) != 3 {
+			t.Fatal("the payable 78th pair did not retain its exact mana-only witness")
+		}
+	})
+	t.Logf("allocations for all 78 exact target pairs: %.0f", allocations)
+	// Rebuilding the whole board's static rules for every symbol branch makes
+	// these 78 payments allocate hundreds of thousands of intermediate effects.
+	if allocations > 100_000 {
+		t.Fatalf("exact target completion rebuilt static rules repeatedly: %.0f allocations", allocations)
+	}
+	if view.InStaticSourceFrame() || g.InStaticSourceFrame() {
+		t.Fatal("target completion retained a read frame beyond its pure query")
 	}
 }
 

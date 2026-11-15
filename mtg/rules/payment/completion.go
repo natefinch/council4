@@ -279,6 +279,9 @@ func (p Planner) CanForecastMana(player game.PlayerID, key ManaAbilityKey) bool 
 }
 
 func (p Planner) complete(request Request, partial Partial) (Plan, completion, bool) {
+	if state, ok := p.s.(interface{ BeginPaymentRead() func() }); ok {
+		defer state.BeginPaymentRead()()
+	}
 	partial.joint = true
 	var plan Plan
 	var result completion
@@ -854,6 +857,9 @@ func (p Partial) With(step Step, choice Choice) Partial {
 
 // Options offers only choices with a witness completion.
 func (p Planner) Options(request Request, partial Partial, step Step) []Choice {
+	if state, ok := p.s.(interface{ BeginPaymentRead() func() }); ok {
+		defer state.BeginPaymentRead()()
+	}
 	var choices []Choice
 	add := func(choice Choice) {
 		plan, ok, _ := p.Complete(request, partial.With(step, choice))

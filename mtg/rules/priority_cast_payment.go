@@ -75,6 +75,8 @@ func priorityCastView(g *game.Game, object *game.StackObject) *game.Game {
 
 func (e *Engine) priorityCastCostsAvailable(g *game.Game, object *game.StackObject, requests []payment.SpellRequest) bool {
 	view := priorityCastView(g, object)
+	view.BeginStaticSourceFrame()
+	defer view.EndStaticSourceFrame()
 	for _, request := range requests {
 		if !castRouteAllowsX(request.Card, request.XValue, request) {
 			continue
@@ -118,6 +120,8 @@ type spellPaymentCompletion func(payment.SpellRequest, payment.Partial) (payment
 func (e *Engine) pendingSpellPayment(g *game.Game, def *game.CardDef, cast action.CastSpellAction) spellPaymentCompletion {
 	specs := prioritySpellTargetSpecs(def, cast.ChosenModes, castBranchForCast(cast), effectiveKickerCount(cast.KickerPaid, cast.KickerCount))
 	return func(request payment.SpellRequest, partial payment.Partial) (payment.Plan, bool) {
+		g.BeginStaticSourceFrame()
+		defer g.EndStaticSourceFrame()
 		var plan payment.Plan
 		found := false
 		visitTargetChoicesForSpec(g, request.PlayerID, def, 0, game.Event{}, specs, 0, nil, nil,
@@ -262,6 +266,8 @@ func (e *Engine) chooseCostedSpellTargets(g *game.Game, player game.PlayerID, de
 			candidates = filterTargetsDistinctFrom(candidates, targets)
 		}
 		extends := func(segment []game.Target, count int) bool {
+			g.BeginStaticSourceFrame()
+			defer g.EndStaticSourceFrame()
 			found := false
 			visitTargetChoicesForSpec(g, player, def, 0, game.Event{}, specs, index, targets, counts,
 				&[][]game.Target{}, &[][]int{}, targetChoiceOptions{xValue: opt.Val(cast.XValue), external: true,
@@ -402,6 +408,8 @@ func (e *Engine) prioritySpellTargets(g *game.Game, player game.PlayerID, cardID
 		XValue: branch.XValue.Val, ChosenModes: modes, Copy: source == zone.Battlefield, Bestowed: branch.Bestowed,
 	}
 	view := priorityCastView(g, object)
+	view.BeginStaticSourceFrame()
+	defer view.EndStaticSourceFrame()
 	visitTargetChoicesForSpec(view, player, def, 0, game.Event{}, specs, 0, nil, nil,
 		&[][]game.Target{}, &[][]int{}, targetChoiceOptions{xValue: branch.XValue, visit: func(targets []game.Target, counts []int) bool {
 			ok := false

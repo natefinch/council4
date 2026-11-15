@@ -160,6 +160,37 @@ func TestManaHistoryRejectedDirectWitnessStillFindsCompletion(t *testing.T) {
 	}
 }
 
+func TestPaymentReadFramesEndBeforeWorldChanges(t *testing.T) {
+	e, g := newEffectiveCascadeGame()
+	card := addCardToHand(g, game.Player1, registryCardDef(t, "Sol Ring"))
+	g.Players[game.Player1].ManaPool.Add(mana.C, 1)
+	request := payment.ForSpell(payment.SpellRequest{
+		PlayerID: game.Player1, CardID: card, Card: registryCardDef(t, "Sol Ring"), SourceZone: zone.Hand,
+	})
+	planner := e.PaymentPlanner(g)
+	if _, ok, reason := planner.Complete(request, payment.Partial{}); !ok {
+		t.Fatal(reason)
+	}
+	addCombatPermanent(g, game.Player2, registryCardDef(t, "Thalia, Guardian of Thraben"))
+	if _, ok, _ := planner.Complete(request, payment.Partial{}); ok {
+		t.Fatal("a completed query's cached rules hid the new spell-cost increase")
+	}
+	g.Players[game.Player1].ManaPool.Add(mana.C, 1)
+	options := planner.Options(request, payment.Partial{}, payment.Step{Kind: payment.StepCostOption})
+	if len(options) != 1 {
+		t.Fatal("the new exact payment was not offered after the world changed")
+	}
+	if g.InStaticSourceFrame() {
+		t.Fatal("a pure payment query retained its read frame")
+	}
+	if _, ok, reason := planner.Apply(options[0].Plan); !ok {
+		t.Fatal(reason)
+	}
+	if g.InStaticSourceFrame() || g.Players[game.Player1].ManaPool.Total() != 0 {
+		t.Fatal("payment application reused an announcement's stale read frame")
+	}
+}
+
 // Official CR effective 2026-11-06: 605.1a/b, 605.3a/b, 605.4,
 // 106.12, 118.3c, 601.2g/h. City of Brass's ordinary tap trigger is not a
 // mana ability; Wild Growth's tapped-for-mana trigger resolves immediately.

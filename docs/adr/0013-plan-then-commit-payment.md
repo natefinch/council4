@@ -86,6 +86,15 @@ Engine. Planning uses structural activation schemas and a resource-only
 copy-on-write evaluation view, not `Game.Clone` or speculative activation.
 The view resets transient evaluation/choice frames; the payment adapter
 rejects mutations and translates permanent references by ObjectID.
+`Complete` and `Options` enter an adapter-owned pure-read frame so repeated
+cost, life and mana queries reuse the same derived static rules. Exact pending
+target searches also share one read frame across their candidate payments.
+These frames end before any agent callback or payment mutation; `Apply` scopes
+only its read-only revalidation, not activation or spending. Resource projections
+retain their own independent frames. No target-dependent payment result or
+failed target prefix is cached across choices. A bounded-allocation regression
+exercises all 78 target pairs, including the payable pair beyond the old sample,
+and freshness scenarios verify that later cost changes remain visible.
 An exact payment from present resources is checked before enumerating mana
 abilities at all. When contextual effects rule out the ordinary-only fast path, a direct
 automatic-source allocation can still supply a candidate history. The search
