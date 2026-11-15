@@ -148,8 +148,8 @@ func TestCagedSunManaProducedMixedOutputFiresOnce(t *testing.T) {
 		t.Fatal("activating mixed-output land = false, want true")
 	}
 	engine.putTriggeredAbilitiesOnStack(g)
-	if got := g.Stack.Size(); got != 1 {
-		t.Fatalf("stack size = %d, want 1 (Caged Sun triggers once per mana event)", got)
+	if got := g.Stack.Size(); got != 0 {
+		t.Fatalf("stack size = %d, want 0 (CR 605.1b mana trigger resolves immediately)", got)
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
 
@@ -162,7 +162,7 @@ func TestCagedSunManaProducedMixedOutputFiresOnce(t *testing.T) {
 }
 
 // TestCagedSunManaProducedNoRecursion proves Caged Sun's own additional mana does
-// not emit a mana-produced event and so cannot retrigger itself: only one extra
+// is not produced by a land and so cannot retrigger itself: only one extra
 // mana is added, not an unbounded loop.
 func TestCagedSunManaProducedNoRecursion(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
@@ -291,8 +291,8 @@ func TestMultipleHighTidesStack(t *testing.T) {
 		t.Fatal("activating Island mana ability = false, want true")
 	}
 	engine.putTriggeredAbilitiesOnStack(g)
-	if got := g.Stack.Size(); got != 2 {
-		t.Fatalf("stack size = %d, want 2 (both High Tides trigger)", got)
+	if got := g.Stack.Size(); got != 0 {
+		t.Fatalf("stack size = %d, want 0 (both High Tide mana triggers resolve immediately)", got)
 	}
 	engine.resolveTopOfStack(g, &TurnLog{})
 	engine.resolveTopOfStack(g, &TurnLog{})

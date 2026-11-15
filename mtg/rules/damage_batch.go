@@ -284,10 +284,7 @@ func (batch *damageBatch) apply(modifier damageModifier) {
 		if replacement.DamagePreventAmount > 0 {
 			batch.prevent(modifier.member, replacement.DamagePreventAmount)
 		} else {
-			if replacement.DamageMultiplier > 1 {
-				member.event.amount *= replacement.DamageMultiplier
-			}
-			member.event.amount = max(0, member.event.amount+replacement.DamageAddend)
+			member.event.amount = damageReplacementAmount(replacement, member.event.amount)
 		}
 	default:
 		panic("unknown damage modifier")

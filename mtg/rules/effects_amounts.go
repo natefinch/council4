@@ -9,11 +9,16 @@ import (
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
+	"slices"
 )
 
 func stackObjectSourceIsSnow(g *game.Game, obj *game.StackObject) bool {
 	permanent, ok := permanentByObjectID(g, obj.SourceID)
-	return ok && permanentIsSnow(g, permanent)
+	if ok {
+		return permanentIsSnow(g, permanent)
+	}
+	snapshot, ok := lastKnownObject(g, obj.SourceID)
+	return ok && obj.Kind == game.StackActivatedAbility && slices.Contains(snapshot.Supertypes, types.Snow)
 }
 
 // stackObjectSourceIsCreature reports whether the mana produced by obj was
@@ -23,7 +28,11 @@ func stackObjectSourceIsSnow(g *game.Game, obj *game.StackObject) bool {
 // creature source.
 func stackObjectSourceIsCreature(g *game.Game, obj *game.StackObject) bool {
 	permanent, ok := permanentByObjectID(g, obj.SourceID)
-	return ok && permanentHasType(g, permanent, types.Creature)
+	if ok {
+		return permanentHasType(g, permanent, types.Creature)
+	}
+	snapshot, ok := lastKnownObject(g, obj.SourceID)
+	return ok && obj.Kind == game.StackActivatedAbility && slices.Contains(snapshot.Types, types.Creature)
 }
 
 func permanentIsSnow(g *game.Game, permanent *game.Permanent) bool {

@@ -44,7 +44,7 @@ func TestNonManaTapDoesNotRecordTappedForMana(t *testing.T) {
 }
 
 // TestRequireTappedForManaPatternFiltersProvenance verifies the trigger pattern
-// matcher only accepts a permanent-tapped event whose tap was for mana.
+// matcher requires production, not merely payment of the tap cost (CR 106.12a).
 func TestRequireTappedForManaPatternFiltersProvenance(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	source := addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
@@ -57,8 +57,12 @@ func TestRequireTappedForManaPatternFiltersProvenance(t *testing.T) {
 	}
 
 	manaTap := game.Event{Kind: game.EventPermanentTapped, Controller: game.Player1, TappedForMana: true}
-	if !triggerMatchesEvent(g, source, pattern, manaTap) {
-		t.Fatal("tapped-for-mana event did not match RequireTappedForMana pattern")
+	if triggerMatchesEvent(g, source, pattern, manaTap) {
+		t.Fatal("tap cost matched before the ability produced mana")
+	}
+	produced := game.Event{Kind: game.EventManaProduced, Controller: game.Player1, TappedForMana: true, ProducedManaColors: []mana.Color{mana.G}}
+	if !triggerMatchesEvent(g, source, pattern, produced) {
+		t.Fatal("mana-production event did not match RequireTappedForMana pattern")
 	}
 	plainTap := game.Event{Kind: game.EventPermanentTapped, Controller: game.Player1}
 	if triggerMatchesEvent(g, source, pattern, plainTap) {

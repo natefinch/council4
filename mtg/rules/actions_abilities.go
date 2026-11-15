@@ -107,18 +107,8 @@ func (e *Engine) applyPermanentAbilityWithChoices(g *game.Game, playerID game.Pl
 			Controller:       playerID,
 			PaidCostSubjects: costPaid.subjects,
 		}
-		if len(manaBody.Content.Modes) > 0 {
-			seedEntryChoices(obj, permanent)
-			before := manaPoolColorSnapshot(g, playerID)
-			e.resolveAbilityContentWithChoices(g, obj, manaBody.Content, agents, log)
-			produced := producedManaColorsSince(g, playerID, before)
-			recordTappedForManaProduced(g, permanent.ObjectID, produced)
-			emitManaProducedEvent(g, manaSource, playerID, produced,
-				producedManaAmountSince(g, playerID, before),
-				manaAbilityTappedSourceSince(g, permanent.ObjectID, eventsBeforePayment))
-		}
-		emitAbilityActivatedEvent(g, obj, permanent.ObjectID, true)
-		recordActivatedAbilityUse(g, permanent.ObjectID, activate.AbilityIndex, manaBody.Timing)
+		seedEntryChoices(obj, permanent)
+		e.resolveManaAbility(g, obj, permanent, manaBody, manaSource, eventsBeforePayment, nil, agents, log)
 		return actionApplied
 	}
 
@@ -373,6 +363,7 @@ func (e *Engine) applyHandManaAbilityWithChoices(g *game.Game, playerID game.Pla
 		return false
 	}
 	sourceCardID := card.ID
+	start := len(g.Events)
 	if !moveCardBetweenZones(g, playerID, card.ID, zone.Hand, zone.Exile) {
 		return false
 	}
@@ -386,11 +377,7 @@ func (e *Engine) applyHandManaAbilityWithChoices(g *game.Game, playerID game.Pla
 		Controller:          playerID,
 		AdditionalCostsPaid: []string{"Exile this card from your hand"},
 	}
-	if len(body.Content.Modes) > 0 {
-		e.resolveAbilityContentWithChoices(g, obj, body.Content, agents, log)
-	}
-	emitAbilityActivatedEvent(g, obj, 0, true)
-	recordActivatedAbilityUse(g, sourceCardID, activate.AbilityIndex, body.Timing)
+	e.resolveManaAbility(g, obj, nil, &body, manaProducedSource{}, start, nil, agents, log)
 	return true
 }
 

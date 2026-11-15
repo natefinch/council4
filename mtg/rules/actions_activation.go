@@ -874,7 +874,7 @@ func canActivateManaAbility(g *game.Game, playerID game.PlayerID, permanent *gam
 }
 
 func manaBodyHasAddManaEffect(body *game.ManaAbility) bool {
-	if body == nil {
+	if body == nil || game.ManaAbilityLibraryMovement(body) != "" {
 		return false
 	}
 	if sequence, ok := manaBodyInstructionSequence(body); ok {
@@ -883,31 +883,8 @@ func manaBodyHasAddManaEffect(body *game.ManaAbility) bool {
 			if sequence[i].Primitive == nil {
 				return false
 			}
-			switch sequence[i].Primitive.Kind() {
-			case game.PrimitiveAddMana:
+			if sequence[i].Primitive.Kind() == game.PrimitiveAddMana {
 				hasAddMana = true
-			case game.PrimitiveChoose:
-				choice, ok := sequence[i].Primitive.(game.Choose)
-				if !ok || choice.Choice.Kind != game.ResolutionChoiceMana {
-					return false
-				}
-			case game.PrimitiveDamage:
-				damage, ok := sequence[i].Primitive.(game.Damage)
-				if !ok || !isSelfControllerDamageRider(damage) {
-					return false
-				}
-			case game.PrimitiveGainLife:
-				gain, ok := sequence[i].Primitive.(game.GainLife)
-				if !ok || !isSelfControllerGainLifeRider(gain) {
-					return false
-				}
-			case game.PrimitiveDraw:
-				draw, ok := sequence[i].Primitive.(game.Draw)
-				if !ok || draw.Player.Kind() != game.PlayerReferenceController || draw.PlayerGroup.Kind != game.PlayerGroupReferenceNone {
-					return false
-				}
-			default:
-				return false
 			}
 		}
 		return hasAddMana

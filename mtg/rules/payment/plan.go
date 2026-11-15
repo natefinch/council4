@@ -22,6 +22,8 @@ type paymentPlan struct {
 	delveExiles    []id.ID
 	lifePayment    int
 	symbolPayments []game.SymbolPayment
+	activations    []ManaActivation
+	projection     game.ResourceProjection
 }
 
 // spellCostPlan is the full payment plan for a spell, including mana and
@@ -71,6 +73,8 @@ type manaSourceRestrictions struct {
 	excluded                 map[id.ID]bool
 	nonSacrificingOnly       map[id.ID]bool
 	reservedGraveyardCardIDs map[id.ID]bool
+	reserved                 *additionalCostPlan
+	resourceCompletion       func(State, []ManaActivation, game.ResourceProjection) (paymentPlan, bool)
 }
 
 // paymentColors is the deterministic ordering used when spending mana. Callers
