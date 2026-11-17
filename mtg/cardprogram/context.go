@@ -326,6 +326,13 @@ type View interface {
 	Player(game.PlayerReference) (game.PlayerID, bool, error)
 	Players(game.PlayerGroupReference) ([]game.PlayerID, error)
 	Permanents(game.GroupReference) ([]game.ObjectSnapshot, error)
+	// Amount determines a rules-derived quantity once, as the effect is
+	// applied (CR 608.2h), with the Engine's evaluation of game.Dynamic. When
+	// one X is shared by several instructions ("you draw X cards and you lose
+	// X life, where X is ..."), pass the value to each as game.Fixed: a
+	// game.Dynamic quantity is re-read by each instruction, after earlier ones
+	// (or their replacements, such as dredge) may have changed the count.
+	Amount(game.DynamicAmount) (int, error)
 }
 
 // Context is the small authoring seam implemented by the Engine.
