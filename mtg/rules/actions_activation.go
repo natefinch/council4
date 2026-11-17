@@ -619,7 +619,8 @@ func equipActivation(g *game.Game, playerID game.PlayerID, permanent *game.Perma
 	if !bodyAttachesLikeEquip(body) && body.Timing != game.SorceryOnly {
 		return activationCost{}
 	}
-	if !isSorcerySpeed(g, playerID) || abilityHasNonTapAdditionalCosts(body.AdditionalCosts) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing, body.MaxActivationsPerTurn) {
+	if !isSorcerySpeed(g, playerID) || abilityHasNonTapAdditionalCosts(body.AdditionalCosts) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing, body.MaxActivationsPerTurn) ||
+		activatedAbilityUsedByObject(g, permanent.ObjectID, abilityIndex, body) {
 		return activationCost{}
 	}
 	if !activationConditionSatisfied(g, playerID, permanent, body.ActivationCondition) {
@@ -658,7 +659,8 @@ func generalActivation(g *game.Game, playerID game.PlayerID, permanent *game.Per
 	if bodyAttachesLikeEquip(body) || !bodyFunctionsOnBattlefield(body) {
 		return activationCost{}
 	}
-	if !activatedAbilityTimingAllows(g, playerID, body.Timing) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing, body.MaxActivationsPerTurn) {
+	if !activatedAbilityTimingAllows(g, playerID, body.Timing) || activatedAbilityUsedThisTurn(g, permanent.ObjectID, abilityIndex, body.Timing, body.MaxActivationsPerTurn) ||
+		activatedAbilityUsedByObject(g, permanent.ObjectID, abilityIndex, body) {
 		return activationCost{}
 	}
 	if !activationConditionSatisfied(g, playerID, permanent, body.ActivationCondition) {
@@ -696,7 +698,7 @@ func cyclingActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, body 
 	if xValue != 0 || abilityIndex < 0 || !game.BodyHasKeyword(body, game.Cycling) {
 		return activationCost{}
 	}
-	if body.Timing != game.NoTimingRestriction || !abilityHasDiscardThisCardCost(body.AdditionalCosts) {
+	if body.Timing != game.NoTimingRestriction || body.ActivateOnlyOnce || !abilityHasDiscardThisCardCost(body.AdditionalCosts) {
 		return activationCost{}
 	}
 	if len(targets) != 0 || len(game.BodyTargets(body)) != 0 {
@@ -736,7 +738,7 @@ func handActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, body *ga
 	// ability-cost planner below. Every other hand-ability shape fails closed.
 	selfEntry := bodyPutsSourceCardOntoBattlefield(body)
 	discardSelf := !selfEntry && len(body.AdditionalCosts) == 1 && abilityHasDiscardThisCardCost(body.AdditionalCosts)
-	if !discardSelf && !selfEntry {
+	if (!discardSelf && !selfEntry) || body.ActivateOnlyOnce {
 		return activationCost{}
 	}
 	if !activatedAbilityTimingAllows(g, playerID, body.Timing) ||
@@ -778,7 +780,7 @@ func graveyardActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, bod
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return activationCost{}
 	}
-	if game.BodyFunctionZone(body) != zone.Graveyard {
+	if game.BodyFunctionZone(body) != zone.Graveyard || body.ActivateOnlyOnce {
 		return activationCost{}
 	}
 	if !activatedAbilityTimingAllows(g, playerID, body.Timing) || activatedAbilityUsedThisTurn(g, cardID, abilityIndex, body.Timing, body.MaxActivationsPerTurn) {
@@ -1109,6 +1111,25 @@ func recordActivatedAbilityUse(g *game.Game, sourceID id.ID, abilityIndex int, t
 
 func abilityHasOncePerTurnRestriction(timing game.TimingRestriction) bool {
 	return timing == game.OncePerTurn || timing == game.SorceryOncePerTurn
+}
+
+// activatedAbilityUsedByObject reports whether a battlefield source object has
+// already activated its "Activate only once" ability (CR 602.5b, 400.7).
+func activatedAbilityUsedByObject(g *game.Game, sourceObjectID id.ID, abilityIndex int, body *game.ActivatedAbility) bool {
+	return body.ActivateOnlyOnce &&
+		g.ActivatedAbilitiesUsedOnce[game.ActivatedAbilityUse{SourceID: sourceObjectID, AbilityIndex: abilityIndex}]
+}
+
+// recordActivatedAbilityObjectUse consumes an "Activate only once" ability for
+// its source object when the activation completes, not when it resolves.
+func recordActivatedAbilityObjectUse(g *game.Game, sourceObjectID id.ID, abilityIndex int, body *game.ActivatedAbility) {
+	if !body.ActivateOnlyOnce || sourceObjectID == 0 {
+		return
+	}
+	if g.ActivatedAbilitiesUsedOnce == nil {
+		g.ActivatedAbilitiesUsedOnce = make(map[game.ActivatedAbilityUse]bool)
+	}
+	g.ActivatedAbilitiesUsedOnce[game.ActivatedAbilityUse{SourceID: sourceObjectID, AbilityIndex: abilityIndex}] = true
 }
 
 func isSorcerySpeed(g *game.Game, playerID game.PlayerID) bool {

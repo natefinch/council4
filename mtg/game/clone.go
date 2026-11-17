@@ -82,6 +82,7 @@ func (g *Game) Clone() *Game {
 		FiredManaSpendRiders:               cloneSlice(g.FiredManaSpendRiders),
 		ActivatedAbilitiesThisTurn:         cloneComparableMap(g.ActivatedAbilitiesThisTurn),
 		AbilityActivationsThisTurn:         cloneComparableMap(g.AbilityActivationsThisTurn),
+		ActivatedAbilitiesUsedOnce:         cloneComparableMap(g.ActivatedAbilitiesUsedOnce),
 		ExilePlayPermissionUsedThisTurn:    cloneComparableMap(g.ExilePlayPermissionUsedThisTurn),
 		PermanentTypePlayUsesThisTurn:      cloneComparableMap(g.PermanentTypePlayUsesThisTurn),
 		TriggeredAbilitiesThisTurn:         cloneComparableMap(g.TriggeredAbilitiesThisTurn),
@@ -153,6 +154,7 @@ func (g *Game) restoreOpaquePaymentWorld(before *Game) {
 	g.FiredManaSpendRiders = before.FiredManaSpendRiders
 	g.ActivatedAbilitiesThisTurn = before.ActivatedAbilitiesThisTurn
 	g.AbilityActivationsThisTurn = before.AbilityActivationsThisTurn
+	g.ActivatedAbilitiesUsedOnce = before.ActivatedAbilitiesUsedOnce
 	g.ExilePlayPermissionUsedThisTurn = before.ExilePlayPermissionUsedThisTurn
 	g.PermanentTypePlayUsesThisTurn = before.PermanentTypePlayUsesThisTurn
 	g.TriggeredAbilitiesThisTurn = before.TriggeredAbilitiesThisTurn

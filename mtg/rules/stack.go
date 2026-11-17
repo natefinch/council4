@@ -975,14 +975,14 @@ func mutateSpellOnTop(selection []int) bool {
 	return len(selection) == 1 && selection[0] == 0
 }
 
-// shiftPermanentAbilityUseIndexes moves every per-turn record keyed by one of
-// sourceID's effective ability indexes when a mutating creature spell is put
-// over it. The merged permanent is the same object (CR 702.140c, CR 730.2c), so
-// its abilities keep their history while the top card's abilities take the
-// lowest indexes. Triggered abilities from the source still on the stack keep
-// counting their resolutions with the moved ability, and a pending state
-// trigger keeps its latch so it doesn't trigger again until that instance
-// leaves the stack (CR 603.8).
+// shiftPermanentAbilityUseIndexes moves every per-turn and "Activate only once"
+// record keyed by one of sourceID's effective ability indexes when a mutating
+// creature spell is put over it. The merged permanent is the same object (CR
+// 702.140c, CR 730.2c), so its abilities keep their history while the top
+// card's abilities take the lowest indexes. Triggered abilities from the source
+// still on the stack keep counting their resolutions with the moved ability, and
+// a pending state trigger keeps its latch so it doesn't trigger again until that
+// instance leaves the stack (CR 603.8).
 func shiftPermanentAbilityUseIndexes(g *game.Game, sourceID id.ID, offset int) {
 	if offset <= 0 {
 		return
@@ -1001,6 +1001,7 @@ func shiftPermanentAbilityUseIndexes(g *game.Game, sourceID id.ID, offset int) {
 	}
 	g.ActivatedAbilitiesThisTurn = shiftAbilityUseKeys(g.ActivatedAbilitiesThisTurn, shiftActivated)
 	g.AbilityActivationsThisTurn = shiftAbilityUseKeys(g.AbilityActivationsThisTurn, shiftActivated)
+	g.ActivatedAbilitiesUsedOnce = shiftAbilityUseKeys(g.ActivatedAbilitiesUsedOnce, shiftActivated)
 	g.TriggeredAbilitiesThisTurn = shiftAbilityUseKeys(g.TriggeredAbilitiesThisTurn, shiftTriggered)
 	g.ResolvedTriggeredAbilitiesThisTurn = shiftAbilityUseKeys(g.ResolvedTriggeredAbilitiesThisTurn, shiftTriggered)
 	g.ChosenModesThisTurn = shiftAbilityUseKeys(g.ChosenModesThisTurn, shiftTriggered)
