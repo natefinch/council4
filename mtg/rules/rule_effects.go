@@ -1060,12 +1060,31 @@ func ruleEffectAssignsCombatDamageByToughness(g *game.Game, permanent *game.Perm
 	return false
 }
 
+// ruleEffectAssignsNoCombatDamage reports whether an "assigns no combat damage
+// this turn/combat" effect applies to permanent (Keeper of Tresserhorn, Master
+// of Cruelties).
+func ruleEffectAssignsNoCombatDamage(g *game.Game, permanent *game.Permanent) bool {
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectAssignNoCombatDamage && ruleEffectMatchesPermanent(g, effect, permanent) {
+			return true
+		}
+	}
+	return false
+}
+
 // combatDamageAssignedBy returns the amount of combat damage permanent assigns:
-// its toughness when a static combat-damage replacement applies to it ("assigns
-// combat damage equal to its toughness rather than its power.", Doran, the Siege
-// Tower), and otherwise its power (CR 510.1a). Negative toughness contributes no
-// damage, matching the power floor.
+// none when an "assigns no combat damage" effect applies to it, its toughness
+// when a static combat-damage replacement applies to it ("assigns combat damage
+// equal to its toughness rather than its power.", Doran, the Siege Tower), and
+// otherwise its power (CR 510.1a). Negative toughness contributes no damage,
+// matching the power floor. A result of 0 or less means the creature assigns
+// no combat damage at all (CR 510.1a).
 func combatDamageAssignedBy(g *game.Game, permanent *game.Permanent) int {
+	if ruleEffectAssignsNoCombatDamage(g, permanent) {
+		return 0
+	}
 	if ruleEffectAssignsCombatDamageByToughness(g, permanent) {
 		if toughness, ok := effectiveToughness(g, permanent); ok {
 			return max(0, toughness)

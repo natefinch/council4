@@ -785,6 +785,19 @@ const (
 	// in a combat. The requirement follows the creature's object, so it lapses
 	// when either creature changes zones (CR 400.7).
 	RuleEffectMustBlock
+	// RuleEffectAssignNoCombatDamage makes the affected creature assign no
+	// combat damage ("... this creature assigns no combat damage this turn.",
+	// Keeper of Tresserhorn, Ophidian, Laccolith Titan; "... assigns no combat
+	// damage this combat.", Master of Cruelties). While it applies, the creature
+	// assigns no combat damage in any combat damage step, whether it is
+	// attacking (blocked or unblocked, with or without trample) or blocking, as
+	// if it would assign 0 or less damage (CR 510.1a). This is not prevention:
+	// no damage is assigned or dealt, so "can't be prevented" effects, lifelink
+	// and "deals combat damage" triggers have nothing to act on, and creatures
+	// in combat with it still assign their own damage normally. ApplyRule's
+	// Object (or AffectedSource) names the exact permanent; it follows that
+	// object, so a new object after a zone change is unaffected (CR 400.7).
+	RuleEffectAssignNoCombatDamage
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -864,7 +877,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectDamageCantBePrevented,
 		RuleEffectDamageToCantBePreventedOrRedirected,
 		RuleEffectCastSpellsFromGraveyardWithSneak,
-		RuleEffectMustBlock:
+		RuleEffectMustBlock,
+		RuleEffectAssignNoCombatDamage:
 		return true
 	default:
 		return false
