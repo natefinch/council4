@@ -264,7 +264,9 @@ const (
 	// blocked only by creatures matching the carried BlockerRestriction ("can't
 	// be blocked except by creatures with flying", "... except by black
 	// creatures", "... except by artifact creatures", "... except by creatures
-	// with defender", "... except by legendary creatures"). Every blocker that
+	// with defender", "... except by legendary creatures", and through
+	// BlockerRestrictionSelection "... except by Walls", "... except by
+	// artifact creatures and/or white creatures"). Every blocker that
 	// does not match the restriction is prohibited; matching blockers are
 	// allowed. Unlike RuleEffectCantBeBlockedByCreaturesWith, which stops only
 	// matching blockers, this stops all non-matching ones.
@@ -924,16 +926,28 @@ const (
 	// player who currently holds the monarch designation ("can't be blocked by
 	// creatures the monarch controls.", Azure Fleet Admiral).
 	BlockerRestrictionControlledByMonarch
+	// BlockerRestrictionSelection matches blockers satisfying the
+	// BlockerRestriction's Selection, read from the blocker's current effective
+	// characteristics (so changeling and type-, color- or keyword-changing
+	// effects count) and viewed from the rule effect's controller. It describes
+	// creature-type and and/or union qualities: "can't be blocked except by
+	// Walls" (SubtypesAny), "... except by Krakens, Leviathans, Octopuses, and
+	// Serpents", "... except by artifact creatures and/or white creatures"
+	// (AnyOf of RequiredTypes and ColorsAny) and "... except by Walls and/or
+	// creatures with flying" (AnyOf of SubtypesAny and Keyword).
+	BlockerRestrictionSelection
 )
 
 // BlockerRestriction bounds which blockers a restricted block prohibition stops.
 // Power is the threshold for the power-comparison kinds; Color names the stopped
-// blocker color for BlockerRestrictionColor. Both are unused for kinds that do
-// not need them.
+// blocker color for BlockerRestrictionColor; Selection describes the matched
+// blockers for BlockerRestrictionSelection and must be non-empty for it. Each is
+// unused for kinds that do not need it.
 type BlockerRestriction struct {
-	Kind  BlockerRestrictionKind
-	Power int
-	Color color.Color
+	Kind      BlockerRestrictionKind
+	Power     int
+	Color     color.Color
+	Selection Selection
 }
 
 // RuleEffect models static or runtime effects that change game rules rather

@@ -100,6 +100,21 @@ func targetSpecAllowedKinds(target *TargetSpec) TargetAllow {
 	return TargetAllowUnspecified
 }
 
+// validate reports a malformed restriction: a Selection restriction must
+// describe the matched blockers, and other kinds don't carry a Selection.
+func (r *BlockerRestriction) validate() error {
+	if r.Kind != BlockerRestrictionSelection {
+		if !r.Selection.Empty() {
+			return errors.New("only a Selection blocker restriction carries a Selection")
+		}
+		return nil
+	}
+	if r.Selection.Empty() {
+		return errors.New("a Selection blocker restriction requires a non-empty Selection")
+	}
+	return firstProblem(r.Selection.Validate())
+}
+
 // firstProblem adapts the structural []string problem list returned by the
 // reference Validate methods to the error-returning sequence validator.
 func firstProblem(problems []string) error {
@@ -1332,6 +1347,9 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 		}
 		if effect.Duration == DurationDuringExtraTurn {
 			return errors.New("an extra-turn-scoped rule effect must be granted by TakeExtraTurn")
+		}
+		if err := effect.BlockerRestriction.validate(); err != nil {
+			return err
 		}
 		if effect.Kind != RuleEffectMustBlock && (effect.RequiredBlockAttackerRef.Exists || effect.RequiredBlockAttacker != 0) {
 			return errors.New("only a block requirement names an attacker to block")

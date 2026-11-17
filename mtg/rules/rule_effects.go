@@ -1135,14 +1135,19 @@ func ruleEffectRestrictsBlocker(g *game.Game, attacker, blocker *game.Permanent)
 		if !ruleEffectMatchesPermanent(g, effect, attacker) {
 			continue
 		}
-		if blockerMatchesRestriction(g, blocker, effect.BlockerRestriction) {
+		if blockerMatchesRestriction(g, effect, blocker) {
 			return true
 		}
 	}
 	return false
 }
 
-func blockerMatchesRestriction(g *game.Game, blocker *game.Permanent, restriction game.BlockerRestriction) bool {
+// blockerMatchesRestriction reports whether blocker has the quality described
+// by effect's BlockerRestriction, read from its current characteristics. The
+// blocker-side "can block only creatures with ..." restriction passes the
+// attacker here instead.
+func blockerMatchesRestriction(g *game.Game, effect *game.RuleEffect, blocker *game.Permanent) bool {
+	restriction := &effect.BlockerRestriction
 	switch restriction.Kind {
 	case game.BlockerRestrictionFlying:
 		return hasKeyword(g, blocker, game.Flying)
@@ -1163,6 +1168,22 @@ func blockerMatchesRestriction(g *game.Game, blocker *game.Permanent, restrictio
 	case game.BlockerRestrictionControlledByMonarch:
 		player, ok := playerByID(g, effectiveController(g, blocker))
 		return ok && player.IsMonarch
+	case game.BlockerRestrictionSelection:
+		if restriction.Selection.Empty() {
+			return false
+		}
+		subject := selectionSubject{
+			kind:           subjectPermanent,
+			g:              g,
+			permanent:      blocker,
+			values:         effectivePermanentValues(g, blocker),
+			viewer:         effect.Controller,
+			sourceObjectID: effect.SourceObjectID,
+		}
+		if selectionReadsController(&restriction.Selection) {
+			subject.controller = effectiveController(g, blocker)
+		}
+		return matchSelection(&subject, &restriction.Selection)
 	default:
 		return false
 	}
@@ -1182,7 +1203,7 @@ func ruleEffectRestrictsBlockerExcept(g *game.Game, attacker, blocker *game.Perm
 		if !ruleEffectMatchesPermanent(g, effect, attacker) {
 			continue
 		}
-		if !blockerMatchesRestriction(g, blocker, effect.BlockerRestriction) {
+		if !blockerMatchesRestriction(g, effect, blocker) {
 			return true
 		}
 	}
@@ -1205,7 +1226,7 @@ func ruleEffectLimitsBlockerToCreaturesWith(g *game.Game, blocker, attacker *gam
 		if !ruleEffectMatchesPermanent(g, effect, blocker) {
 			continue
 		}
-		if !blockerMatchesRestriction(g, attacker, effect.BlockerRestriction) {
+		if !blockerMatchesRestriction(g, effect, attacker) {
 			return true
 		}
 	}
