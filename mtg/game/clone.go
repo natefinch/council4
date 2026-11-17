@@ -52,6 +52,7 @@ func (g *Game) Clone() *Game {
 		ControlGrantsEnded:                 g.ControlGrantsEnded,
 		SearchControlScopes:                cloneSlice(g.SearchControlScopes),
 		HiddenZoneSearchScopes:             cloneSlice(g.HiddenZoneSearchScopes),
+		RevealedHands:                      cloneSlice(g.RevealedHands),
 		ManaPaymentScopes:                  cloneSlice(g.ManaPaymentScopes),
 		LibraryTopWindows:                  cloneSlice(g.LibraryTopWindows),
 		ClashReveals:                       cloneSliceFunc(g.ClashReveals, cloneClashDecision),

@@ -158,6 +158,9 @@ type Game struct {
 	SearchControlScopes []SearchControlScope
 	// HiddenZoneSearchScopes are open searches of a player's hand and library.
 	HiddenZoneSearchScopes []HiddenZoneSearchScope
+	// RevealedHands are the players whose whole hand an effect is currently
+	// showing to every player (CR 701.20a), innermost last.
+	RevealedHands []PlayerID
 	// ManaPaymentScopes grant mana activation, never ordinary priority.
 	ManaPaymentScopes []PlayerID
 	// LibraryTopWindows are the open CR 401.5 windows, outermost first.

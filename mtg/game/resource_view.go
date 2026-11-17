@@ -59,6 +59,7 @@ func (g *Game) ResourceView(projection ResourceProjection) *Game {
 	view.pendingEntryEvents = nil
 	view.ManaPaymentScopes = nil
 	view.HiddenZoneSearchScopes = nil
+	view.RevealedHands = nil
 	view.SearchControlScopes = nil
 	view.LibraryTopWindows = nil
 	view.Battlefield = make([]*Permanent, 0, len(g.Battlefield))

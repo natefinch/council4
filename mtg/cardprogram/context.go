@@ -187,6 +187,33 @@ type SameNameResult struct {
 	Cards     []FoundCard
 }
 
+// HandReveal has one player reveal their whole hand (CR 701.20a), after which
+// the source's controller chooses up to Max revealed cards matching Filter (a
+// zero Filter matches every card). Unless Optional, the controller must choose
+// Max matching cards, or every matching card when fewer match (CR 608.2c-d);
+// Optional ("you may choose") allows choosing none. Max zero only reveals.
+type HandReveal struct {
+	Player   game.PlayerReference
+	Filter   game.Selection
+	Max      int
+	Optional bool
+}
+
+// HandRevealResult reports one hand reveal. Available is false when the
+// player was unavailable, so nothing was revealed. Revealed holds every card
+// that was in the revealed hand, Matching the revealed cards that matched the
+// filter, and Chosen the controller's chosen cards, each as a hand handle for
+// a later MoveCards placement; the cards stay in the hand until moved (CR
+// 701.20b), and a handle stops authorizing placement once its card changes
+// zones.
+type HandRevealResult struct {
+	Available bool
+	Player    game.PlayerID
+	Revealed  []FoundCard
+	Matching  []FoundCard
+	Chosen    []FoundCard
+}
+
 // ClashReveal is one clashing player's public reveal and placement (CR
 // 701.30a, 701.30c). Card is unset when that player's library was empty, so
 // nothing was revealed; Card.ManaValue is the card's mana value in the library
@@ -271,4 +298,10 @@ type Context interface {
 	// handles with MoveCards as one simultaneous placement, then shuffle with
 	// Execute(game.ShuffleLibrary).
 	SearchSameName(SameNameSearch) (SameNameResult, error)
+	// RevealHand has one player reveal their hand to every player, as a
+	// public announcement of each card's characteristics (not its identity,
+	// CR 406.3), and the source's controller choose among the revealed cards
+	// (CR 701.20a). Move the chosen handles with MoveCards ("exile that
+	// card").
+	RevealHand(HandReveal) (HandRevealResult, error)
 }

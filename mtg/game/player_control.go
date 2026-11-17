@@ -1,6 +1,10 @@
 package game
 
-import "github.com/natefinch/council4/mtg/game/id"
+import (
+	"slices"
+
+	"github.com/natefinch/council4/mtg/game/id"
+)
 
 // DecisionKind distinguishes rules decisions from personal/tournament decisions
 // that a controller cannot make for another player (CR 723.5b, 723.6).
@@ -153,6 +157,23 @@ func (g *Game) LookingAtLibrary(viewer, player PlayerID) bool {
 // controlled player's (CR 723.4), or one viewer is searching (CR 701.23a).
 func (g *Game) LookingAtHand(viewer, player PlayerID) bool {
 	return g.CanSeePlayerInformation(viewer, player) || g.searchingHiddenZones(viewer, player)
+}
+
+// HandRevealedToAll reports whether an effect is currently showing player's
+// whole hand to every player (CR 701.20a). Unlike LookingAtHand, a reveal
+// shows the cards' characteristics, not identities that could track a card
+// into a later hidden object (CR 406.3).
+func (g *Game) HandRevealedToAll(player PlayerID) bool {
+	return slices.Contains(g.RevealedHands, player)
+}
+
+// OpenHandReveal shows player's whole hand to every player until the returned
+// function ends the reveal (CR 701.20a). The cards stay in that hand (CR
+// 701.20b), and a card that leaves it is no longer shown by this reveal.
+func (g *Game) OpenHandReveal(player PlayerID) (closeReveal func()) {
+	depth := len(g.RevealedHands)
+	g.RevealedHands = append(g.RevealedHands, player)
+	return func() { g.RevealedHands = g.RevealedHands[:depth] }
 }
 
 func (g *Game) searchingHiddenZones(viewer, player PlayerID) bool {
