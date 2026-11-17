@@ -5,6 +5,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/rules/payment"
 )
 
 // distinctManaColorsSpent counts the distinct colors of mana among a payment's
@@ -292,6 +293,9 @@ func manaSpendConditionSatisfied(g *game.Game, rider game.ManaRiderInstance, spe
 		return spellDef != nil && !isCreatureSpell
 	case game.ManaSpendCastMulticoloredSpell:
 		return spellDef != nil && len(spellDef.Colors) >= 2
+	case game.ManaSpendFaceDownOrTurnFaceUp:
+		// Any face-down creature spell, whatever cast it face down (CR 708.4).
+		return spellObj != nil && spellObj.FaceDown && isCreatureSpell
 	case game.ManaSpendCastMonocoloredSpellOfChosenColor:
 		// The tagged mana is produced in the source's entry-time chosen color, so
 		// "that color" is the produced unit's own color: admit only a monocolored
@@ -365,6 +369,30 @@ func consumeManaSpendRidersForPayment(
 		return abilityActivationSatisfiesManaSpendRider(g, source, rider)
 	}
 	processManaSpendRiders(player, before, spent, qualifies, func(rider game.ManaRiderInstance) {
+		if rider.Rider.FiresOnSpend() {
+			fireManaSpendRider(g, rider)
+		}
+	})
+}
+
+// consumeManaSpendRidersForTurnFaceUp consumes the tagged mana a turn-face-up
+// special action spent (CR 116.2b). It is not an ability activation, so only
+// the face-down restriction (Qarsi Deceiver) can qualify, and only for a morph
+// cost or a manifested creature's mana cost, as the payment planner admits.
+func consumeManaSpendRidersForTurnFaceUp(
+	g *game.Game,
+	playerID game.PlayerID,
+	turnFaceUp payment.TurnFaceUpCost,
+	before map[mana.Unit]int,
+	spent map[mana.Unit]int,
+) {
+	player, ok := playerByID(g, playerID)
+	if !ok || len(player.ManaRiders) == 0 {
+		return
+	}
+	processManaSpendRiders(player, before, spent, func(rider game.ManaRiderInstance) bool {
+		return rider.Rider.Condition == game.ManaSpendFaceDownOrTurnFaceUp && turnFaceUp.MorphOrManifestedManaCost()
+	}, func(rider game.ManaRiderInstance) {
 		if rider.Rider.FiresOnSpend() {
 			fireManaSpendRider(g, rider)
 		}
