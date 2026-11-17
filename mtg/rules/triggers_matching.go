@@ -1015,8 +1015,8 @@ func enteredBattlefieldObjectIdentity(source *game.Permanent, subject game.Trigg
 	return event.PermanentID, true
 }
 
-// combatEventHasObjectIdentity reports whether a combat declaration event and
-// the source both carry battlefield object identities. Such events only ever
+// combatEventHasObjectIdentity reports whether a combat declaration or exert
+// event and the source both carry battlefield object identities. Such events only ever
 // concern battlefield objects, and a card that leaves and reenters becomes a new
 // object with no memory of its earlier incarnation (CR 400.7), so its earlier
 // attack or block is not this source's even though both share one card
@@ -1029,7 +1029,8 @@ func combatEventHasObjectIdentity(source *game.Permanent, subjectID id.ID, event
 	case game.EventAttackerDeclared,
 		game.EventBlockerDeclared,
 		game.EventAttackerBecameBlocked,
-		game.EventAttackerBecameUnblocked:
+		game.EventAttackerBecameUnblocked,
+		game.EventPermanentExerted:
 		return true
 	default:
 		return false

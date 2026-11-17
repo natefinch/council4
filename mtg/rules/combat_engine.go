@@ -650,27 +650,33 @@ func (ce combatEngine) attackersLegal(g *game.Game, playerID game.PlayerID, decl
 // attackers' optional costs to attack (CR 508.1g, 508.1j) to the attacking
 // player: exert-as-it-attacks, then enlist. Without agents both are declined.
 func (ce combatEngine) applyAttackersWithChoices(g *game.Game, playerID game.PlayerID, declare action.DeclareAttackersAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-	if !ce.applyAttackersWithPayment(g, playerID, declare, agents, log) {
+	simultaneousID, ok := ce.applyAttackersWithPayment(g, playerID, declare, agents, log)
+	if !ok {
 		return false
 	}
-	ce.chooseAttackExertions(g, playerID, declare.Attackers, agents, log)
+	ce.chooseAttackExertions(g, playerID, declare.Attackers, simultaneousID, agents, log)
 	ce.payEnlistCosts(g, playerID, declare.Attackers, agents, log)
 	return true
 }
 
 // applyAttackers validates, pays attack taxes, taps and emits declaration events.
 func (ce combatEngine) applyAttackers(g *game.Game, playerID game.PlayerID, declare action.DeclareAttackersAction) bool {
-	return ce.applyAttackersWithPayment(g, playerID, declare, [game.NumPlayers]PlayerAgent{}, nil)
+	_, ok := ce.applyAttackersWithPayment(g, playerID, declare, [game.NumPlayers]PlayerAgent{}, nil)
+	return ok
 }
 
-func (ce combatEngine) applyAttackersWithPayment(g *game.Game, playerID game.PlayerID, declare action.DeclareAttackersAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
+// applyAttackersWithPayment returns the SimultaneousID shared by the
+// declaration's attack events, which the attackers' exert events join. It is
+// allocated when several creatures attack or any of them may be exerted as it
+// attacks; otherwise it is 0.
+func (ce combatEngine) applyAttackersWithPayment(g *game.Game, playerID game.PlayerID, declare action.DeclareAttackersAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (id.ID, bool) {
 	if !ce.attackersLegal(g, playerID, declare) {
-		return false
+		return 0, false
 	}
 	eligibleByID := permanentMapByObjectID(eligibleAttackers(g, playerID))
 	if tax, ok := ce.attackTaxCost(g, declare.Attackers); ok {
 		if !ce.payAttackTax(g, playerID, declare.Attackers, tax, agents, log) {
-			return false
+			return 0, false
 		}
 	}
 
@@ -693,7 +699,7 @@ func (ce combatEngine) applyAttackersWithPayment(g *game.Game, playerID game.Pla
 		recordAttackCombatants(g, declaration)
 	}
 	simultaneousID := id.ID(0)
-	if len(declare.Attackers) > 1 {
+	if len(declare.Attackers) > 1 || attackDeclarationMayExert(g, declare.Attackers, eligibleByID) {
 		simultaneousID = g.IDGen.Next()
 	}
 	for _, declaration := range declare.Attackers {
@@ -715,7 +721,7 @@ func (ce combatEngine) applyAttackersWithPayment(g *game.Game, playerID game.Pla
 			SimultaneousID:     simultaneousID,
 		})
 	}
-	return true
+	return simultaneousID, true
 }
 
 // blockersLegal is a pure validator for a complete declaration.

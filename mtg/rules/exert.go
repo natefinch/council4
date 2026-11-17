@@ -2,6 +2,7 @@ package rules
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
 )
 
 // exertPermanent is the shared exert operation (CR 701.43): playerID chooses
@@ -10,8 +11,11 @@ import (
 // repeated exert by the same player expires in the same untap step, so it
 // changes nothing (CR 701.43b). An object that isn't on the battlefield can't
 // be exerted (CR 701.43c), and a phased-out permanent is treated as though it
-// doesn't exist (CR 702.26b).
-func exertPermanent(g *game.Game, playerID game.PlayerID, p *game.Permanent) bool {
+// doesn't exist (CR 702.26b). Every exert, including a repeated one, emits
+// EventPermanentExerted so "whenever you exert a creature" triggers and "hasn't
+// been exerted this turn" reads it; simultaneousID batches it with the event
+// that exerted it (0 for none).
+func exertPermanent(g *game.Game, playerID game.PlayerID, p *game.Permanent, simultaneousID id.ID) bool {
 	if !activeBattlefieldPermanent(p) || playerID < 0 || int(playerID) >= game.NumPlayers {
 		return false
 	}
@@ -19,6 +23,15 @@ func exertPermanent(g *game.Game, playerID game.PlayerID, p *game.Permanent) boo
 		return false
 	}
 	p.ExertedBy[playerID] = true
+	emitEvent(g, game.Event{
+		Kind:           game.EventPermanentExerted,
+		SourceID:       p.CardInstanceID,
+		SourceObjectID: p.ObjectID,
+		Controller:     playerID,
+		Player:         playerID,
+		PermanentID:    p.ObjectID,
+		SimultaneousID: simultaneousID,
+	})
 	return true
 }
 
@@ -56,8 +69,11 @@ type attackExertOption struct {
 // attacking player and queues that instance's linked "When you do" trigger
 // (CR 603.12, 607.2h), which is put on the stack with the other attack
 // triggers. The trigger is queued even when it would have no legal target; it
-// is then removed as it would be put on the stack (CR 603.3d).
-func (ce combatEngine) chooseAttackExertions(g *game.Game, playerID game.PlayerID, attackers []game.AttackDeclaration, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
+// is then removed as it would be put on the stack (CR 603.3d). A conditional
+// option ("If this creature hasn't been exerted this turn, you may exert it as
+// it attacks") is offered only while its static condition holds for that
+// attacker. Exert events share the declaration's attack batch simultaneousID.
+func (ce combatEngine) chooseAttackExertions(g *game.Game, playerID game.PlayerID, attackers []game.AttackDeclaration, simultaneousID id.ID, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	var offered []attackExertOption
 	for _, declaration := range attackers {
 		attacker, ok := permanentByObjectID(g, declaration.Attacker)
@@ -67,6 +83,13 @@ func (ce combatEngine) chooseAttackExertions(g *game.Game, playerID game.PlayerI
 		for _, body := range permanentEffectiveAbilitiesView(g, attacker) {
 			static, ok := body.(*game.StaticAbility)
 			if !ok || !static.ExertAsItAttacks.Exists {
+				continue
+			}
+			if !conditionSatisfied(g, conditionContext{
+				controller:     playerID,
+				source:         attacker,
+				sourceObjectID: attacker.ObjectID,
+			}, static.Condition) {
 				continue
 			}
 			offered = append(offered, attackExertOption{attacker: attacker, cost: static.ExertAsItAttacks.Val, text: static.Text})
@@ -98,7 +121,7 @@ func (ce combatEngine) chooseAttackExertions(g *game.Game, playerID game.PlayerI
 		}
 		seen[index] = true
 		option := offered[index]
-		if !exertPermanent(g, playerID, option.attacker) || !option.cost.WhenYouDo.Exists {
+		if !exertPermanent(g, playerID, option.attacker, simultaneousID) || !option.cost.WhenYouDo.Exists {
 			continue
 		}
 		g.PendingReflexiveTriggers = append(g.PendingReflexiveTriggers, game.ReflexiveTrigger{
@@ -112,4 +135,22 @@ func (ce combatEngine) chooseAttackExertions(g *game.Game, playerID game.PlayerI
 			},
 		})
 	}
+}
+
+// attackDeclarationMayExert reports whether any declared attacker has an
+// exert-as-it-attacks ability, so its attack events need a batch identity
+// that the exert events can share.
+func attackDeclarationMayExert(g *game.Game, attackers []game.AttackDeclaration, eligibleByID map[id.ID]*game.Permanent) bool {
+	for _, declaration := range attackers {
+		attacker := eligibleByID[declaration.Attacker]
+		if attacker == nil {
+			continue
+		}
+		for _, body := range permanentEffectiveAbilitiesView(g, attacker) {
+			if static, ok := body.(*game.StaticAbility); ok && static.ExertAsItAttacks.Exists {
+				return true
+			}
+		}
+	}
+	return false
 }
