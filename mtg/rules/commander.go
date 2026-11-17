@@ -194,6 +194,57 @@ func isCommanderOwnedBy(g *game.Game, playerID game.PlayerID, cardID id.ID) bool
 	return ok && card.Owner == playerID
 }
 
+// greatestCommanderManaValue returns the greatest mana value among the
+// commanders playerID owns, or 0 when they have none. CR 903.3/903.3e: a
+// commander is a commander in every zone and uses its current characteristics
+// there, so a commander permanent (including one merged into a mutated
+// permanent, CR 903.3c) or spell reads its live mana value, and a card in any
+// other zone reads its printed mana value. A face-down commander in any zone
+// has no characteristics (CR 406.3a, 708.2), so its mana value is 0 (CR 202.3a)
+// and its hidden printed mana value isn't revealed.
+func greatestCommanderManaValue(g *game.Game, playerID game.PlayerID) int {
+	player, ok := playerByID(g, playerID)
+	if !ok {
+		return 0
+	}
+	greatest := 0
+	consider := func(cardID id.ID) {
+		card, ok := g.GetCardInstance(cardID)
+		if !ok || card.Owner != playerID {
+			return
+		}
+		if manaValue := commanderManaValue(g, card); manaValue > greatest {
+			greatest = manaValue
+		}
+	}
+	for cardID, isCommander := range g.CommanderIDs {
+		if isCommander {
+			consider(cardID)
+		}
+	}
+	if legacy := player.CommanderInstanceID; legacy != 0 && !g.CommanderIDs[legacy] {
+		consider(legacy)
+	}
+	return greatest
+}
+
+func commanderManaValue(g *game.Game, card *game.CardInstance) int {
+	if permanent, ok := commanderPermanent(g, card.ID); ok {
+		manaValue, _ := effectivePermanentManaValue(g, permanent)
+		return manaValue
+	}
+	for _, obj := range g.Stack.Objects() {
+		if obj.Kind == game.StackSpell && !obj.Copy && obj.SourceID == card.ID {
+			manaValue, _ := stackObjectManaValue(g, obj)
+			return manaValue
+		}
+	}
+	if from, ok := cardZone(g, card.ID); ok && cardFaceDownInZone(g, card, from) {
+		return 0
+	}
+	return offStackCardManaValue(card)
+}
+
 func recordCommanderCast(g *game.Game, playerID game.PlayerID, cardID id.ID) {
 	player, ok := playerByID(g, playerID)
 	if !ok || !isCommanderOwnedBy(g, playerID, cardID) {

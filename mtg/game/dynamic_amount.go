@@ -353,6 +353,16 @@ const (
 	// such paid component counts zero. Added last so existing kinds keep their
 	// wire values.
 	DynamicAmountPaidCostCounters
+	// DynamicAmountGreatestCommanderManaValue is the greatest mana value among
+	// the commanders the resolving controller owns ("where X is the greatest
+	// mana value among your commanders", Cactus Preserve). Every commander
+	// counts wherever it is, including a partner or Background, using its
+	// current characteristics in that zone (CR 903.3, 903.3e): a permanent or
+	// spell reads its live mana value, and a card elsewhere reads its printed
+	// mana value. A player with no commander has 0. The amount is read as the
+	// effect resolves (CR 608.2h), so an ApplyContinuous P/T set freezes it.
+	// Added last so existing kinds keep their wire values.
+	DynamicAmountGreatestCommanderManaValue
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves
