@@ -158,6 +158,7 @@ func (e *Engine) resolveProgram(g *game.Game, obj *game.StackObject, mode game.M
 	}
 	defer func() { ctx.active = false }()
 	defer g.OpenClashRevealScope()()
+	defer ctx.endKeptHandReveals()
 	previous, _ := g.ChoiceContext()
 	e.setReplacementChoiceContext(g, agents, log)
 	defer g.SetChoiceContext(previous)
@@ -179,6 +180,7 @@ type programContext struct {
 	found        map[game.ObjectID]game.ZoneCardSnapshot
 	foundZones   map[game.ObjectID]zone.Type
 	libraryEpoch map[game.ObjectID]uint64
+	keptReveals  []*keptHandReveal
 }
 
 func (c *programContext) View() cardprogram.View { return c }

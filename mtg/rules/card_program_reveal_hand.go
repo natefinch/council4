@@ -3,6 +3,7 @@ package rules
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/natefinch/council4/mtg/cardprogram"
 	"github.com/natefinch/council4/mtg/game"
@@ -28,7 +29,16 @@ import (
 // 701.20b): the chosen handles authorize one later MoveCards placement, which
 // moves hand and graveyard cards together. A mandatory choice takes every
 // matching card unasked when there are no more than Max, and nothing when none
-// match (CR 608.2c-d); All takes every match unasked.
+// match (CR 608.2c-d); All takes every match unasked. Chooser, when set, names
+// another player who makes the choice ("That player exiles a card from it");
+// the filter stays relative to the source's controller. KeepRevealed keeps the
+// hand revealed until the program finishes or a later reveal finds it empty,
+// rather than only through this choice, and every later RevealHand of that hand
+// in the same program continues that one reveal (CR 701.20a): it shows the
+// hand as it now is and announces only cards it has not already revealed, so
+// alternating choices ("Repeat this process until all cards in that hand have
+// been exiled") are made from one revealed hand. Ending at an empty hand keeps
+// cards the program later returns to it hidden (CR 402.3).
 func (c *programContext) RevealHand(reveal cardprogram.HandReveal) (cardprogram.HandRevealResult, error) {
 	if err := c.valid(); err != nil {
 		return cardprogram.HandRevealResult{}, err
@@ -50,14 +60,31 @@ func (c *programContext) RevealHand(reveal cardprogram.HandReveal) (cardprogram.
 			return cardprogram.HandRevealResult{}, fmt.Errorf("invalid hand reveal graveyard filter: %s", problems[0])
 		}
 	}
+	if reveal.Chooser.Exists {
+		if problems := reveal.Chooser.Val.Validate(); len(problems) != 0 {
+			return cardprogram.HandRevealResult{}, fmt.Errorf("invalid hand reveal chooser: %s", problems[0])
+		}
+	}
 	player, available := resolvePlayerReference(c.game, c.obj, reveal.Player)
 	if !available || !isPlayerAlive(c.game, player) {
 		return cardprogram.HandRevealResult{}, nil
 	}
 	result := cardprogram.HandRevealResult{Available: true, Player: player}
-	endReveal := c.game.OpenHandReveal(player)
-	defer endReveal()
-	chooser := c.obj.Controller
+	controller := c.obj.Controller
+	chooser, hasChooser := controller, true
+	if reveal.Chooser.Exists {
+		chooser, hasChooser = resolvePlayerReference(c.game, c.obj, reveal.Chooser.Val)
+	}
+	kept := c.keptHandReveal(player)
+	if kept == nil {
+		endReveal := c.game.OpenHandReveal(player)
+		if reveal.KeepRevealed {
+			kept = &keptHandReveal{player: player, announced: make(map[game.ZoneCardSnapshot]bool), end: endReveal}
+			c.keptReveals = append(c.keptReveals, kept)
+		} else {
+			defer endReveal()
+		}
+	}
 	var candidates []revealChoiceCandidate
 	var revealed []game.ChoiceCardInfo
 	for _, cardID := range c.game.Players[player].Hand.All() {
@@ -65,24 +92,30 @@ func (c *programContext) RevealHand(reveal cardprogram.HandReveal) (cardprogram.
 		if !exists {
 			continue
 		}
-		emitEvent(c.game, game.Event{
-			Kind:          game.EventCardRevealed,
-			Announcement:  true,
-			Unidentified:  true,
-			SourceID:      stackObjectSourceID(c.obj),
-			StackObjectID: stackObjectID(c.obj),
-			Controller:    stackObjectController(c.obj),
-			Player:        player,
-			CardID:        cardID,
-			FromZone:      zone.Hand,
-			Amount:        1,
-		})
+		object := game.ZoneCardSnapshot{CardID: cardID, ZoneVersion: card.ZoneVersion}
+		if kept == nil || !kept.announced[object] {
+			emitEvent(c.game, game.Event{
+				Kind:          game.EventCardRevealed,
+				Announcement:  true,
+				Unidentified:  true,
+				SourceID:      stackObjectSourceID(c.obj),
+				StackObjectID: stackObjectID(c.obj),
+				Controller:    stackObjectController(c.obj),
+				Player:        player,
+				CardID:        cardID,
+				FromZone:      zone.Hand,
+				Amount:        1,
+			})
+			if kept != nil {
+				kept.announced[object] = true
+			}
+		}
 		if info := revealedCardChoiceInfo(c.game, cardID); info.Exists {
 			revealed = append(revealed, info.Val)
 		}
 		handle := c.mintFoundCard(card, zone.Hand)
 		result.Revealed = append(result.Revealed, handle)
-		if handCardMatchesSelection(c.game, card, reveal.Filter, chooser) {
+		if handCardMatchesSelection(c.game, card, reveal.Filter, controller) {
 			result.Matching = append(result.Matching, handle)
 			candidates = append(candidates, revealChoiceCandidate{handle: handle, info: revealedCardChoiceInfo(c.game, cardID)})
 		}
@@ -90,7 +123,7 @@ func (c *programContext) RevealHand(reveal cardprogram.HandReveal) (cardprogram.
 	if reveal.Graveyard.Exists {
 		for _, cardID := range c.game.Players[player].Graveyard.All() {
 			card, exists := c.game.GetCardInstance(cardID)
-			if !exists || !handCardMatchesSelection(c.game, card, reveal.Graveyard.Val, chooser) {
+			if !exists || !handCardMatchesSelection(c.game, card, reveal.Graveyard.Val, controller) {
 				continue
 			}
 			handle := c.mintFoundCard(card, zone.Graveyard)
@@ -98,10 +131,49 @@ func (c *programContext) RevealHand(reveal cardprogram.HandReveal) (cardprogram.
 			candidates = append(candidates, revealChoiceCandidate{handle: handle, info: cardChoiceInfo(c.game, cardID)})
 		}
 	}
+	if kept != nil && len(result.Revealed) == 0 {
+		c.endKeptHandReveal(kept)
+	}
+	if !hasChooser {
+		return result, nil
+	}
 	for _, index := range c.chooseRevealedCards(reveal, chooser, candidates, revealed) {
 		result.Chosen = append(result.Chosen, candidates[index].handle)
 	}
 	return result, nil
+}
+
+// keptHandReveal is one hand a program keeps revealed until it finishes
+// (HandReveal.KeepRevealed), with the hand objects that reveal has announced.
+type keptHandReveal struct {
+	player    game.PlayerID
+	announced map[game.ZoneCardSnapshot]bool
+	end       func()
+}
+
+func (c *programContext) keptHandReveal(player game.PlayerID) *keptHandReveal {
+	for _, kept := range c.keptReveals {
+		if kept.player == player {
+			return kept
+		}
+	}
+	return nil
+}
+
+// endKeptHandReveal ends a kept reveal once it finds the hand empty, so cards
+// later put into that hand, which were never revealed, stay hidden (CR 402.3).
+func (c *programContext) endKeptHandReveal(kept *keptHandReveal) {
+	kept.end()
+	c.keptReveals = slices.DeleteFunc(c.keptReveals, func(other *keptHandReveal) bool { return other == kept })
+}
+
+// endKeptHandReveals hides every hand the program still keeps revealed (CR
+// 402.3).
+func (c *programContext) endKeptHandReveals() {
+	for _, kept := range c.keptReveals {
+		kept.end()
+	}
+	c.keptReveals = nil
 }
 
 // revealChoiceCandidate is one card the controller may choose after a hand

@@ -647,3 +647,156 @@ func TestRevealHandThoughtDistortionExilesAllMatchingFromHandAndGraveyard(t *tes
 		t.Fatalf("unexpected reveal result %+v", results)
 	}
 }
+
+// Source review: pinned corpus 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4.
+// Struggle for Sanity (5c0f63ad-4bb1-479e-9760-5421265da40b), {2}{B}{B}
+// Sorcery: "Target opponent reveals their hand. That player exiles a card from
+// it, then you exile a card from it. Repeat this process until all cards in
+// that hand have been exiled. That player returns the cards they exiled this
+// way to their hand and puts the rest into their graveyard." No rulings. CR
+// 2026-11-06 verified copy: 701.20a (a revealed card stays revealed as long as
+// necessary to complete the parts of the effect it's relevant to), 402.3 and
+// 406.3 (the hand is hidden again afterwards; returned cards are new objects,
+// CR 400.7). This test-local program proves the shared operation; the card
+// stays unregistered.
+var struggleForSanityTestReference = game.ProgramReference{ID: "test/struggle-for-sanity-reveal-hand", Version: "1"}
+
+func struggleForSanityTestProgram() cardprogram.Program {
+	return cardprogram.Program{Reference: struggleForSanityTestReference, Resolve: func(ctx cardprogram.Context) error {
+		target := game.TargetPlayerReference(0)
+		var theirs, mine []cardprogram.FoundCard
+		for opponentChooses := true; ; opponentChooses = !opponentChooses {
+			reveal := cardprogram.HandReveal{Player: target, Max: 1, KeepRevealed: true}
+			if opponentChooses {
+				reveal.Chooser = opt.Val(target)
+			}
+			revealed, err := ctx.RevealHand(reveal)
+			if err != nil {
+				return err
+			}
+			if len(revealed.Chosen) == 0 {
+				break
+			}
+			exiled, err := ctx.MoveCards(cardprogram.CardPlacement{Cards: revealed.Chosen, Destination: zone.Exile})
+			if err != nil {
+				return err
+			}
+			if opponentChooses {
+				theirs = append(theirs, exiled...)
+			} else {
+				mine = append(mine, exiled...)
+			}
+		}
+		var placements []cardprogram.CardPlacement
+		if len(theirs) > 0 {
+			placements = append(placements, cardprogram.CardPlacement{Cards: theirs, Destination: zone.Hand})
+		}
+		if len(mine) > 0 {
+			placements = append(placements, cardprogram.CardPlacement{Cards: mine, Destination: zone.Graveyard})
+		}
+		if len(placements) == 0 {
+			return nil
+		}
+		_, err := ctx.MoveCards(placements...)
+		return err
+	}}
+}
+
+func TestRevealHandStruggleForSanityAlternatesChoicesFromOneRevealedHand(t *testing.T) {
+	t.Parallel()
+	engine := revealHandEngine(t, struggleForSanityTestProgram())
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	forest := addCardToHand(g, game.Player2, revealHandLand())
+	bolt := addCardToHand(g, game.Player2, evidenceCard("Lightning Bolt", 1))
+	titan := addCardToHand(g, game.Player2, evidenceCard("Grave Titan", 6))
+	opt1 := addCardToHand(g, game.Player2, evidenceCard("Opt", 1))
+	divination := addCardToHand(g, game.Player2, evidenceCard("Divination", 3))
+	hand := slices.Clone(g.Players[game.Player2].Hand.All())
+	addImplementationSpellToStack(g, game.Player1, revealHandSpellDef("Struggle for Sanity", struggleForSanityTestReference),
+		[]game.Target{game.PlayerTarget(game.Player2)})
+
+	start := len(g.Events)
+	var choosers []game.PlayerID
+	ordered := false
+	picks := []string{"Grave Titan", "Lightning Bolt", "Divination", "Opt"}
+	choose := func(obs PlayerObservation, req game.ChoiceRequest) []int {
+		if req.Player == game.Player2 && len(choosers) == len(picks) {
+			// Ordering the caster's cards into the graveyard happens as the
+			// opponent's cards return to the emptied hand, which is no longer
+			// revealed (CR 402.3).
+			if g.HandRevealedToAll(game.Player2) || len(NewObservation(g, game.Player3).HandOf(game.Player2)) != 0 {
+				t.Fatal("cards returned to the emptied hand were revealed")
+			}
+			ordered = true
+			return req.DefaultSelection
+		}
+		if req.Kind != game.ChoiceZoneSelection || req.Private || req.MinChoices != 1 || req.MaxChoices != 1 {
+			t.Fatalf("the exile choice was not one public mandatory choice: %+v", req)
+		}
+		current := cardNames(g, g.Players[game.Player2].Hand.All())
+		// The hand stays revealed to every player through every choice (CR 701.20a).
+		if !g.HandRevealedToAll(game.Player2) ||
+			!slices.Equal(cardViewNames(t, NewObservation(g, game.Player3).HandOf(game.Player2)), current) ||
+			req.Player == game.Player1 && !slices.Equal(cardViewNames(t, obs.HandOf(game.Player2)), current) ||
+			!slices.Equal(choiceCardNames(t, req.RevealedCards), current) ||
+			!slices.Equal(optionCardNames(t, req.Options), current) {
+			t.Fatalf("choice %d did not show the remaining revealed hand %v", len(choosers), current)
+		}
+		pick := picks[len(choosers)]
+		choosers = append(choosers, req.Player)
+		return []int{slices.Index(current, pick)}
+	}
+	agents := [game.NumPlayers]PlayerAgent{&controlScript{choice: choose}, &controlScript{choice: choose}}
+	engine.resolveTopOfStackWithChoices(g, agents, &TurnLog{})
+
+	// The opponent chooses first, then the caster, alternating; the last card is
+	// the opponent's forced choice.
+	if !ordered || !slices.Equal(choosers, []game.PlayerID{game.Player2, game.Player1, game.Player2, game.Player1}) {
+		t.Fatalf("choosers %v, want the opponent and caster alternating", choosers)
+	}
+	// One reveal: each card is announced once, not again on every repetition.
+	if !slices.Equal(handRevealEvents(g, start), hand) {
+		t.Fatalf("revealed %v, want each card of the hand %v once", handRevealEvents(g, start), hand)
+	}
+	if g.Players[game.Player2].Exile.Size() != 0 ||
+		!slices.Equal(sortedIDs(g.Players[game.Player2].Hand.All()), sortedIDs([]id.ID{titan, divination, forest})) ||
+		!slices.Equal(sortedIDs(g.Players[game.Player2].Graveyard.All()), sortedIDs([]id.ID{bolt, opt1})) {
+		t.Fatalf("hand=%v graveyard=%v exile=%v, want the opponent's exiled cards returned and the caster's in the graveyard",
+			g.Players[game.Player2].Hand.All(), g.Players[game.Player2].Graveyard.All(), g.Players[game.Player2].Exile.All())
+	}
+	// The returns to hand and graveyard are one simultaneous event.
+	batches := make(map[game.ObjectID]int)
+	for _, event := range g.Events[start:] {
+		if event.Kind == game.EventZoneChanged && event.FromZone == zone.Exile {
+			batches[event.SimultaneousID]++
+		}
+	}
+	if len(batches) != 1 {
+		t.Fatalf("exile departures in batches %v, want one simultaneous placement", batches)
+	}
+	for batch, count := range batches {
+		if batch == 0 || count != len(hand) {
+			t.Fatalf("exile departures in batches %v, want all %d cards together", batches, len(hand))
+		}
+	}
+	// The hand is hidden again once the effect finishes (CR 402.3).
+	if len(g.RevealedHands) != 0 || len(NewObservation(g, game.Player3).HandOf(game.Player2)) != 0 {
+		t.Fatal("the hand stayed revealed after the effect")
+	}
+}
+
+func TestRevealHandStruggleForSanityWithEmptyHandDoesNothing(t *testing.T) {
+	t.Parallel()
+	engine := revealHandEngine(t, struggleForSanityTestProgram())
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addImplementationSpellToStack(g, game.Player1, revealHandSpellDef("Struggle for Sanity", struggleForSanityTestReference),
+		[]game.Target{game.PlayerTarget(game.Player2)})
+	refuse := &controlScript{choice: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+		t.Fatalf("an empty hand asked a choice: %+v", req)
+		return nil
+	}}
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{refuse, refuse}, &TurnLog{})
+	if len(g.RevealedHands) != 0 || g.Players[game.Player2].Graveyard.Size() != 0 {
+		t.Fatal("an empty revealed hand changed the game")
+	}
+}

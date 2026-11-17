@@ -201,20 +201,33 @@ type SameNameResult struct {
 // matching it in the same choice: "a nonland card from it or a card from their
 // graveyard" chooses one card from either zone, and with All "all <filter>
 // cards from that player's hand and graveyard" takes every match in both.
+//
+// Chooser, when set, names the player who makes the choice instead of the
+// source's controller ("That player exiles a card from it"); the filter is
+// still read relative to the source's controller. An unavailable chooser
+// chooses nothing. KeepRevealed keeps the hand revealed until the program
+// finishes or a later reveal finds the hand empty; every later RevealHand of
+// that hand in the same program continues the one reveal, showing the hand as
+// it now is and announcing only cards not already revealed, so a program can
+// repeat choices from one revealed hand ("Repeat this process until all cards
+// in that hand have been exiled") and then return cards to the emptied hand
+// without revealing them.
 type HandReveal struct {
-	Player    game.PlayerReference
-	Filter    game.Selection
-	Graveyard opt.V[game.Selection]
-	Max       int
-	Optional  bool
-	All       bool
+	Player       game.PlayerReference
+	Filter       game.Selection
+	Graveyard    opt.V[game.Selection]
+	Max          int
+	Optional     bool
+	All          bool
+	Chooser      opt.V[game.PlayerReference]
+	KeepRevealed bool
 }
 
 // HandRevealResult reports one hand reveal. Available is false when the
 // player was unavailable, so nothing was revealed. Revealed holds every card
 // that was in the revealed hand, Matching the revealed cards that matched the
 // filter, GraveyardMatching the graveyard cards offered by HandReveal.Graveyard,
-// and Chosen the controller's chosen cards, hand cards first, each as a handle
+// and Chosen the chooser's chosen cards, hand cards first, each as a handle
 // whose Zone is its hand or graveyard origin, for one later MoveCards placement
 // of them all together; the cards stay where they are until moved (CR
 // 701.20b), and a handle stops authorizing placement once its card changes
