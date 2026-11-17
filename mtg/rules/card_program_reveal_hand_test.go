@@ -470,3 +470,180 @@ func TestRevealHandDoesNotTrackRevealedCardsIntoHiddenObjects(t *testing.T) {
 		t.Fatalf("the revealing player's record announced %v, want %v", announced, sortedIDs(tracked))
 	}
 }
+
+// Source review: pinned corpus 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4.
+// Agonizing Remorse (1267dfda-eb1a-4963-9fe3-fa619d924d7a): "Target opponent
+// reveals their hand. You choose a nonland card from it or a card from their
+// graveyard. Exile that card. You lose 1 life." Rulings 2020-01-24: a
+// graveyard card may be a land card; you must choose a card if able, from the
+// graveyard when the hand has no nonland card and vice versa; no player may act
+// between the choice and the exile; with neither, you just lose 1 life. Thought
+// Distortion (5f089ac6-9e92-4ec2-bf46-a0b08d1e2979): "This spell can't be
+// countered. Target opponent reveals their hand. Exile all noncreature, nonland
+// cards from that player's hand and graveyard." Rulings 2019-07-12 cover only
+// its uncounterability and an illegal target. CR 2026-11-06 verified copy:
+// 400.2 (graveyard public, hand hidden even when revealed), 608.2c-d, 701.20a-b.
+// These test-local programs prove the shared operation; the cards stay
+// unregistered.
+var (
+	agonizingRemorseTestReference  = game.ProgramReference{ID: "test/agonizing-remorse-reveal-hand", Version: "1"}
+	thoughtDistortionTestReference = game.ProgramReference{ID: "test/thought-distortion-reveal-hand", Version: "1"}
+)
+
+func agonizingRemorseTestProgram(results *[]cardprogram.HandRevealResult) cardprogram.Program {
+	return cardprogram.Program{Reference: agonizingRemorseTestReference, Resolve: func(ctx cardprogram.Context) error {
+		revealed, err := ctx.RevealHand(cardprogram.HandReveal{
+			Player: game.TargetPlayerReference(0), Filter: nonlandSelection(), Graveyard: opt.Val(game.Selection{}), Max: 1,
+		})
+		if err != nil {
+			return err
+		}
+		*results = append(*results, revealed)
+		if len(revealed.Chosen) != 0 {
+			if _, err := ctx.MoveCards(cardprogram.CardPlacement{Cards: revealed.Chosen, Destination: zone.Exile}); err != nil {
+				return err
+			}
+		}
+		_, err = ctx.Execute(game.LoseLife{Amount: game.Fixed(1), Player: game.ControllerReference()})
+		return err
+	}}
+}
+
+func thoughtDistortionTestProgram(results *[]cardprogram.HandRevealResult) cardprogram.Program {
+	return cardprogram.Program{Reference: thoughtDistortionTestReference, Resolve: func(ctx cardprogram.Context) error {
+		filter := game.Selection{ExcludedTypes: []types.Card{types.Creature, types.Land}}
+		revealed, err := ctx.RevealHand(cardprogram.HandReveal{
+			Player: game.TargetPlayerReference(0), Filter: filter, Graveyard: opt.Val(filter), All: true,
+		})
+		if err != nil {
+			return err
+		}
+		*results = append(*results, revealed)
+		_, err = ctx.MoveCards(cardprogram.CardPlacement{Cards: revealed.Chosen, Destination: zone.Exile})
+		return err
+	}}
+}
+
+func TestRevealHandAgonizingRemorseChoosesFromHandOrGraveyard(t *testing.T) {
+	t.Parallel()
+	var results []cardprogram.HandRevealResult
+	engine := revealHandEngine(t, agonizingRemorseTestProgram(&results))
+	def := revealHandSpellDef("Agonizing Remorse", agonizingRemorseTestReference)
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	land := addCardToHand(g, game.Player2, revealHandLand())
+	opt1 := addCardToHand(g, game.Player2, evidenceCard("Opt", 1))
+	hand := slices.Clone(g.Players[game.Player2].Hand.All())
+	graveLand := addCardToGraveyard(g, game.Player2, revealHandLand())
+	titan := addCardToGraveyard(g, game.Player2, evidenceCard("Grave Titan", 6))
+	graveyard := slices.Clone(g.Players[game.Player2].Graveyard.All())
+	life := g.Players[game.Player1].Life
+	addImplementationSpellToStack(g, game.Player1, def, []game.Target{game.PlayerTarget(game.Player2)})
+
+	asked := 0
+	chooser := &controlScript{choice: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+		asked++
+		if req.Player != game.Player1 || req.Kind != game.ChoiceZoneSelection || req.Private ||
+			req.MinChoices != 1 || req.MaxChoices != 1 || len(req.Options) != 3 {
+			t.Fatalf("the choice was not one public mandatory choice among three cards: %+v", req)
+		}
+		// The hand's nonland card is offered without its identity; graveyard
+		// cards, lands included, are public objects (CR 400.2).
+		if card := req.Options[0].Card.Val; card.Name != "Opt" || card.CardID != 0 || req.Options[0].Label != "Opt (Hand)" {
+			t.Fatalf("the hand option was %+v", req.Options[0])
+		}
+		for index, want := range graveyard {
+			option := req.Options[index+1]
+			if option.Card.Val.CardID != want || option.Label != cardNames(g, []id.ID{want})[0]+" (Graveyard)" {
+				t.Fatalf("graveyard option %d was %+v, want card %d", index, option, want)
+			}
+		}
+		if !slices.Equal(choiceCardNames(t, req.RevealedCards), cardNames(g, hand)) {
+			t.Fatalf("the choice listed revealed %v, want the whole hand", choiceCardNames(t, req.RevealedCards))
+		}
+		return []int{1 + slices.Index(graveyard, graveLand)}
+	}}
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{chooser}, &TurnLog{})
+	if asked != 1 || !g.Players[game.Player2].Exile.Contains(graveLand) || g.Players[game.Player2].Exile.Size() != 1 ||
+		!g.Players[game.Player2].Hand.Contains(land) || !g.Players[game.Player2].Hand.Contains(opt1) ||
+		!g.Players[game.Player2].Graveyard.Contains(titan) || g.Players[game.Player1].Life != life-1 {
+		t.Fatal("Agonizing Remorse did not exile only the chosen graveyard land and lose 1 life")
+	}
+	if len(results) != 1 || !slices.Equal(handleCardIDs(results[0].Matching), []id.ID{opt1}) ||
+		!slices.Equal(handleCardIDs(results[0].GraveyardMatching), graveyard) ||
+		len(results[0].Chosen) != 1 || results[0].Chosen[0].Zone != zone.Graveyard {
+		t.Fatalf("unexpected reveal result %+v", results)
+	}
+
+	// With no nonland card in hand, the only graveyard card must be exiled
+	// unasked; with neither, the caster just loses 1 life.
+	refuse := &controlScript{choice: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+		t.Fatalf("a forced or empty choice was asked: %+v", req)
+		return nil
+	}}
+	onlyLand := addCardToHand(g, game.Player3, revealHandLand())
+	onlyGrave := addCardToGraveyard(g, game.Player3, evidenceCard("Divination", 3))
+	addImplementationSpellToStack(g, game.Player1, def, []game.Target{game.PlayerTarget(game.Player3)})
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{refuse}, &TurnLog{})
+	if !g.Players[game.Player3].Exile.Contains(onlyGrave) || !g.Players[game.Player3].Hand.Contains(onlyLand) ||
+		g.Players[game.Player1].Life != life-2 {
+		t.Fatal("the only graveyard card was not exiled")
+	}
+	addImplementationSpellToStack(g, game.Player1, def, []game.Target{game.PlayerTarget(game.Player4)})
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{refuse}, &TurnLog{})
+	if g.Players[game.Player4].Exile.Size() != 0 || g.Players[game.Player1].Life != life-3 || len(results) != 3 ||
+		len(results[2].Chosen) != 0 {
+		t.Fatal("with no card to choose, Agonizing Remorse did more than lose 1 life")
+	}
+}
+
+func TestRevealHandThoughtDistortionExilesAllMatchingFromHandAndGraveyard(t *testing.T) {
+	t.Parallel()
+	var results []cardprogram.HandRevealResult
+	engine := revealHandEngine(t, thoughtDistortionTestProgram(&results))
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	handLand := addCardToHand(g, game.Player2, revealHandLand())
+	handBear := addCardToHand(g, game.Player2, greenCreature())
+	handOpt := addCardToHand(g, game.Player2, evidenceCard("Opt", 1))
+	handDivination := addCardToHand(g, game.Player2, evidenceCard("Divination", 3))
+	hand := slices.Clone(g.Players[game.Player2].Hand.All())
+	graveBear := addCardToGraveyard(g, game.Player2, greenCreature())
+	graveLand := addCardToGraveyard(g, game.Player2, revealHandLand())
+	graveTitan := addCardToGraveyard(g, game.Player2, evidenceCard("Grave Titan", 6))
+	addImplementationSpellToStack(g, game.Player1, revealHandSpellDef("Thought Distortion", thoughtDistortionTestReference),
+		[]game.Target{game.PlayerTarget(game.Player2)})
+
+	start := len(g.Events)
+	refuse := &controlScript{choice: func(_ PlayerObservation, req game.ChoiceRequest) []int {
+		t.Fatalf("exiling all matching cards asked a choice: %+v", req)
+		return nil
+	}}
+	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{refuse}, &TurnLog{})
+
+	if !slices.Equal(handRevealEvents(g, start), hand) {
+		t.Fatalf("revealed %v, want the whole hand %v", handRevealEvents(g, start), hand)
+	}
+	// Chosen lists the hand's matches in hand order, then the graveyard's.
+	exiled := slices.DeleteFunc(slices.Clone(hand), func(card id.ID) bool { return card == handLand || card == handBear })
+	exiled = append(exiled, graveTitan)
+	if !slices.Equal(sortedIDs(g.Players[game.Player2].Exile.All()), sortedIDs([]id.ID{handOpt, handDivination, graveTitan})) ||
+		!slices.Equal(sortedIDs(g.Players[game.Player2].Hand.All()), sortedIDs([]id.ID{handLand, handBear})) ||
+		!slices.Equal(sortedIDs(g.Players[game.Player2].Graveyard.All()), sortedIDs([]id.ID{graveBear, graveLand})) {
+		t.Fatalf("exile=%v hand=%v graveyard=%v, want every noncreature, nonland card from both exiled",
+			g.Players[game.Player2].Exile.All(), g.Players[game.Player2].Hand.All(), g.Players[game.Player2].Graveyard.All())
+	}
+	// Both zones' cards are exiled in one simultaneous event.
+	batches := make(map[game.ObjectID]bool)
+	from := make(map[zone.Type]int)
+	for _, event := range g.Events[start:] {
+		if event.Kind == game.EventZoneChanged && event.ToZone == zone.Exile {
+			batches[event.SimultaneousID] = true
+			from[event.FromZone]++
+		}
+	}
+	if len(batches) != 1 || batches[0] || from[zone.Hand] != 2 || from[zone.Graveyard] != 1 {
+		t.Fatalf("exile batches %v from %v, want one simultaneous exile of two hand cards and one graveyard card", batches, from)
+	}
+	if len(results) != 1 || !slices.Equal(handleCardIDs(results[0].Chosen), exiled) {
+		t.Fatalf("unexpected reveal result %+v", results)
+	}
+}
