@@ -256,6 +256,9 @@ func blockOracle(p *blockDeclarationProblem) [][]game.BlockDeclaration {
 				declarations = append(declarations, game.BlockDeclaration{Blocker: source.ObjectID, Blocking: target.ObjectID})
 			}
 			valid = valid && capacity <= p.capacities[blocker]
+			if capacity > 0 {
+				score += p.blockWeights[blocker]
+			}
 		}
 		for attacker, count := range counts {
 			valid = valid && (count == 0 || count >= p.minimum[attacker])
@@ -277,18 +280,20 @@ func blockOracle(p *blockDeclarationProblem) [][]game.BlockDeclaration {
 }
 
 func TestStagedBlockDeclarationsExhaustiveGlobalRequirements(t *testing.T) {
-	for _, scenario := range []string{"unit", "lure-menace", "lure-max-one", "multiple-capacity-alone"} {
+	for _, scenario := range []string{"unit", "lure-menace", "lure-max-one", "multiple-capacity-alone", "must-block"} {
 		t.Run(scenario, func(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			g.Turn.ActivePlayer = game.Player1
 			g.Turn.Phase, g.Turn.Step = game.PhaseCombat, game.StepDeclareBlockers
 			g.Combat = &game.CombatState{}
+			var attackers, blockers []*game.Permanent
 			for index := range 3 {
 				var keywords []game.Keyword
-				if scenario == "lure-menace" && index == 0 {
+				if (scenario == "lure-menace" || scenario == "must-block") && index == 0 {
 					keywords = []game.Keyword{game.Menace}
 				}
 				attacker := addCombatCreaturePermanentWithPower(g, game.Player1, 3, keywords...)
+				attackers = append(attackers, attacker)
 				g.Combat.Attackers = append(g.Combat.Attackers, game.AttackDeclaration{
 					Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2},
 				})
@@ -308,10 +313,23 @@ func TestStagedBlockDeclarationsExhaustiveGlobalRequirements(t *testing.T) {
 						},
 					})
 				}
-				addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+				blockers = append(blockers, addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
 					Name: "Blocker", Types: []types.Card{types.Creature},
 					Power: opt.Val(game.PT{Value: 3}), Toughness: opt.Val(game.PT{Value: 3}), StaticAbilities: static,
-				}})
+				}}))
+			}
+			if scenario == "must-block" {
+				// Two directed requirements on one blocker, an undirected one on
+				// another, a lure and menace compete for the same blockers.
+				for _, requirement := range []struct{ blocker, attacker *game.Permanent }{
+					{blockers[1], attackers[2]}, {blockers[1], attackers[2]}, {blockers[2], nil},
+				} {
+					effect := game.RuleEffect{ID: g.IDGen.Next(), Kind: game.RuleEffectMustBlock, AffectedObjectID: requirement.blocker.ObjectID, Duration: game.DurationThisTurn}
+					if requirement.attacker != nil {
+						effect.RequiredBlockAttacker = requirement.attacker.ObjectID
+					}
+					g.RuleEffects = append(g.RuleEffects, effect)
+				}
 			}
 			engine := NewEngine(nil)
 			problem := newBlockDeclarationProblem(g, game.Player2)

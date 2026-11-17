@@ -769,6 +769,22 @@ const (
 	// the castable spells by card type (any one of the listed types). Sneak's
 	// timing and return-an-unblocked-attacker cost are unchanged (CR 702.190a).
 	RuleEffectCastSpellsFromGraveyardWithSneak
+	// RuleEffectMustBlock is a blocker requirement (CR 509.1c): the affected
+	// creature blocks this turn or combat if able. With RequiredBlockAttackerRef
+	// it is directed ("Target creature blocks target creature this turn if
+	// able.", Hunt Down; "{G}: Target creature blocks this creature this turn if
+	// able.", Tangle Angler) and is obeyed only by blocking that attacker; when
+	// that attacker isn't attacking the creature's controller, or the creature
+	// can't legally block it, the requirement does nothing. Without the
+	// reference it is undirected ("... blocks this turn if able.", Mark for
+	// Death) and blocking any attacker obeys it. Restrictions still win, and the
+	// controller maximizes obeyed requirements together with every other block
+	// requirement. Each instance counts separately. "Attacks or blocks this
+	// combat if able" (Boros Battleshaper) pairs it with a RuleEffectMustAttack
+	// on the same creature: a creature faces only one of the two declarations
+	// in a combat. The requirement follows the creature's object, so it lapses
+	// when either creature changes zones (CR 400.7).
+	RuleEffectMustBlock
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -847,7 +863,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectCascadeLandOption,
 		RuleEffectDamageCantBePrevented,
 		RuleEffectDamageToCantBePreventedOrRedirected,
-		RuleEffectCastSpellsFromGraveyardWithSneak:
+		RuleEffectCastSpellsFromGraveyardWithSneak,
+		RuleEffectMustBlock:
 		return true
 	default:
 		return false
@@ -1181,6 +1198,20 @@ type RuleEffect struct {
 	// It is the resolved form of RequiredAttackTargetRef and is unset for every
 	// other effect.
 	RequiredAttackTarget opt.V[PlayerID]
+
+	// RequiredBlockAttackerRef directs a RuleEffectMustBlock requirement at one
+	// attacking creature ("blocks target creature", Hunt Down; "blocks this
+	// creature", Tangle Angler; "blocks that Wolf", Tolsimir, Midnight's
+	// Light). createRuleEffectTemplates resolves it to RequiredBlockAttacker; a
+	// template whose reference does not resolve to a battlefield permanent is
+	// dropped. It is unset for undirected requirements and every other effect.
+	RequiredBlockAttackerRef opt.V[ObjectReference]
+
+	// RequiredBlockAttacker is the resolved object ID of the creature a
+	// RuleEffectMustBlock requirement's creature must block. It names that
+	// object only, so the requirement does nothing once the creature changes
+	// zones (CR 400.7). It is the resolved form of RequiredBlockAttackerRef.
+	RequiredBlockAttacker id.ID
 
 	// AttackTaxIncludesPlaneswalkers extends a RuleEffectAttackTaxPerCreature tax
 	// to cover attacks on planeswalkers the effect's controller controls, not only
