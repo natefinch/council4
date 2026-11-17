@@ -1699,6 +1699,9 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 		return
 	}
 	v.validateCastEntryCounters(faceName, path, effect)
+	if effect.RequiredBlockAttackerRef.Exists || effect.RequiredBlockAttacker != 0 {
+		v.add(faceName, appendPath(path, "RequiredBlockAttackerRef"), CardDefIssueInvalidRuleEffect, "a directed block requirement must be created by an ApplyRule instruction")
+	}
 	switch effect.Kind {
 	case RuleEffectPlayFromGraveyardPerPermanentType:
 		if effect.PermissionKey == "" || effect.AffectedPlayer != PlayerYou ||

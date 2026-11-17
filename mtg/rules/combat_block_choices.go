@@ -8,19 +8,22 @@ import (
 )
 
 type blockDeclarationProblem struct {
-	game       *game.Game
-	player     game.PlayerID
-	attackers  []*game.Permanent
-	blockers   []*game.Permanent
-	allowed    [][]bool
-	lures      [][]int
-	minimum    []int
-	oneBlocker []bool
-	bands      []int
-	weights    []int
-	capacities []int
-	unit       bool
-	states     int
+	game      *game.Game
+	player    game.PlayerID
+	attackers []*game.Permanent
+	blockers  []*game.Permanent
+	allowed   [][]bool
+	lures     [][]int
+	// blockWeights counts each blocker's undirected requirements to block
+	// (CR 509.1c), obeyed once the blocker blocks any attacker.
+	blockWeights []int
+	minimum      []int
+	oneBlocker   []bool
+	bands        []int
+	weights      []int
+	capacities   []int
+	unit         bool
+	states       int
 }
 
 func newBlockDeclarationProblem(g *game.Game, player game.PlayerID) *blockDeclarationProblem {
@@ -78,7 +81,31 @@ func newBlockDeclarationProblem(g *game.Game, player game.PlayerID) *blockDeclar
 				}
 			}
 		}
+		blockWeight := 0
+		for effect := range effects {
+			requirement := &effects[effect]
+			if requirement.Kind != game.RuleEffectMustBlock || !ruleEffectMatchesPermanent(g, requirement, blocker) {
+				continue
+			}
+			if requirement.RequiredBlockAttacker == 0 {
+				if slices.Contains(allowed, true) {
+					blockWeight++
+					p.unit = false
+				}
+				continue
+			}
+			// A directed requirement is obeyable only by blocking that
+			// attacker; otherwise it does nothing.
+			index := slices.IndexFunc(p.attackers, func(attacker *game.Permanent) bool {
+				return attacker.ObjectID == requirement.RequiredBlockAttacker
+			})
+			if index >= 0 && allowed[index] {
+				lures[index]++
+				p.unit = false
+			}
+		}
 		p.allowed, p.lures = append(p.allowed, allowed), append(p.lures, lures)
+		p.blockWeights = append(p.blockWeights, blockWeight)
 	}
 	return p
 }
@@ -94,11 +121,16 @@ func (p *blockDeclarationProblem) fixedAt(fixed []int8, blocker, attacker int) i
 func (p *blockDeclarationProblem) score(declarations []game.BlockDeclaration) int {
 	score := 0
 	counts := make(map[id.ID]int)
+	blocking := make([]bool, len(p.blockers))
 	for _, declaration := range declarations {
 		counts[declaration.Blocking]++
 		for blocker, source := range p.blockers {
 			if source.ObjectID != declaration.Blocker {
 				continue
+			}
+			if !blocking[blocker] {
+				blocking[blocker] = true
+				score += p.blockWeights[blocker]
 			}
 			for attacker, target := range p.attackers {
 				if target.ObjectID == declaration.Blocking {
@@ -233,6 +265,7 @@ func (p *blockDeclarationProblem) search(fixed []int8, goal int) ([]game.BlockDe
 		rootUpper += weight
 	}
 	for blocker := range p.blockers {
+		rootUpper += p.blockWeights[blocker]
 		lures := slices.Clone(p.lures[blocker])
 		slices.Sort(lures)
 		for index := 0; index < min(p.capacities[blocker], len(lures)); index++ {
@@ -255,10 +288,15 @@ func (p *blockDeclarationProblem) search(fixed []int8, goal int) ([]game.BlockDe
 			}
 		}
 		for next := blocker; next < len(p.blockers); next++ {
+			blockable := false
 			for attacker := range p.attackers {
 				if p.allowed[next][attacker] && p.fixedAt(fixed, next, attacker) != 0 {
 					upper += p.lures[next][attacker]
+					blockable = true
 				}
+			}
+			if blockable {
+				upper += p.blockWeights[next]
 			}
 		}
 		if goal >= 0 && upper < goal || goal < 0 && upper <= best {
@@ -304,6 +342,9 @@ func (p *blockDeclarationProblem) search(fixed []int8, goal int) ([]game.BlockDe
 				}
 				next := slices.Clone(declarations)
 				score, valid := lureScore, true
+				if len(chosen) > 0 {
+					score += p.blockWeights[blocker]
+				}
 				for index, attacker := range chosen {
 					if slices.ContainsFunc(chosen[:index], func(other int) bool { return p.sameBand(attacker, other) }) {
 						valid = false

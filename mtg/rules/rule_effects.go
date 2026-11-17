@@ -70,6 +70,15 @@ func createRuleEffectTemplates(g *game.Game, obj *game.StackObject, object opt.V
 			}
 			ruleEffect.RequiredAttackTarget = opt.Val(required)
 		}
+		if ruleEffect.RequiredBlockAttackerRef.Exists {
+			// A directed block requirement whose attacker has left the
+			// battlefield does nothing, so the template is dropped.
+			required, ok := resolveObjectReference(g, obj, ruleEffect.RequiredBlockAttackerRef.Val)
+			if !ok || required.permanent == nil {
+				continue
+			}
+			ruleEffect.RequiredBlockAttacker = required.permanent.ObjectID
+		}
 		ruleEffect.CreatedTurn = g.Turn.TurnNumber
 		if duration != game.DurationPermanent {
 			ruleEffect.Duration = duration

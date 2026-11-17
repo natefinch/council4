@@ -86,6 +86,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 		RuleEffectDamageCantBePrevented,
 		RuleEffectDamageToCantBePreventedOrRedirected,
 		RuleEffectCastSpellsFromGraveyardWithSneak,
+		RuleEffectMustBlock,
 	}
 	for _, kind := range valid {
 		if !kind.Valid() {
@@ -96,7 +97,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 	invalid := []RuleEffectKind{
 		RuleEffectNone,
 		-1,
-		RuleEffectCastSpellsFromGraveyardWithSneak + 1,
+		RuleEffectMustBlock + 1,
 		RuleEffectKind(1 << 20),
 	}
 	for _, kind := range invalid {
@@ -115,7 +116,7 @@ func TestValidateApplyRulePlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectCastSpellsFromGraveyardWithSneak + 1,
+		"future":       RuleEffectMustBlock + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -139,7 +140,7 @@ func TestValidateCardDefPlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectCastSpellsFromGraveyardWithSneak + 1,
+		"future":       RuleEffectMustBlock + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -248,6 +249,27 @@ func playFromZoneTestEffect() RuleEffect {
 		AffectedPlayer: PlayerYou,
 		CastFromZone:   zone.Exile,
 		AffectedCardID: id.ID(1),
+	}
+}
+
+func TestValidateDirectedBlockRequirement(t *testing.T) {
+	t.Parallel()
+
+	directed := RuleEffect{Kind: RuleEffectMustBlock, RequiredBlockAttackerRef: opt.Val(SourcePermanentReference())}
+	if err := validateApplyRuleTestEffect(&directed); err != nil {
+		t.Fatalf("directed block requirement rejected: %v", err)
+	}
+	for name, effect := range map[string]RuleEffect{
+		"other kind":      {Kind: RuleEffectMustAttack, RequiredBlockAttackerRef: opt.Val(SourcePermanentReference())},
+		"preset attacker": {Kind: RuleEffectMustBlock, RequiredBlockAttacker: id.ID(1)},
+		"missing target":  {Kind: RuleEffectMustBlock, RequiredBlockAttackerRef: opt.Val(TargetPermanentReference(1))},
+	} {
+		if err := ValidateInstructionSequence([]Instruction{{Primitive: ApplyRule{RuleEffects: []RuleEffect{effect}}}}, []TargetSpec{}); err == nil {
+			t.Errorf("%s: invalid directed block requirement accepted", name)
+		}
+	}
+	if issues := ValidateCardDef(cardDefWithRuleEffect(&directed)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+		t.Fatalf("static directed block requirement issues = %+v, want %s", issues, CardDefIssueInvalidRuleEffect)
 	}
 }
 

@@ -513,7 +513,15 @@ Attack taxes remain voluntary, but paying one creature's tax does not waive
 another creature's freely satisfiable attack requirement. Joint blocker
 feasibility includes lure, menace, maximum-one, additional capacity and distinct
 creature alone restrictions. Ordinary must-block assignments use residual
-bipartite b-matching rather than factorial enumeration.
+bipartite b-matching rather than factorial enumeration. Blocker-side
+requirements (CR 509.1c) come from `RuleEffectMustBlock`, created by
+`ApplyRule`: without `RequiredBlockAttackerRef` the creature must block some
+attacker; with it the reference is resolved once to the named permanent and the
+creature must block that object. Each obeyed requirement counts once beside lure
+requirements, a requirement does nothing when every way to obey it would break
+a restriction, and a new object after a zone change is unaffected (CR 400.7).
+"Attacks or blocks this combat if able" is `RuleEffectMustAttack` plus
+`RuleEffectMustBlock` until end of combat.
 
 Attacking bands (CR 508.1e, 702.22c-f) are announced with the attack
 declaration: `action.DeclareAttackersWithBands` carries them in a complete

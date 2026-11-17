@@ -1333,9 +1333,21 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 		if effect.Duration == DurationDuringExtraTurn {
 			return errors.New("an extra-turn-scoped rule effect must be granted by TakeExtraTurn")
 		}
+		if effect.Kind != RuleEffectMustBlock && (effect.RequiredBlockAttackerRef.Exists || effect.RequiredBlockAttacker != 0) {
+			return errors.New("only a block requirement names an attacker to block")
+		}
 		switch effect.Kind {
 		case RuleEffectPlayFromGraveyardPerPermanentType:
 			return errors.New("permanent-type graveyard permission requires an effective battlefield static ability")
+		case RuleEffectMustBlock:
+			if effect.RequiredBlockAttacker != 0 {
+				return errors.New("a directed block requirement names its attacker with RequiredBlockAttackerRef")
+			}
+			if effect.RequiredBlockAttackerRef.Exists {
+				if err := validateObjectReference(effect.RequiredBlockAttackerRef.Val, targets, checkTargets); err != nil {
+					return err
+				}
+			}
 		case RuleEffectLifeTotalCantChange, RuleEffectNoMaximumHandSize, RuleEffectPlayerHexproof, RuleEffectPlayerShroud, RuleEffectLegendRuleDoesNotApply:
 			if effect.AffectedPlayer == PlayerAny {
 				return errors.New("player rule effect requires an affected player")
