@@ -216,6 +216,19 @@ type StaticAbility struct {
 	ContinuousEffects            []ContinuousEffect
 	RuleEffects                  []RuleEffect
 	ZoneTransitionPolicy         ZoneTransitionPolicy
+	// ExertAsItAttacks declares "You may exert this creature as it attacks.",
+	// an optional cost to attack chosen as the creature is declared as an
+	// attacker (CR 508.1g, 701.43d).
+	ExertAsItAttacks opt.V[ExertAttackCost]
+}
+
+// ExertAttackCost is the static exert-as-it-attacks optional attack cost. Each
+// time it is paid, the attacking player exerts the creature (CR 701.43a).
+// WhenYouDo, when set, is the linked "When you do, ..." triggered ability
+// printed in the same paragraph (CR 603.11, 607.2h); it triggers each time
+// this instance is paid and is put on the stack with the attack triggers.
+type ExertAttackCost struct {
+	WhenYouDo opt.V[AbilityContent]
 }
 
 // ReplacementAbility is a replacement/prevention ability on a printed face.

@@ -233,9 +233,14 @@ func (a *TriggeredAbility) ProgramReferences() []ProgramReference {
 // ProgramReferences reports a chapter's code dependencies.
 func (a *ChapterAbility) ProgramReferences() []ProgramReference { return a.Content.ProgramReferences() }
 
-// ProgramReferences reports code in granted resolving abilities.
+// ProgramReferences reports code in granted resolving abilities and linked
+// exert triggers.
 func (a *StaticAbility) ProgramReferences() []ProgramReference {
-	return append(continuousPrograms(a.ContinuousEffects), keywordPrograms(a.KeywordAbilities)...)
+	references := append(continuousPrograms(a.ContinuousEffects), keywordPrograms(a.KeywordAbilities)...)
+	if a.ExertAsItAttacks.Exists && a.ExertAsItAttacks.Val.WhenYouDo.Exists {
+		references = append(references, a.ExertAsItAttacks.Val.WhenYouDo.Val.ProgramReferences()...)
+	}
+	return references
 }
 
 // ProgramReferences reports code used by the printed faces and overload body.

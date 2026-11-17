@@ -255,8 +255,9 @@ type stateMutations interface {
 	// AddCounters adds amount counters of kind to a permanent.
 	AddCounters(playerID game.PlayerID, p *game.Permanent, kind counter.Kind, amount int) bool
 
-	// ExertPermanent marks a permanent to skip its controller's next untap step.
-	ExertPermanent(p *game.Permanent) bool
+	// ExertPermanent has playerID exert a permanent: it won't untap during that
+	// player's next untap step (CR 701.43a).
+	ExertPermanent(playerID game.PlayerID, p *game.Permanent) bool
 
 	// MillCards moves up to amount cards from the player's library to their graveyard.
 	MillCards(playerID game.PlayerID, amount int)

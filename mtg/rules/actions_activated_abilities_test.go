@@ -558,8 +558,8 @@ func TestActivatedAbilityExertsSourceAsCost(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, act) {
 		t.Fatal("applyAction(exert ability) = false, want true")
 	}
-	if source.Tapped || !source.Exerted {
-		t.Fatalf("source tapped/exerted = %v/%v, want false/true", source.Tapped, source.Exerted)
+	if source.Tapped || !source.ExertedBy[game.Player1] {
+		t.Fatalf("source tapped/exerted = %v/%v, want false/true", source.Tapped, source.ExertedBy[game.Player1])
 	}
 	if !containsAction(engine.legalActions(g, game.Player1), act) {
 		t.Fatal("exert ability was not legal while source was already exerted")
@@ -573,8 +573,8 @@ func TestActivatedAbilityExertsSourceAsCost(t *testing.T) {
 	g.Turn.PriorityPlayer = game.Player1
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Draw Step Card"}})
 	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
-	if source.Tapped || source.Exerted || source.SummoningSick {
-		t.Fatalf("after exerted untap step tapped/exerted/sick = %v/%v/%v, want false/false/false", source.Tapped, source.Exerted, source.SummoningSick)
+	if source.Tapped || source.ExertedBy[game.Player1] || source.SummoningSick {
+		t.Fatalf("after exerted untap step tapped/exerted/sick = %v/%v/%v, want false/false/false", source.Tapped, source.ExertedBy[game.Player1], source.SummoningSick)
 	}
 }
 
@@ -607,8 +607,8 @@ func TestActivatedAbilityTapAndExertSourceAsCost(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, act) {
 		t.Fatal("applyAction(tap-and-exert ability) = false, want true")
 	}
-	if !source.Tapped || !source.Exerted {
-		t.Fatalf("source tapped/exerted = %v/%v, want true/true", source.Tapped, source.Exerted)
+	if !source.Tapped || !source.ExertedBy[game.Player1] {
+		t.Fatalf("source tapped/exerted = %v/%v, want true/true", source.Tapped, source.ExertedBy[game.Player1])
 	}
 	source.Tapped = false
 	if !containsAction(engine.legalActions(g, game.Player1), act) {
@@ -617,8 +617,8 @@ func TestActivatedAbilityTapAndExertSourceAsCost(t *testing.T) {
 	if !engine.applyAction(g, game.Player1, act) {
 		t.Fatal("applyAction(second tap-and-exert ability) = false, want true")
 	}
-	if !source.Tapped || !source.Exerted {
-		t.Fatalf("after second activation tapped/exerted = %v/%v, want true/true", source.Tapped, source.Exerted)
+	if !source.Tapped || !source.ExertedBy[game.Player1] {
+		t.Fatalf("after second activation tapped/exerted = %v/%v, want true/true", source.Tapped, source.ExertedBy[game.Player1])
 	}
 
 	source.SummoningSick = true
@@ -626,8 +626,8 @@ func TestActivatedAbilityTapAndExertSourceAsCost(t *testing.T) {
 	g.Turn.PriorityPlayer = game.Player1
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Draw Step Card"}})
 	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
-	if !source.Tapped || source.Exerted || source.SummoningSick {
-		t.Fatalf("after exerted untap step tapped/exerted/sick = %v/%v/%v, want true/false/false", source.Tapped, source.Exerted, source.SummoningSick)
+	if !source.Tapped || source.ExertedBy[game.Player1] || source.SummoningSick {
+		t.Fatalf("after exerted untap step tapped/exerted/sick = %v/%v/%v, want true/false/false", source.Tapped, source.ExertedBy[game.Player1], source.SummoningSick)
 	}
 	g.Turn.ActivePlayer = game.Player1
 	g.Turn.PriorityPlayer = game.Player1
@@ -646,7 +646,7 @@ func TestExertedPhasedOutPermanentClearsExertionDuringUntap(t *testing.T) {
 		Types: []types.Card{types.Creature},
 	}})
 	permanent.Tapped = true
-	permanent.Exerted = true
+	permanent.SkipsNextUntap = true
 	permanent.PhasedOut = true
 	permanent.SummoningSick = true
 	g.Turn.ActivePlayer = game.Player1
@@ -658,8 +658,8 @@ func TestExertedPhasedOutPermanentClearsExertionDuringUntap(t *testing.T) {
 	if permanent.PhasedOut {
 		t.Fatal("permanent did not phase in")
 	}
-	if !permanent.Tapped || permanent.Exerted || permanent.SummoningSick {
-		t.Fatalf("after phased exerted untap tapped/exerted/sick = %v/%v/%v, want true/false/false", permanent.Tapped, permanent.Exerted, permanent.SummoningSick)
+	if !permanent.Tapped || permanent.SkipsNextUntap || permanent.SummoningSick {
+		t.Fatalf("after phased exerted untap tapped/exerted/sick = %v/%v/%v, want true/false/false", permanent.Tapped, permanent.SkipsNextUntap, permanent.SummoningSick)
 	}
 }
 

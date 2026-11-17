@@ -352,8 +352,8 @@ func (fakePaymentState) RecordManaAbilityUse(*game.Permanent, int, game.TimingRe
 func (fakePaymentState) AddCounters(game.PlayerID, *game.Permanent, counter.Kind, int) bool {
 	return true
 }
-func (fakePaymentState) ExertPermanent(*game.Permanent) bool { return true }
-func (fakePaymentState) MillCards(game.PlayerID, int)        {}
+func (fakePaymentState) ExertPermanent(game.PlayerID, *game.Permanent) bool { return true }
+func (fakePaymentState) MillCards(game.PlayerID, int)                       {}
 func (fakePaymentState) RemoveCounters(game.PlayerID, *game.Permanent, counter.Kind, int) bool {
 	return false
 }

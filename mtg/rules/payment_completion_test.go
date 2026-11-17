@@ -375,7 +375,7 @@ func TestPaymentCompletionEveryAdditionalCostKind(t *testing.T) {
 					t.Fatal("mill cost was not paid")
 				}
 			case cost.AdditionalExert:
-				if !source.Exerted {
+				if !source.ExertedBy[game.Player1] || source.SkipsNextUntap {
 					t.Fatal("exert cost was not paid")
 				}
 			case cost.AdditionalPutCounter:

@@ -647,11 +647,13 @@ func (ce combatEngine) attackersLegal(g *game.Game, playerID game.PlayerID, decl
 }
 
 // applyAttackersWithChoices applies a declaration and then offers the
-// attackers' optional enlist costs (CR 508.1j) to the attacking player.
+// attackers' optional costs to attack (CR 508.1g, 508.1j) to the attacking
+// player: exert-as-it-attacks, then enlist. Without agents both are declined.
 func (ce combatEngine) applyAttackersWithChoices(g *game.Game, playerID game.PlayerID, declare action.DeclareAttackersAction, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	if !ce.applyAttackersWithPayment(g, playerID, declare, agents, log) {
 		return false
 	}
+	ce.chooseAttackExertions(g, playerID, declare.Attackers, agents, log)
 	ce.payEnlistCosts(g, playerID, declare.Attackers, agents, log)
 	return true
 }

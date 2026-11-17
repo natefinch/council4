@@ -34,7 +34,7 @@ func TestTapDownSequenceKeepsTargetTappedThroughNextUntapStep(t *testing.T) {
 	if !target.Tapped {
 		t.Fatal("tap-down sequence did not tap its target")
 	}
-	if !target.Exerted {
+	if !target.SkipsNextUntap {
 		t.Fatal("tap-down sequence did not mark its target to skip its next untap")
 	}
 
@@ -48,7 +48,7 @@ func TestTapDownSequenceKeepsTargetTappedThroughNextUntapStep(t *testing.T) {
 	if !target.Tapped {
 		t.Fatal("target untapped during its skipped untap step")
 	}
-	if target.Exerted {
+	if target.SkipsNextUntap {
 		t.Fatal("skip-next-untap flag was not cleared after the skipped untap step")
 	}
 
@@ -87,13 +87,13 @@ func TestGroupSkipNextUntapExertsOnlyTheControlledGroup(t *testing.T) {
 	log := TurnLog{}
 	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &log)
 
-	if !ownLand.Exerted || !ownOtherLand.Exerted {
+	if !ownLand.SkipsNextUntap || !ownOtherLand.SkipsNextUntap {
 		t.Fatal("group skip-untap did not exert every land the controller controls")
 	}
-	if ownCreature.Exerted {
+	if ownCreature.SkipsNextUntap {
 		t.Fatal("group skip-untap exerted a non-land permanent")
 	}
-	if opponentLand.Exerted {
+	if opponentLand.SkipsNextUntap {
 		t.Fatal("group skip-untap exerted an opponent's land")
 	}
 
@@ -106,7 +106,7 @@ func TestGroupSkipNextUntapExertsOnlyTheControlledGroup(t *testing.T) {
 	if !ownLand.Tapped || !ownOtherLand.Tapped {
 		t.Fatal("controlled lands untapped during their skipped untap step")
 	}
-	if ownLand.Exerted || ownOtherLand.Exerted {
+	if ownLand.SkipsNextUntap || ownOtherLand.SkipsNextUntap {
 		t.Fatal("controlled lands did not shed their skip-next-untap flag")
 	}
 
@@ -156,7 +156,7 @@ func TestMultiTargetTapStunSequenceStunsEachChosenTarget(t *testing.T) {
 		if !c.Tapped {
 			t.Fatalf("target %d was not tapped by the multi-target tap-stun", i)
 		}
-		if !c.Exerted {
+		if !c.SkipsNextUntap {
 			t.Fatalf("target %d was not marked to skip its next untap", i)
 		}
 	}
@@ -172,7 +172,7 @@ func TestMultiTargetTapStunSequenceStunsEachChosenTarget(t *testing.T) {
 		if !c.Tapped {
 			t.Fatalf("target %d untapped during its skipped untap step", i)
 		}
-		if c.Exerted {
+		if c.SkipsNextUntap {
 			t.Fatalf("target %d did not shed its skip-next-untap flag", i)
 		}
 	}
