@@ -523,6 +523,15 @@ a restriction, and a new object after a zone change is unaffected (CR 400.7).
 "Attacks or blocks this combat if able" is `RuleEffectMustAttack` plus
 `RuleEffectMustBlock` until end of combat.
 
+"This creature assigns no combat damage this turn/combat" is
+`RuleEffectAssignNoCombatDamage`, created by `ApplyRule` with
+`AffectedSource` or an `Object` reference and a this-turn or end-of-combat
+duration. `combatDamageAssignedBy` returns 0 for an affected attacker or
+blocker, so it assigns no combat damage at all (CR 510.1a) in every damage
+step, including trample and banding assignment. Nothing is assigned, so
+prevention, "can't be prevented" effects and lifelink don't apply. The effect
+follows the exact object (CR 400.7) and outlasts its source.
+
 Attacking bands (CR 508.1e, 702.22c-f) are announced with the attack
 declaration: `action.DeclareAttackersWithBands` carries them in a complete
 proposal, and a staged declaration asks `ChoiceAttackingBand` questions after
