@@ -1702,6 +1702,9 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 	if effect.RequiredBlockAttackerRef.Exists || effect.RequiredBlockAttacker != 0 {
 		v.add(faceName, appendPath(path, "RequiredBlockAttackerRef"), CardDefIssueInvalidRuleEffect, "a directed block requirement must be created by an ApplyRule instruction")
 	}
+	if err := effect.BlockerRestriction.validate(); err != nil {
+		v.add(faceName, appendPath(path, "BlockerRestriction"), CardDefIssueInvalidRuleEffect, err.Error())
+	}
 	switch effect.Kind {
 	case RuleEffectPlayFromGraveyardPerPermanentType:
 		if effect.PermissionKey == "" || effect.AffectedPlayer != PlayerYou ||

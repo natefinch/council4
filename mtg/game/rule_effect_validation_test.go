@@ -280,6 +280,36 @@ func validateApplyRuleTestEffect(effect *RuleEffect) error {
 	}})
 }
 
+func TestValidateSelectionBlockerRestriction(t *testing.T) {
+	t.Parallel()
+
+	valid := RuleEffect{Kind: RuleEffectCantBeBlockedExceptBy, BlockerRestriction: BlockerRestriction{
+		Kind:      BlockerRestrictionSelection,
+		Selection: Selection{AnyOf: []Selection{{SubtypesAny: []types.Sub{types.Wall}}, {Keyword: Flying}}},
+	}}
+	if err := validateApplyRuleTestEffect(&valid); err != nil {
+		t.Fatalf("valid Selection blocker restriction rejected: %v", err)
+	}
+	static := valid
+	static.AffectedSource = true
+	if issues := ValidateCardDef(cardDefWithRuleEffect(&static)); len(issues) != 0 {
+		t.Fatalf("valid static Selection blocker restriction issues = %+v, want none", issues)
+	}
+	for name, restriction := range map[string]BlockerRestriction{
+		"empty Selection":           {Kind: BlockerRestrictionSelection},
+		"Selection on another kind": {Kind: BlockerRestrictionFlying, Selection: Selection{SubtypesAny: []types.Sub{types.Wall}}},
+	} {
+		effect := RuleEffect{Kind: RuleEffectCantBeBlockedExceptBy, BlockerRestriction: restriction}
+		if err := validateApplyRuleTestEffect(&effect); err == nil {
+			t.Errorf("%s: ApplyRule accepted the restriction", name)
+		}
+		effect.AffectedSource = true
+		if issues := ValidateCardDef(cardDefWithRuleEffect(&effect)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+			t.Errorf("%s: static issues = %+v, want %s", name, issues, CardDefIssueInvalidRuleEffect)
+		}
+	}
+}
+
 func TestValidateCardDefActionRestriction(t *testing.T) {
 	t.Parallel()
 
