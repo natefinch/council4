@@ -85,6 +85,10 @@ type SpellRequest struct {
 	// Sneak is this cast's Sneak permission (CR 702.190a). Only a cast the
 	// caster begins with priority in their declare blockers step may offer it.
 	Sneak SneakCast
+	// FaceDown marks a face-down cast (CR 702.37c, 702.168b, 708.4). Mana
+	// restricted to face-down creature spells (Qarsi Deceiver) may pay its total
+	// cost only when this is set.
+	FaceDown bool
 }
 
 // SneakCast is whether a cast may be made for its Sneak alternative cost
@@ -168,6 +172,37 @@ type GenericRequest struct {
 	Exclude         map[id.ID]bool
 	AdditionalCosts []cost.Additional
 	Prefs           *Preferences
+	// TurnFaceUp identifies the turn-face-up cost this payment pays, if it is
+	// the special action of turning a face-down permanent face up (CR 116.2b).
+	TurnFaceUp TurnFaceUpCost
+}
+
+// TurnFaceUpCost identifies the rule whose cost a turn-face-up special action
+// pays. Restricted mana reads it: mana spendable only to pay a morph cost or a
+// manifested creature's mana cost (Qarsi Deceiver) can pay only those, and a
+// turn-face-up payment is never an activated ability's cost.
+type TurnFaceUpCost uint8
+
+const (
+	// NotTurningFaceUp is any payment other than turning a permanent face up.
+	NotTurningFaceUp TurnFaceUpCost = iota
+	// TurnFaceUpMorphCost is a morph cost, including a megamorph cost
+	// (CR 702.37b, 702.37e), whatever made the permanent face down.
+	TurnFaceUpMorphCost
+	// TurnFaceUpManifestedManaCost is the mana cost of a manifested creature
+	// card (CR 701.40b), including one manifested by manifest dread.
+	TurnFaceUpManifestedManaCost
+	// TurnFaceUpCloakedManaCost is the mana cost of a cloaked creature card
+	// (CR 701.58c). A cloaked permanent is not a manifested permanent.
+	TurnFaceUpCloakedManaCost
+	// TurnFaceUpDisguiseCost is a disguise cost (CR 702.168d).
+	TurnFaceUpDisguiseCost
+)
+
+// MorphOrManifestedManaCost reports whether c is a morph cost or a manifested
+// creature's mana cost.
+func (c TurnFaceUpCost) MorphOrManifestedManaCost() bool {
+	return c == TurnFaceUpMorphCost || c == TurnFaceUpManifestedManaCost
 }
 
 // Preferences records the player's choices about how to pay optional or

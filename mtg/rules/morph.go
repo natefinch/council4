@@ -212,6 +212,7 @@ func faceDownSpellRequest(player game.PlayerID, cardID id.ID, sourceZone zone.Ty
 		PlayerID: player, CardID: cardID, SourceZone: sourceZone, Card: faceDownSpellDef(),
 		Alternative:     opt.Val(cost.Alternative{Label: "Face down", ManaCost: opt.Val(faceDownCastCost)}),
 		CastPermissions: []payment.SpellCastPermission{permission},
+		FaceDown:        true,
 	}
 }
 
@@ -489,14 +490,35 @@ func turnableFaceDown(g *game.Game, playerID game.PlayerID, permanentID id.ID) (
 }
 
 // turnFaceUpCost is the activationCost of turning permanentID face up for
-// manaCost. Its payment requires the permanent to remain face down under the
+// option. Its payment requires the permanent to remain face down under the
 // player's control after any payment-time mana abilities.
-func turnFaceUpCost(g *game.Game, playerID game.PlayerID, permanentID id.ID, manaCost *cost.Mana) activationCost {
+func turnFaceUpCost(g *game.Game, playerID game.PlayerID, permanentID id.ID, option faceDownCostOption) activationCost {
 	permanent, _ := permanentByObjectID(g, permanentID)
-	return genericRequestCost(payment.GenericRequest{PlayerID: playerID, Cost: manaCost, Source: permanent}, func(g *game.Game) bool {
+	manaCost := option.cost
+	return genericRequestCost(payment.GenericRequest{PlayerID: playerID, Cost: &manaCost, Source: permanent,
+		TurnFaceUp: turnFaceUpPayment(permanent.FaceDownKind, option.source)}, func(g *game.Game) bool {
 		_, ok := turnableFaceDown(g, playerID, permanentID)
 		return ok
 	})
+}
+
+// turnFaceUpPayment identifies the turn-face-up cost paid for source on a
+// permanent made face down by kind. A mana cost is a manifested creature's
+// (CR 701.40b) unless the permanent was cloaked (CR 701.58c).
+func turnFaceUpPayment(kind game.FaceDownKind, source faceDownCostSource) payment.TurnFaceUpCost {
+	switch source {
+	case faceDownCostMorph, faceDownCostMegamorph:
+		return payment.TurnFaceUpMorphCost
+	case faceDownCostDisguise:
+		return payment.TurnFaceUpDisguiseCost
+	case faceDownCostManaCost:
+		if kind == game.FaceDownManifest {
+			return payment.TurnFaceUpManifestedManaCost
+		}
+		return payment.TurnFaceUpCloakedManaCost
+	default:
+		panic(fmt.Sprintf("unknown face-down cost source %d", source))
+	}
 }
 
 // feasibleTurnFaceUpCosts lists the distinct turn-face-up cost options of
@@ -516,7 +538,7 @@ func (e *Engine) feasibleTurnFaceUpCosts(g *game.Game, playerID game.PlayerID, p
 			duplicate := slices.ContainsFunc(costs, func(prior faceDownCostOption) bool {
 				return prior.source == option.source && prior.cost.String() == option.cost.String()
 			})
-			if !duplicate && e.costedActionAvailable(g, playerID, turnFaceUpCost(g, playerID, permanentID, &option.cost)) {
+			if !duplicate && e.costedActionAvailable(g, playerID, turnFaceUpCost(g, playerID, permanentID, option)) {
 				costs = append(costs, option)
 			}
 		}
@@ -536,7 +558,7 @@ func (e *Engine) applyTurnFaceUpWithChoices(g *game.Game, playerID game.PlayerID
 		return actionFailed
 	}
 	manaCost := option.cost
-	c := turnFaceUpCost(g, playerID, permanentID, &manaCost)
+	c := turnFaceUpCost(g, playerID, permanentID, option)
 	return e.costedAction(g, playerID, costedAction{cost: c, disclose: func(g *game.Game) {
 		permanent, _ := permanentByObjectID(g, permanentID)
 		event := game.Event{Kind: game.EventActionCostAnnounced, Controller: playerID, Player: playerID,

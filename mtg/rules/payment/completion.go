@@ -376,7 +376,7 @@ func (p Planner) complete(request Request, partial Partial) (Plan, completion, b
 			x = partial.X.Val
 		}
 		options = []spellCostOption{{manaCost: req.Cost, additionalCosts: req.AdditionalCosts}}
-		ctx.spell, excluded = req.Spell, req.Exclude
+		ctx, excluded = genericSpendContext(req), req.Exclude
 	default:
 		return plan, result, false
 	}
@@ -629,7 +629,11 @@ func (p Planner) Apply(plan Plan) (ApplyResult, bool, string) {
 	}
 	spellSpend := plan.request.kind == spellPayment || plan.request.kind == genericPayment && plan.request.generic.Spell != nil
 	if state, ok := p.s.(ManaState); ok && !spellSpend {
-		state.ConsumePaymentRiders(current.player, current.source, before, current.mana.poolSpend)
+		var turnFaceUp TurnFaceUpCost
+		if plan.request.kind == genericPayment {
+			turnFaceUp = plan.request.generic.TurnFaceUp
+		}
+		state.ConsumePaymentRiders(current.player, current.source, turnFaceUp, before, current.mana.poolSpend)
 	}
 	if current.tapSource && !tapForAbility(p.s, current.source, current.forMana) {
 		panic("prevalidated costed-action source became untappable")

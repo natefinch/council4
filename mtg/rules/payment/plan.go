@@ -373,7 +373,7 @@ func canPayGenericCost(s State, req GenericRequest) bool {
 		}
 		return true
 	}
-	_, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, manaSourceRestrictions{excluded: req.Exclude}, spendContext{spell: req.Spell}, nil)
+	_, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, manaSourceRestrictions{excluded: req.Exclude}, genericSpendContext(req), nil)
 	return ok
 }
 
@@ -391,7 +391,7 @@ func payGenericCost(s State, req GenericRequest) (poolSpend map[mana.Unit]int, o
 		applyAdditionalCostPlan(s, plan.additional)
 		return clonePoolSpend(plan.mana.poolSpend), true
 	}
-	plan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, manaSourceRestrictions{excluded: req.Exclude}, spendContext{spell: req.Spell}, req.Prefs)
+	plan, ok := buildPaymentPlanWithPreferences(s, req.PlayerID, req.Cost, req.XValue, manaSourceRestrictions{excluded: req.Exclude}, genericSpendContext(req), req.Prefs)
 	if !ok {
 		return nil, false
 	}
@@ -406,7 +406,7 @@ func payGenericCost(s State, req GenericRequest) (poolSpend map[mana.Unit]int, o
 func buildGenericCostPlan(s State, req GenericRequest) (spellCostPlan, bool) {
 	plan := spellCostPlan{}
 	witness, ok := completeAdditional(s, req.PlayerID, req.AdditionalCosts, req.XValue, req.Prefs, req.Source, req.SourceCardID, zone.None, 0, nil, nil, nil, func(witness additionalWitness) bool {
-		manaPlan, ok := completeMana(s, req.PlayerID, req.Cost, req.XValue, additionalManaRestrictions(req.Exclude, witness.plan, true), spendContext{spell: req.Spell}, clonePreferences(req.Prefs), witness.plan.lifePaid, nil, 0, zone.None, Partial{})
+		manaPlan, ok := completeMana(s, req.PlayerID, req.Cost, req.XValue, additionalManaRestrictions(req.Exclude, witness.plan, true), genericSpendContext(req), clonePreferences(req.Prefs), witness.plan.lifePaid, nil, 0, zone.None, Partial{})
 		if ok {
 			plan.mana = manaPlan
 		}
@@ -678,6 +678,14 @@ type spendContext struct {
 	abilitySource *game.Permanent
 	// spendAs is the payment's spending permission (CR 609.4b).
 	spendAs game.ManaSpendPermission
+	// faceDownSpell marks a face-down cast's payment (CR 708.4).
+	faceDownSpell bool
+	// turnFaceUp is the turn-face-up cost a special-action payment pays.
+	turnFaceUp TurnFaceUpCost
+}
+
+func genericSpendContext(req GenericRequest) spendContext {
+	return spendContext{spell: req.Spell, turnFaceUp: req.TurnFaceUp}
 }
 
 func snapshotPool(s State, player *game.Player, ctx spendContext) map[mana.Unit]int {
@@ -768,6 +776,12 @@ func restrictedManaCanPay(s State, rider game.ManaRiderInstance, ctx spendContex
 		// non-spell payment (ability cost; ctx.spell is nil) is not a planeswalker
 		// spell, so the tagged mana cannot pay for it.
 		return ctx.spell != nil && ctx.spell.HasType(types.Planeswalker)
+	case game.ManaSpendFaceDownOrTurnFaceUp:
+		// Qarsi Deceiver: spendable only on a face-down creature spell's total
+		// cost, a morph cost, or a manifested creature's mana cost. Disguise
+		// costs, cloaked mana costs, face-up spells and abilities are excluded.
+		return ctx.faceDownSpell && ctx.spell != nil && ctx.spell.HasType(types.Creature) ||
+			ctx.turnFaceUp.MorphOrManifestedManaCost()
 	default:
 		return false
 	}

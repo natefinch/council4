@@ -41,6 +41,8 @@ type spellCostOption struct {
 	// type-changing effect, a characteristic-defining ability or a bestowed cast
 	// decides which tagged mana can pay. Nil falls back to card.
 	spendSpell *game.CardDef
+	// faceDown marks the face-down cast's option (SpellRequest.FaceDown).
+	faceDown bool
 }
 
 // spendContext is the mana-spending context for paying this option's mana.
@@ -49,7 +51,7 @@ func (o spellCostOption) spendContext() spendContext {
 	if spell == nil {
 		spell = o.card
 	}
-	return spendContext{spell: spell, spendAs: o.spendAs}
+	return spendContext{spell: spell, spendAs: o.spendAs, faceDownSpell: o.faceDown}
 }
 
 // spellCostOptionsForZoneAndKicker returns the available cost options for
@@ -193,6 +195,7 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 	for i := range options {
 		options[i].spendAs = req.SpendAnyMana
 		options[i].spendSpell = spendSpell
+		options[i].faceDown = req.FaceDown
 	}
 	return options
 }

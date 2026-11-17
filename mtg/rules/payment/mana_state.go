@@ -24,7 +24,10 @@ type ManaState interface {
 	ManaSourceSnapshot(id.ID) game.ObjectSnapshot
 	LifePaymentLoss(game.PlayerID, int) int
 	RidersAfterInput(game.PlayerID, id.ID, map[mana.Unit]int) []game.ManaRiderInstance
-	ConsumePaymentRiders(game.PlayerID, *game.Permanent, map[mana.Unit]int, map[mana.Unit]int)
+	// ConsumePaymentRiders consumes riders on the pool mana a non-spell payment
+	// spent. A turn-face-up payment is a special action, not an activation of
+	// its source's ability, so it qualifies riders by its TurnFaceUpCost.
+	ConsumePaymentRiders(game.PlayerID, *game.Permanent, TurnFaceUpCost, map[mana.Unit]int, map[mana.Unit]int)
 	ManaAbilityLabel(id.ID, int) string
 	UntapResources(id.ID) (game.PermanentResources, bool)
 	ForecastCardCost(game.PlayerID, id.ID, zone.Type, zone.Type, bool) (game.ResourceProjection, bool)

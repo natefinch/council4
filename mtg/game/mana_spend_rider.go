@@ -100,6 +100,15 @@ const (
 	// single color equals that produced unit's color, never an ability cost or
 	// other payment.
 	ManaSpendCastMonocoloredSpellOfChosenColor
+	// ManaSpendFaceDownOrTurnFaceUp is "spend this mana only to cast a face-down
+	// creature spell, pay a mana cost to turn a manifested creature face up, or
+	// pay a morph cost" (Qarsi Deceiver). It is a restriction-only rider: the
+	// tagged mana may pay the total cost of any face-down creature spell
+	// (CR 708.4), a morph or megamorph cost to turn a permanent face up
+	// (CR 702.37e), or the mana cost of a manifested permanent turned face up by
+	// CR 701.40b. It may not pay a face-up spell, a disguise cost, a cloaked
+	// permanent's mana cost (CR 701.58c) or any activated ability.
+	ManaSpendFaceDownOrTurnFaceUp
 )
 
 // ManaSpendRestrictionKind identifies whether a tagged mana unit may be spent

@@ -189,8 +189,12 @@ func (s *rulesPaymentState) RidersAfterInput(playerID game.PlayerID, sourceID id
 	return resource.ManaRiders
 }
 
-func (s *rulesPaymentState) ConsumePaymentRiders(player game.PlayerID, source *game.Permanent, before, spent map[mana.Unit]int) {
+func (s *rulesPaymentState) ConsumePaymentRiders(player game.PlayerID, source *game.Permanent, turnFaceUp payment.TurnFaceUpCost, before, spent map[mana.Unit]int) {
 	s.assertWritable()
+	if turnFaceUp != payment.NotTurningFaceUp {
+		consumeManaSpendRidersForTurnFaceUp(s.g, player, turnFaceUp, before, spent)
+		return
+	}
 	consumeManaSpendRidersForPayment(s.g, player, source, before, spent)
 }
 
