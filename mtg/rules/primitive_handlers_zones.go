@@ -825,6 +825,9 @@ func handleCreateToken(r *effectResolver, prim game.CreateToken) effectResolved 
 	if prim.AttackSameAsObject.Exists {
 		r.declareTokensAttackingSameAsObject(created, prim.AttackSameAsObject.Val)
 	}
+	if prim.EntryBlocking.Exists {
+		r.putEnteredPermanentsBlocking(created, prim.EntryBlocking.Val)
+	}
 	r.publishEnteredPermanents(prim.PublishLinked, created...)
 	res.amount = len(created)
 	res.succeeded = res.amount > 0
@@ -878,6 +881,9 @@ func (r *effectResolver) populate(prim game.CreateToken, spec game.TokenCopySpec
 	}
 	created, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, recipient, def, 1, prim.EntryTapped, r.agents, r.log)
 	if ok {
+		if prim.EntryBlocking.Exists {
+			r.putEnteredPermanentsBlocking(created, prim.EntryBlocking.Val)
+		}
 		r.publishEnteredPermanents(prim.PublishLinked, created...)
 	}
 	res.succeeded = ok
@@ -937,6 +943,8 @@ func (r *effectResolver) createCopyTokenFromChosenGroup(
 		r.declareTokensAttackingSameAsSource(created)
 	case prim.AttackSameAsObject.Exists:
 		r.declareTokensAttackingSameAsObject(created, prim.AttackSameAsObject.Val)
+	case prim.EntryBlocking.Exists:
+		r.putEnteredPermanentsBlocking(created, prim.EntryBlocking.Val)
 	default:
 	}
 	r.publishEnteredPermanents(prim.PublishLinked, created...)
@@ -1178,7 +1186,11 @@ func (r *effectResolver) createTokenForGroup(prim game.CreateToken, amount int) 
 func (r *effectResolver) createCopyTokensForEach(prim game.CreateToken, spec game.TokenCopySpec, recipient game.PlayerID) effectResolved {
 	res := effectResolved{accepted: true}
 	members := r.groupPermanents(*spec.Group)
-	defs := make([]*game.CardDef, 0, len(members))
+	type memberCopy struct {
+		member id.ID
+		def    *game.CardDef
+	}
+	copies := make([]memberCopy, 0, len(members))
 	for _, member := range members {
 		source, ok := permanentCopyDef(r.game, member)
 		if !ok {
@@ -1188,15 +1200,34 @@ func (r *effectResolver) createCopyTokensForEach(prim game.CreateToken, spec gam
 		if !ok {
 			continue
 		}
-		defs = append(defs, def)
+		copies = append(copies, memberCopy{member: member.ObjectID, def: def})
 	}
-	for _, def := range defs {
-		created, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, recipient, def, 1, prim.EntryTapped, r.agents, r.log)
+	blockBatchID := id.ID(0)
+	if prim.EntryBlockingCopySource || prim.EntryBlocking.Exists {
+		blockBatchID = r.game.IDGen.Next()
+	}
+	var blockingAttacker id.ID
+	if prim.EntryBlocking.Exists {
+		if resolved, ok := resolveObjectReference(r.game, r.obj, prim.EntryBlocking.Val); ok && resolved.permanent != nil {
+			blockingAttacker = resolved.permanent.ObjectID
+		}
+	}
+	for _, copied := range copies {
+		created, ok := createTokenPermanentsCollectingWithChoices(r.engine, r.game, recipient, copied.def, 1, prim.EntryTapped, r.agents, r.log)
 		if !ok {
 			continue
 		}
 		if prim.EntryAttacking {
 			declareCreatedTokensAttacking(r.engine, r.game, recipient, created, r.agents, r.log)
+		}
+		attacker := blockingAttacker
+		if prim.EntryBlockingCopySource {
+			attacker = copied.member
+		}
+		if attacker != 0 {
+			for _, token := range created {
+				putEnteredBlocking(r.game, token, attacker, blockBatchID)
+			}
 		}
 		r.publishEnteredPermanents(prim.PublishLinked, created...)
 		res.amount++
@@ -1232,6 +1263,9 @@ func (r *effectResolver) createCopyTokenFromTriggerBatch(prim game.CreateToken, 
 	}
 	if prim.EntryAttacking {
 		declareCreatedTokensAttacking(r.engine, r.game, recipient, created, r.agents, r.log)
+	}
+	if prim.EntryBlocking.Exists {
+		r.putEnteredPermanentsBlocking(created, prim.EntryBlocking.Val)
 	}
 	r.publishEnteredPermanents(prim.PublishLinked, created...)
 	res.amount = 1

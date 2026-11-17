@@ -850,16 +850,17 @@ func (ce combatEngine) applyBlockers(g *game.Game, playerID game.PlayerID, decla
 		g.Combat.BlockerOrder[block.Blocking] = append(g.Combat.BlockerOrder[block.Blocking], block.Blocker)
 	}
 	for i, block := range blocks {
-		emitBlockEvents(g, block, eligibleByID[block.Blocker], newlyBlocked[i], newlyBlocking[i])
+		emitBlockEvents(g, block, eligibleByID[block.Blocker], newlyBlocked[i], newlyBlocking[i], g.Combat.BlockDeclarationBatchID)
 	}
 	return true
 }
 
-// emitBlockEvents emits one block's events in the declaration batch: the
+// emitBlockEvents emits one block's events in the batch simultaneousID: the
 // attacker becoming blocked by this blocker, marked when the attacker was
 // already blocked, then the blocker blocking it, marked when this is the
-// blocker's first block (CR 509.3).
-func emitBlockEvents(g *game.Game, block game.BlockDeclaration, blocker *game.Permanent, attackerBecameBlocked, blockerBecameBlocking bool) {
+// blocker's first block (CR 509.3). A nil blocker emits only the attacker's
+// event, for a creature put onto the battlefield blocking (CR 509.4).
+func emitBlockEvents(g *game.Game, block game.BlockDeclaration, blocker *game.Permanent, attackerBecameBlocked, blockerBecameBlocking bool, simultaneousID id.ID) {
 	if attacker, ok := permanentByObjectID(g, block.Blocking); ok {
 		attackTarget, _ := attackTargetForAttacker(g, attacker.ObjectID)
 		emitEvent(g, game.Event{
@@ -871,7 +872,7 @@ func emitBlockEvents(g *game.Game, block game.BlockDeclaration, blocker *game.Pe
 			PermanentID:            attacker.ObjectID,
 			RelatedPermanentID:     block.Blocker,
 			AttackTarget:           attackTarget,
-			SimultaneousID:         g.Combat.BlockDeclarationBatchID,
+			SimultaneousID:         simultaneousID,
 			AttackerAlreadyBlocked: !attackerBecameBlocked,
 		})
 	}
@@ -888,7 +889,7 @@ func emitBlockEvents(g *game.Game, block game.BlockDeclaration, blocker *game.Pe
 		SubjectGoadedKnown:    true,
 		RelatedPermanentID:    block.Blocking,
 		BlockedAttackerID:     block.Blocking,
-		SimultaneousID:        g.Combat.BlockDeclarationBatchID,
+		SimultaneousID:        simultaneousID,
 		BlockerBecameBlocking: blockerBecameBlocking,
 	})
 }

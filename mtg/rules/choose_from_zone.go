@@ -184,12 +184,17 @@ func chooseFromZoneSupported(env game.ChooseFromZone) bool {
 		(env.Destination.Zone != zone.Battlefield || env.Riders.FaceDown) {
 		return false
 	}
+	if env.Riders.EntersBlocking.Exists &&
+		(env.Destination.Zone != zone.Battlefield || env.Riders.FaceDown || env.Riders.EntersAttacking) {
+		return false
+	}
 	if env.Riders.EntryController.Exists &&
 		(env.Destination.Zone != zone.Battlefield || env.Riders.UnderOwnerControl) {
 		return false
 	}
 	if env.Choosers.Exists && (env.AllOwners || env.Grouping == game.ChooseSplitDestination ||
-		env.Riders.FaceDown || env.Riders.EntersAttacking || env.Riders.PublishObjectScoped) {
+		env.Riders.FaceDown || env.Riders.EntersAttacking || env.Riders.EntersBlocking.Exists ||
+		env.Riders.PublishObjectScoped) {
 		return false
 	}
 	return true
@@ -500,6 +505,9 @@ func (r *effectResolver) chooseFromZoneEnterBattlefield(env game.ChooseFromZone,
 	permanents := r.chooseFromZonePutOnBattlefield(env, chooseFromZonePicks(playerID, chosen), tapped)
 	if env.Riders.EntersAttacking && len(permanents) > 0 {
 		declareCreatedTokensAttacking(r.engine, r.game, playerID, permanents, r.agents, r.log)
+	}
+	if env.Riders.EntersBlocking.Exists {
+		r.putEnteredPermanentsBlocking(permanents, env.Riders.EntersBlocking.Val)
 	}
 	return len(permanents) > 0
 }

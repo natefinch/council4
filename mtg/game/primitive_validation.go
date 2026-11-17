@@ -1888,6 +1888,17 @@ func (p ChooseFromZone) validatePrimitive(targets []TargetSpec, checkTargets boo
 			return errors.New("choose from zone attacking entry cannot enter face down")
 		}
 	}
+	if p.Riders.EntersBlocking.Exists {
+		switch {
+		case p.Destination.Zone != zone.Battlefield:
+			return errors.New("choose from zone blocking entry requires a battlefield destination")
+		case p.Riders.FaceDown || p.Riders.EntersAttacking:
+			return errors.New("choose from zone blocking entry cannot enter face down or attacking")
+		}
+		if err := validateObjectReference(p.Riders.EntersBlocking.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	}
 	if p.Riders.MaxTotalManaValue.Exists {
 		if p.Destination.Zone != zone.Battlefield {
 			return errors.New("choose from zone total mana value cap requires a battlefield destination")
@@ -1924,8 +1935,8 @@ func (p ChooseFromZone) validateChoosers() error {
 		return errors.New("choose from zone choosers choose from their own zones, not every owner's")
 	case p.Grouping == ChooseSplitDestination:
 		return errors.New("choose from zone choosers exclude the split-destination grouping")
-	case p.Riders.FaceDown || p.Riders.EntersAttacking:
-		return errors.New("choose from zone choosers exclude face-down and attacking entry")
+	case p.Riders.FaceDown || p.Riders.EntersAttacking || p.Riders.EntersBlocking.Exists:
+		return errors.New("choose from zone choosers exclude face-down, attacking and blocking entry")
 	case p.Riders.PublishObjectScoped:
 		return errors.New("choose from zone choosers exclude object-scoped publication")
 	}
@@ -2284,6 +2295,26 @@ func (p CreateToken) validatePrimitive(targets []TargetSpec, checkTargets bool) 
 	if p.AttackSameAsObject.Exists {
 		if err := validateObjectReference(p.AttackSameAsObject.Val, targets, checkTargets); err != nil {
 			return err
+		}
+	}
+	if p.EntryBlocking.Exists || p.EntryBlockingCopySource {
+		switch {
+		case attackModes > 0 || p.MustAttackEachOpponentThisTurn:
+			return errors.New("create token blocking entry cannot also enter attacking")
+		case p.EntryBlocking.Exists && p.EntryBlockingCopySource:
+			return errors.New("create token blocking entry names one attacker")
+		case p.RecipientGroup.Kind != PlayerGroupReferenceNone:
+			return errors.New("create token blocking entry cannot set a recipient group")
+		}
+	}
+	if p.EntryBlocking.Exists {
+		if err := validateObjectReference(p.EntryBlocking.Val, targets, checkTargets); err != nil {
+			return err
+		}
+	}
+	if p.EntryBlockingCopySource {
+		if spec, ok := p.Source.TokenCopy(); !ok || spec.Source != TokenCopySourceEachInGroup {
+			return errors.New("create token copy-source blocking entry requires a copy of each group member")
 		}
 	}
 	if spec, ok := p.Source.TokenCopy(); ok {
