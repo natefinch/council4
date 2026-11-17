@@ -1327,6 +1327,22 @@ func validateContinuousEffectNewControllerRef(continuous *ContinuousEffect, targ
 	return validatePlayerReference(continuous.NewControllerRef.Val, targets, checkTargets)
 }
 
+// validateMinimumBlockers requires a minimum-blocker restriction to demand at
+// least two blockers (a minimum of one restricts nothing) and every other kind
+// to leave MinimumBlockers unset.
+func (e *RuleEffect) validateMinimumBlockers() error {
+	if e.Kind == RuleEffectCantBeBlockedExceptByNOrMore {
+		if e.MinimumBlockers < 2 {
+			return errors.New("a minimum-blocker restriction requires at least two blockers")
+		}
+		return nil
+	}
+	if e.MinimumBlockers != 0 {
+		return errors.New("only a minimum-blocker restriction sets MinimumBlockers")
+	}
+	return nil
+}
+
 func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) error {
 	if len(p.RuleEffects) == 0 {
 		return errors.New("rule effect instruction has no declarations")
@@ -1349,6 +1365,9 @@ func (p ApplyRule) validatePrimitive(targets []TargetSpec, checkTargets bool) er
 			return errors.New("an extra-turn-scoped rule effect must be granted by TakeExtraTurn")
 		}
 		if err := effect.BlockerRestriction.validate(); err != nil {
+			return err
+		}
+		if err := effect.validateMinimumBlockers(); err != nil {
 			return err
 		}
 		if effect.Kind != RuleEffectMustBlock && (effect.RequiredBlockAttackerRef.Exists || effect.RequiredBlockAttacker != 0) {
