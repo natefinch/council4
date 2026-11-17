@@ -3812,7 +3812,7 @@ func (r *effectResolver) putResolvedCardsOnBattlefieldCollecting(
 			options:  entryOptions,
 		})
 	}
-	if len(moves) > 1 {
+	if len(moves) > 1 && options.SimultaneousID == 0 {
 		options.SimultaneousID = r.game.IDGen.Next()
 	}
 	for i := range moves {
