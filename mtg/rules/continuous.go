@@ -48,6 +48,9 @@ type permanentEffectiveValues struct {
 	// "bands with other" (CR 702.22b). Only abilities gained after that removal
 	// (later in timestamp order) remain.
 	bandsWithOtherFrom int
+	// grantedStatics are the static abilities layer-6 effects have granted
+	// this permanent that modify the permanent itself, in grant order.
+	grantedStatics []grantedStaticAbility
 
 	power            int
 	powerOK          bool
@@ -779,10 +782,7 @@ func applyContinuousLayers(g *game.Game, permanent *game.Permanent, values *perm
 		if layer == game.LayerPowerToughnessModify && hasCounterEffect {
 			effects = append(effects, counterEffect)
 		}
-		ordered := orderContinuousEffects(effects)
-		for i := range ordered {
-			applyContinuousEffect(g, permanent, values, &ordered[i])
-		}
+		applyLayerEffects(g, permanent, values, layer, orderContinuousEffects(effects))
 		if layer == game.LayerCopy && permanent.FaceDown {
 			applyFaceDownCharacteristics(permanent, values)
 		}
@@ -886,10 +886,7 @@ func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop ga
 			continue
 		}
 		effects := continuousEffectsForLayer(g, permanent, &values, layer, sources)
-		ordered := orderContinuousEffects(effects)
-		for i := range ordered {
-			applyContinuousEffect(g, permanent, &values, &ordered[i])
-		}
+		applyLayerEffects(g, permanent, &values, layer, orderContinuousEffects(effects))
 		if layer == game.LayerCopy && permanent.FaceDown {
 			applyFaceDownCharacteristics(permanent, &values)
 		}
@@ -947,6 +944,11 @@ func continuousEffectsForLayer(g *game.Game, permanent *game.Permanent, values *
 	effects = appendStaticAbilityContinuousEffectsForLayer(effects, g, permanent, values, layer, sources)
 	if layer == game.LayerAbility {
 		effects = append(effects, keywordCounterEffects(permanent)...)
+	}
+	if layer > game.LayerAbility {
+		for _, granted := range values.grantedStatics {
+			effects = appendGrantedStaticEffects(effects, g, permanent, values, granted, layer, nil)
+		}
 	}
 	return effects
 }
@@ -1691,8 +1693,10 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 			values.triggerOrigins = nil
 			values.keywords.clear()
 			values.bandsWithOtherFrom = 0
+			removeUnstartedGrantedStatics(values)
 		}
 		for i, body := range effect.AddAbilities {
+			recordGrantedStaticAbility(values, permanent, body, effect, i)
 			appendEffectiveAbility(values, permanent, body, game.ActivatedAbilityResolutionUse{
 				OriginID: effect.SourceCardID, Granted: true, GrantID: effect.ID,
 				GrantSourceID: effect.SourceObjectID, Occurrence: i,
@@ -1709,7 +1713,9 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 			}
 			origin.RecipientID, origin.BodyIndex = permanent.ObjectID, i
 			setEffectiveTriggerOrigin(values, origin)
-			addBodyKeywords(&values.keywords, body)
+			if !conditionalKeywordStatic(body) {
+				addBodyKeywords(&values.keywords, body)
+			}
 		}
 		for _, keyword := range effect.RemoveKeywords {
 			values.keywords.set(keyword, false)
