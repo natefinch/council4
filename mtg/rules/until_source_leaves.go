@@ -34,13 +34,14 @@ func (r *effectResolver) startUntilSourceLeaves(untilSourceLeaves bool) (until *
 	if !present {
 		return nil, false
 	}
-	return &untilSourceLeavesRecorder{sourceObjectID: sourceObjectID}, true
+	return &untilSourceLeavesRecorder{sourceObjectID: sourceObjectID, returnZone: zone.Battlefield}, true
 }
 
 // untilSourceLeavesRecorder accumulates the exact card incarnations one
-// UntilSourceLeaves move put into exile.
+// UntilSourceLeaves move put into exile from returnZone.
 type untilSourceLeavesRecorder struct {
 	sourceObjectID id.ID
+	returnZone     zone.Type
 	objects        []game.LinkedObjectRef
 }
 
@@ -73,18 +74,20 @@ func (u *untilSourceLeavesRecorder) commit(g *game.Game) {
 	g.UntilSourceLeavesExiles = append(g.UntilSourceLeavesExiles, game.UntilSourceLeavesExile{
 		SourceObjectID: u.sourceObjectID,
 		Objects:        u.objects,
+		ReturnZone:     u.returnZone,
 	})
 }
 
 // returnUntilSourceLeavesExiles performs CR 610.3's second one-shot effect for
 // every recorded source that is no longer on the battlefield: each recorded
-// card still in exile as the same incarnation returns to the battlefield under
-// its owner's control (CR 610.3c). All returns created by the same flush are
-// one simultaneous event (CR 610.3d). It is called immediately after events
-// that can remove a permanent (after each resolving instruction, at the start
-// of each state-based-action pass and before triggered abilities are put on the
-// stack), so the return precedes any priority and never uses the stack. It
-// reports whether any record was consumed.
+// card still in exile as the same incarnation returns to its previous zone,
+// the battlefield under its owner's control (CR 610.3c) or its owner's hand.
+// All returns created by the same flush are one simultaneous event (CR
+// 610.3d). It is called immediately after events that can remove a permanent
+// (after each resolving instruction, at the start of each state-based-action
+// pass and before triggered abilities are put on the stack), so the return
+// precedes any priority and never uses the stack. It reports whether any
+// record was consumed.
 func (e *Engine) returnUntilSourceLeavesExiles(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
 	if len(g.UntilSourceLeavesExiles) == 0 {
 		return false
@@ -105,6 +108,7 @@ func (e *Engine) returnUntilSourceLeavesExiles(g *game.Game, agents [game.NumPla
 	// return (an entering permanent's replacement or choice) cannot repeat it.
 	g.UntilSourceLeavesExiles = kept
 	var resolved []resolvedBattlefieldCard
+	var toHand []simultaneousCardMove
 	seen := make(map[id.ID]bool)
 	for _, record := range departed {
 		for _, ref := range record.Objects {
@@ -119,12 +123,31 @@ func (e *Engine) returnUntilSourceLeavesExiles(g *game.Game, agents [game.NumPla
 				continue
 			}
 			seen[ref.CardID] = true
+			if record.ReturnZone == zone.Hand {
+				toHand = append(toHand, simultaneousCardMove{
+					card:     game.ZoneCardSnapshot{CardID: card.ID, ZoneVersion: card.ZoneVersion},
+					fromZone: zone.Exile,
+				})
+				continue
+			}
 			resolved = append(resolved, resolvedBattlefieldCard{card: card, fromZone: zone.Exile, controller: card.Owner})
 		}
 	}
+	var options permanentCreationOptions
+	if len(resolved)+len(toHand) > 1 {
+		options.SimultaneousID = g.IDGen.Next()
+	}
+	if len(toHand) > 0 {
+		if _, ok := replacementChoiceContextFor(g); !ok {
+			previous, _ := g.ChoiceContext()
+			e.setReplacementChoiceContext(g, agents, log)
+			defer g.SetChoiceContext(previous)
+		}
+		moveCardsBetweenZonesSimultaneously(g, toHand, zone.Hand, false, options.SimultaneousID, nil)
+	}
 	if len(resolved) > 0 {
 		r := newEffectResolver(e, g, nil, agents, log)
-		r.putResolvedCardsOnBattlefieldCollecting(resolved, nil, permanentCreationOptions{})
+		r.putResolvedCardsOnBattlefieldCollecting(resolved, nil, options)
 	}
 	return true
 }

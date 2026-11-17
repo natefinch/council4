@@ -100,7 +100,8 @@ type Exchange struct {
 // whose value comes from a characteristic-defining ability the Engine cannot
 // yet evaluate outside the battlefield (#3836). Zone is the zone the identified
 // incarnation was in when the operation reported it: a found card's origin, or
-// a moved card's actual destination after replacement effects.
+// a moved card's actual destination after replacement effects. Owner is the
+// card's owner.
 type FoundCard struct {
 	Identity     game.ZoneCardSnapshot
 	Info         game.ChoiceCardInfo
@@ -108,6 +109,7 @@ type FoundCard struct {
 	Power        opt.V[int]
 	Toughness    opt.V[int]
 	Zone         zone.Type
+	Owner        game.PlayerID
 }
 
 // UntilResult reports one "<act> cards until a matching card" process.
@@ -253,6 +255,20 @@ type CardPlacement struct {
 	ContinuousEffects []game.ContinuousEffect
 	EntryCounters     []game.CounterPlacement
 	EntryTapped       bool
+	// PublishLinkedProducer remembers every card of an exile placement that
+	// actually reaches exile in the declared producer channel of the resolving
+	// ability's original source permanent (CR 607.2a "the exiled card", "cards
+	// exiled with this"), even if that permanent has already left the
+	// battlefield. The resolving ability body must declare the producer. A
+	// later linked ability reads the cards with LinkedExiledCards.
+	PublishLinkedProducer game.LinkedProducerKey
+	// UntilSourceLeaves exiles hand cards "until <this permanent> leaves the
+	// battlefield" (CR 610.3): immediately after the resolving ability's source
+	// permanent leaves, each such card still in exile returns to its owner's
+	// hand, its previous zone. If the source already left before this
+	// placement, those cards don't move (CR 610.3a-b). It requires an exile
+	// placement of hand handles made by an activated or triggered ability.
+	UntilSourceLeaves bool
 }
 
 // View resolves invocation metadata and read-only references.
@@ -304,4 +320,12 @@ type Context interface {
 	// (CR 701.20a). Move the chosen handles with MoveCards ("exile that
 	// card").
 	RevealHand(HandReveal) (HandRevealResult, error)
+	// LinkedExiledCards returns the cards the resolving ability's original
+	// source permanent exiled through producer (CardPlacement or primitive
+	// PublishLinkedProducer) that are still in exile as the same objects (CR
+	// 607.2a), with their current characteristics there. The handles authorize
+	// one later MoveCards placement ("return the exiled card to its owner's
+	// hand"). A card that left exile is a new object and is not returned (CR
+	// 400.7). A spell has no source permanent and finds nothing.
+	LinkedExiledCards(producer game.LinkedProducerKey) ([]FoundCard, error)
 }

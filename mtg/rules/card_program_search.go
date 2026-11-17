@@ -38,6 +38,7 @@ func (c *programContext) describeFoundCard(card *game.CardInstance) cardprogram.
 	handle := cardprogram.FoundCard{
 		Identity: game.ZoneCardSnapshot{CardID: card.ID, ZoneVersion: card.ZoneVersion},
 		Info:     cardChoiceInfo(c.game, card.ID).Val,
+		Owner:    card.Owner,
 	}
 	if power, ok := cardPower(c.game, card); ok {
 		handle.Power = opt.Val(power)
@@ -162,6 +163,9 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 			}
 			seen[member.Identity.CardID] = true
 		}
+		if err := c.validateExileDuration(placement); err != nil {
+			return nil, err
+		}
 	}
 	if entry && (bottom || ordinary) || bottom && ordinary {
 		return nil, errors.New("battlefield entry and library reordering require their own simultaneous placement")
@@ -181,6 +185,7 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 		fromZone    zone.Type
 		event       game.Event
 		replacement zoneChangeReplacementResult
+		exile       *placementExileRecord
 	}
 	var prepared []preparedMove
 	var moved []cardprogram.FoundCard
@@ -188,7 +193,15 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 	if len(seen) > 1 {
 		batch = c.game.IDGen.Next()
 	}
+	var records []*placementExileRecord
 	for _, placement := range placements {
+		record, proceed := c.startPlacementExileRecord(placement)
+		if !proceed {
+			continue
+		}
+		if record != nil {
+			records = append(records, record)
+		}
 		for _, member := range placement.Cards {
 			card, fromZone, available := c.availableFoundCard(member)
 			if !available {
@@ -201,7 +214,9 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 			}
 			replacement := replacementZoneChange(c.game, event)
 			replacement.destination = commanderReplacementDestination(c.game, card.ID, replacement.destination)
-			prepared = append(prepared, preparedMove{member: member, owner: card.Owner, fromZone: fromZone, event: event, replacement: replacement})
+			prepared = append(prepared, preparedMove{
+				member: member, owner: card.Owner, fromZone: fromZone, event: event, replacement: replacement, exile: record,
+			})
 		}
 	}
 	// CR 404.3: order the actual graveyard arrivals after destination replacements.
@@ -248,14 +263,20 @@ func (c *programContext) MoveCards(placements ...cardprogram.CardPlacement) ([]c
 			if card.ZoneVersion == move.member.Identity.ZoneVersion {
 				continue
 			}
+			move.exile.add(c.game, card)
 			identity := game.ZoneCardSnapshot{CardID: card.ID, ZoneVersion: card.ZoneVersion}
 			if replacement.destination == zone.Graveyard || replacement.destination == zone.Exile &&
 				!c.game.Players[card.Owner].Exile.IsFaceDown(card.ID) {
 				moved = append(moved, c.mintFoundCard(card, replacement.destination))
 			} else {
-				moved = append(moved, cardprogram.FoundCard{Identity: identity, Info: move.member.Info, Zone: replacement.destination})
+				moved = append(moved, cardprogram.FoundCard{
+					Identity: identity, Info: move.member.Info, Zone: replacement.destination, Owner: card.Owner,
+				})
 			}
 		}
+	}
+	for _, record := range records {
+		record.commit(c.game)
 	}
 	for player := range game.NumPlayers {
 		if shuffle[game.PlayerID(player)] {
