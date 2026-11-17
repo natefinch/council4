@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/counter"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestStunUntapSteps(t *testing.T) {
@@ -63,7 +64,8 @@ func TestStunUntapStepRestrictionsPrecedeReplacement(t *testing.T) {
 		for _, restriction := range []string{"doesnt-untap", "exerted", "phased-out"} {
 			t.Run(strconv.FormatBool(otherStep)+"/"+restriction, func(t *testing.T) {
 				g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-				def := &game.CardDef{CardFace: game.CardFace{Name: "Restricted", Types: []types.Card{types.Creature}}}
+				def := &game.CardDef{CardFace: game.CardFace{Name: "Restricted", Types: []types.Card{types.Creature},
+					Power: opt.Val(game.PT{Value: 1}), Toughness: opt.Val(game.PT{Value: 1})}}
 				if restriction == "doesnt-untap" {
 					def.StaticAbilities = []game.StaticAbility{game.DoesntUntapStaticBody}
 				}

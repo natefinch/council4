@@ -33,8 +33,10 @@ func evidenceCard(name string, manaValue int) *game.CardDef {
 
 func greenCreature() *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: "Runeclaw Bear",
-		ManaCost: greenCost(),
-		Types:    []types.Card{types.Creature}},
+		ManaCost:  greenCost(),
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 2}),
+		Toughness: opt.Val(game.PT{Value: 2})},
 	}
 }
 

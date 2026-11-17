@@ -313,7 +313,8 @@ func TestChimericMassRulingOverridesEarlierSetEffects(t *testing.T) {
 // timestamp order. An activation that resolves after a "loses all abilities"
 // effect grants a newer P/T ability the loss does not remove, so it is 3/3.
 // Once a later loss applies, the granted ability is removed before it applies
-// in layer 7b, so nothing sets its P/T (CR 208.5 treats it as 0/0).
+// in layer 7b, so nothing sets its P/T and it is 0/0 (CR 208.5). State-based
+// actions are checked only at the end, so the first drain isolates layer order.
 func TestChimericMassGrantedStaticRemovedByLaterAbilityLoss(t *testing.T) {
 	g, engine := grantedStaticGame(game.Player1)
 	mass := castChimericMass(t, g, engine, 3)
@@ -345,10 +346,12 @@ func TestChimericMassGrantedStaticRemovedByLaterAbilityLoss(t *testing.T) {
 	if !permanentHasType(g, mass, types.Creature) {
 		t.Fatal("losing abilities ended the animation's type change")
 	}
-	if _, ok := effectiveToughness(g, mass); ok {
-		t.Fatal("the removed granted ability still set Chimeric Mass's toughness")
-	}
 	assertPowerToughness(t, g, mass, 0, 0)
+	engine.applyStateBasedActions(g)
+	if _, ok := findPermanentByCardID(g, mass.CardInstanceID); ok ||
+		!g.Players[game.Player1].Graveyard.Contains(mass.CardInstanceID) {
+		t.Fatal("Chimeric Mass with no toughness value was not put into its owner's graveyard (CR 208.5, 704.5f)")
+	}
 }
 
 // TestSvogthosGrantedStaticCountsGraveyardLive is the #3953 Svogthos

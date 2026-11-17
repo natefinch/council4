@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 func TestOptionalCaptureOriginalProductAvailability(t *testing.T) {
@@ -24,7 +25,8 @@ func TestOptionalCaptureOriginalProductAvailability(t *testing.T) {
 					engine := NewEngine(nil)
 					source := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 					decoy := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Types: []types.Card{types.Artifact}}})
-					cardID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Types: []types.Card{types.Creature}}})
+					cardID := addCardToGraveyard(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Types: []types.Card{types.Creature},
+						Power: opt.Val(game.PT{Value: 1}), Toughness: opt.Val(game.PT{Value: 1})}})
 					obj := &game.StackObject{Controller: game.Player1, SourceID: source.ObjectID, SourceCardID: source.CardInstanceID,
 						Targets:      []game.Target{game.PermanentTarget(decoy.ObjectID), currentCardTarget(t, g, cardID)},
 						TargetCounts: []int{1, 1}}

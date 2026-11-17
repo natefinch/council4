@@ -22,7 +22,7 @@ func TestPaidCostNumericActivationReadsEffectiveSnapshot(t *testing.T) {
 		{"power known zero", "'s power was 0 or less", 0, 0, true, true, false},
 		{"negative power not clamped", "'s power was 0 or less", -1, 0, true, true, false},
 		{"power positive", "'s power was 0 or less", 1, 0, true, false, false},
-		{"unavailable power", "'s power was 0 or less", 0, 0, false, false, false},
+		{"undefined power is zero", "'s power was 0 or less", 0, 0, false, true, false},
 		{"face-down mana value known zero", "had mana value 0 or less", 2, 0, true, true, true},
 		{"face-up mana value", "had mana value 0 or less", 2, 0, true, false, false},
 	} {

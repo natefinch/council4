@@ -563,8 +563,10 @@ func academyManufactorReplacementCardDef() *game.CardDef {
 		}}
 	}
 	return &game.CardDef{CardFace: game.CardFace{
-		Name:  "Academy Manufactor",
-		Types: []types.Card{types.Artifact, types.Creature},
+		Name:      "Academy Manufactor",
+		Types:     []types.Card{types.Artifact, types.Creature},
+		Power:     opt.Val(game.PT{Value: 1}),
+		Toughness: opt.Val(game.PT{Value: 3}),
 		ReplacementAbilities: []game.ReplacementAbility{
 			game.NamedTokenSetReplacement(
 				"If you would create a Clue, Food, or Treasure token, instead create one of each.",
