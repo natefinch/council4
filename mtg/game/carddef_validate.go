@@ -1705,6 +1705,9 @@ func (v *cardDefValidator) validateRuleEffect(faceName, path string, effect *Rul
 	if err := effect.BlockerRestriction.validate(); err != nil {
 		v.add(faceName, appendPath(path, "BlockerRestriction"), CardDefIssueInvalidRuleEffect, err.Error())
 	}
+	if err := effect.validateMinimumBlockers(); err != nil {
+		v.add(faceName, appendPath(path, "MinimumBlockers"), CardDefIssueInvalidRuleEffect, err.Error())
+	}
 	switch effect.Kind {
 	case RuleEffectPlayFromGraveyardPerPermanentType:
 		if effect.PermissionKey == "" || effect.AffectedPlayer != PlayerYou ||

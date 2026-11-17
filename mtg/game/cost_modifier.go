@@ -800,6 +800,15 @@ const (
 	// Object (or AffectedSource) names the exact permanent; it follows that
 	// object, so a new object after a zone change is unaffected (CR 400.7).
 	RuleEffectAssignNoCombatDamage
+	// RuleEffectCantBeBlockedExceptByNOrMore is a blocking restriction on the
+	// affected attacking creature ("This creature can't be blocked except by
+	// three or more creatures.", Pathrazer of Ulamog, Phyrexian Colossus). It
+	// generalizes menace (CR 702.111b): a declaration in which fewer than
+	// MinimumBlockers creatures block the creature is illegal (CR 509.1b), while
+	// leaving it unblocked stays legal. Several minimums, including menace's
+	// two, combine by taking the largest rather than adding. Added last so
+	// existing kinds keep their wire values.
+	RuleEffectCantBeBlockedExceptByNOrMore
 )
 
 // Valid reports whether k identifies a supported rule effect.
@@ -880,7 +889,8 @@ func (k RuleEffectKind) Valid() bool {
 		RuleEffectDamageToCantBePreventedOrRedirected,
 		RuleEffectCastSpellsFromGraveyardWithSneak,
 		RuleEffectMustBlock,
-		RuleEffectAssignNoCombatDamage:
+		RuleEffectAssignNoCombatDamage,
+		RuleEffectCantBeBlockedExceptByNOrMore:
 		return true
 	default:
 		return false
@@ -1195,6 +1205,12 @@ type RuleEffect struct {
 	// default limit of one ("can block an additional creature" sets it to 1). It
 	// is zero for every other kind.
 	AdditionalBlockCount int
+
+	// MinimumBlockers is the fewest creatures that may block the affected
+	// creature under RuleEffectCantBeBlockedExceptByNOrMore ("except by three or
+	// more creatures" sets it to 3). It is at least 2 for that kind and zero for
+	// every other kind.
+	MinimumBlockers int
 
 	// AffectedPlayerRef binds a group-scoped rule effect's affected permanents to
 	// a specific player chosen at resolution rather than to the AffectedController

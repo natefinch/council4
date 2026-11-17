@@ -88,6 +88,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 		RuleEffectCastSpellsFromGraveyardWithSneak,
 		RuleEffectMustBlock,
 		RuleEffectAssignNoCombatDamage,
+		RuleEffectCantBeBlockedExceptByNOrMore,
 	}
 	for _, kind := range valid {
 		if !kind.Valid() {
@@ -98,7 +99,7 @@ func TestRuleEffectKindValid(t *testing.T) {
 	invalid := []RuleEffectKind{
 		RuleEffectNone,
 		-1,
-		RuleEffectAssignNoCombatDamage + 1,
+		RuleEffectCantBeBlockedExceptByNOrMore + 1,
 		RuleEffectKind(1 << 20),
 	}
 	for _, kind := range invalid {
@@ -117,7 +118,7 @@ func TestValidateApplyRulePlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectAssignNoCombatDamage + 1,
+		"future":       RuleEffectCantBeBlockedExceptByNOrMore + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -141,7 +142,7 @@ func TestValidateCardDefPlayFromZone(t *testing.T) {
 	}
 
 	for name, kind := range map[string]RuleEffectKind{
-		"future":       RuleEffectAssignNoCombatDamage + 1,
+		"future":       RuleEffectCantBeBlockedExceptByNOrMore + 1,
 		"out of range": RuleEffectKind(1 << 20),
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -300,6 +301,34 @@ func TestValidateSelectionBlockerRestriction(t *testing.T) {
 		"Selection on another kind": {Kind: BlockerRestrictionFlying, Selection: Selection{SubtypesAny: []types.Sub{types.Wall}}},
 	} {
 		effect := RuleEffect{Kind: RuleEffectCantBeBlockedExceptBy, BlockerRestriction: restriction}
+		if err := validateApplyRuleTestEffect(&effect); err == nil {
+			t.Errorf("%s: ApplyRule accepted the restriction", name)
+		}
+		effect.AffectedSource = true
+		if issues := ValidateCardDef(cardDefWithRuleEffect(&effect)); !hasCardDefIssue(issues, CardDefIssueInvalidRuleEffect) {
+			t.Errorf("%s: static issues = %+v, want %s", name, issues, CardDefIssueInvalidRuleEffect)
+		}
+	}
+}
+
+func TestValidateMinimumBlockersRestriction(t *testing.T) {
+	t.Parallel()
+
+	valid := RuleEffect{Kind: RuleEffectCantBeBlockedExceptByNOrMore, MinimumBlockers: 3}
+	if err := validateApplyRuleTestEffect(&valid); err != nil {
+		t.Fatalf("valid minimum-blocker restriction rejected: %v", err)
+	}
+	static := valid
+	static.AffectedSource = true
+	if issues := ValidateCardDef(cardDefWithRuleEffect(&static)); len(issues) != 0 {
+		t.Fatalf("valid static minimum-blocker restriction issues = %+v, want none", issues)
+	}
+	for name, effect := range map[string]RuleEffect{
+		"missing minimum":          {Kind: RuleEffectCantBeBlockedExceptByNOrMore},
+		"minimum of one":           {Kind: RuleEffectCantBeBlockedExceptByNOrMore, MinimumBlockers: 1},
+		"minimum on another kind":  {Kind: RuleEffectCantBeBlockedByMoreThanOne, MinimumBlockers: 3},
+		"negative on another kind": {Kind: RuleEffectMustBeBlocked, MinimumBlockers: -1},
+	} {
 		if err := validateApplyRuleTestEffect(&effect); err == nil {
 			t.Errorf("%s: ApplyRule accepted the restriction", name)
 		}

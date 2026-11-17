@@ -1010,8 +1010,24 @@ func canBlockAttacker(g *game.Game, blocker, attacker *game.Permanent) bool {
 	return true
 }
 
-func attackerRequiresMultipleBlockers(g *game.Game, attacker *game.Permanent) bool {
-	return hasKeyword(g, attacker, game.Menace)
+// attackerMinimumBlockers returns the fewest creatures that may block attacker
+// (CR 509.1b): one by default, two with menace (CR 702.111b), and each matching
+// RuleEffectCantBeBlockedExceptByNOrMore's MinimumBlockers. Several minimums
+// combine by taking the largest, so menace on a "three or more" creature still
+// needs three blockers, not five.
+func attackerMinimumBlockers(g *game.Game, attacker *game.Permanent) int {
+	minimum := 1
+	if hasKeyword(g, attacker, game.Menace) {
+		minimum = 2
+	}
+	effects := activeRuleEffects(g)
+	for i := range effects {
+		effect := &effects[i]
+		if effect.Kind == game.RuleEffectCantBeBlockedExceptByNOrMore && ruleEffectMatchesPermanent(g, effect, attacker) {
+			minimum = max(minimum, effect.MinimumBlockers)
+		}
+	}
+	return minimum
 }
 
 // appendCombatBlockers returns the existing declared blockers concatenated with
