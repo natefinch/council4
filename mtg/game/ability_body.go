@@ -112,6 +112,15 @@ type ActivatedAbility struct {
 	// separately; a positive cap is enforced against the per-ability activation
 	// count regardless of timing.
 	MaxActivationsPerTurn int
+	// ActivateOnlyOnce restricts the ability to one activation per source object
+	// for the whole game ("Activate only once."), independent of Timing and
+	// ActivationCondition, which still apply. The use is recorded when the
+	// activation completes, so countering the ability doesn't restore it. The
+	// restriction follows the object through control changes (CR 602.5b) and a
+	// permanent that changes zones is a new object with a fresh use (CR 400.7).
+	// It is supported for abilities that function on the battlefield; activations
+	// from other zones with this restriction are not legal.
+	ActivateOnlyOnce bool
 	// CountsResolutionsThisTurn opts into actual resolution accounting, including
 	// resolving copies, for SourceAbilityResolutionOrdinalThisTurn body gates.
 	CountsResolutionsThisTurn bool

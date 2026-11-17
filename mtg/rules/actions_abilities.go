@@ -184,6 +184,7 @@ func (e *Engine) describeActivation(g *game.Game, player game.PlayerID, activate
 		emitAbilityActivatedEvent(g, obj, sourceObject, false)
 		if activated != nil {
 			recordActivatedAbilityUse(g, activate.SourceID, activate.AbilityIndex, activated.Timing)
+			recordActivatedAbilityObjectUse(g, sourceObject, activate.AbilityIndex, activated)
 		}
 	}
 	// The attack target is locked while the returning creature is still in
@@ -293,7 +294,7 @@ func attackTargetForAttacker(g *game.Game, attackerID id.ID) (game.AttackTarget,
 
 func ninjutsuActivation(g *game.Game, playerID game.PlayerID, cardID id.ID, body *game.ActivatedAbility, abilityIndex int, targets []game.Target, xValue int) activationCost {
 	if body == nil || !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer || xValue != 0 || abilityIndex < 0 ||
-		!game.BodyHasKeyword(body, game.Ninjutsu) || game.BodyFunctionZone(body) != zone.Hand || body.Timing != game.DuringCombat ||
+		!game.BodyHasKeyword(body, game.Ninjutsu) || game.BodyFunctionZone(body) != zone.Hand || body.Timing != game.DuringCombat || body.ActivateOnlyOnce ||
 		len(targets) != 0 || len(game.BodyTargets(body)) != 0 || !abilityHasReturnUnblockedAttackerCost(body.AdditionalCosts) ||
 		len(unblockedAttackers(g, playerID)) == 0 {
 		return activationCost{}

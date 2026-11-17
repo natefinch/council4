@@ -289,6 +289,12 @@ type Game struct {
 	// ActivatedAbilitiesThisTurn.
 	AbilityActivationsThisTurn map[ActivatedAbilityUse]int
 
+	// ActivatedAbilitiesUsedOnce records "Activate only once" abilities
+	// (ActivatedAbility.ActivateOnlyOnce) their source object has activated. It
+	// is keyed by the permanent's object ID, so it is never reset by turn and a
+	// permanent that changes zones returns as a new, unused object (CR 400.7).
+	ActivatedAbilitiesUsedOnce map[ActivatedAbilityUse]bool
+
 	// ExilePlayPermissionUsedThisTurn records, keyed by the source permanent's
 	// object ID, which once-per-turn play/cast-from-exile permissions have already
 	// been used this turn ("Once each turn, you may play a card from exile ...",
@@ -430,6 +436,7 @@ func NewGameWithRand(configs [NumPlayers]PlayerConfig, rng *rand.Rand) *Game {
 		StateTriggerLatches:                make(map[StateTriggerKey]bool),
 		ActivatedAbilitiesThisTurn:         make(map[ActivatedAbilityUse]bool),
 		AbilityActivationsThisTurn:         make(map[ActivatedAbilityUse]int),
+		ActivatedAbilitiesUsedOnce:         make(map[ActivatedAbilityUse]bool),
 		TriggeredAbilitiesThisTurn:         make(map[TriggeredAbilityUse]int),
 		ResolvedTriggeredAbilitiesThisTurn: make(map[TriggeredAbilityUse]int),
 		ResolvedActivatedAbilitiesThisTurn: make(map[ActivatedAbilityResolutionUse]int),
