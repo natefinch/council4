@@ -31,6 +31,9 @@ type landTypeEffect struct {
 type landTypeLayerResult struct {
 	values  map[id.ID]permanentEffectiveValues
 	started map[staticBodyKey]map[id.ID]bool
+	// grantedStarted records, for each static ability granted to a permanent,
+	// the objects its layer-6 effects on other objects began applying to.
+	grantedStarted map[grantedHolderKey]map[id.ID]bool
 }
 
 func hasBasicLandTypeSet(g *game.Game, sources []staticAbilitySource) bool {

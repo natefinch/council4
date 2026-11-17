@@ -194,6 +194,10 @@ type frameCache struct {
 	ruleEffectsBuilt bool
 	layerBoards      map[game.ContinuousLayer]*landTypeLayerResult
 
+	// grantedGroup memoizes hasGrantedGroupStatic.
+	grantedGroup      bool
+	grantedGroupBuilt bool
+
 	// Candidate enumeration reuses declarations and routes, never target
 	// legality or payment results, within this same immutable game snapshot.
 	castRoutes  map[castRouteKey][]castRoute
@@ -949,6 +953,7 @@ func continuousEffectsForLayer(g *game.Game, permanent *game.Permanent, values *
 		for _, granted := range values.grantedStatics {
 			effects = appendGrantedStaticEffects(effects, g, permanent, values, granted, layer, nil)
 		}
+		effects = appendGrantedGroupStaticEffects(effects, g, permanent, values, layer, sources)
 	}
 	return effects
 }
