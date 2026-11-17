@@ -170,10 +170,20 @@ func (g *Game) HandRevealedToAll(player PlayerID) bool {
 // OpenHandReveal shows player's whole hand to every player until the returned
 // function ends the reveal (CR 701.20a). The cards stay in that hand (CR
 // 701.20b), and a card that leaves it is no longer shown by this reveal.
+// Reveals may end in any order; ending one leaves other open reveals, including
+// another of the same hand, in place.
 func (g *Game) OpenHandReveal(player PlayerID) (closeReveal func()) {
-	depth := len(g.RevealedHands)
 	g.RevealedHands = append(g.RevealedHands, player)
-	return func() { g.RevealedHands = g.RevealedHands[:depth] }
+	closed := false
+	return func() {
+		if closed {
+			return
+		}
+		closed = true
+		if index := slices.Index(g.RevealedHands, player); index >= 0 {
+			g.RevealedHands = slices.Delete(g.RevealedHands, index, index+1)
+		}
+	}
 }
 
 func (g *Game) searchingHiddenZones(viewer, player PlayerID) bool {
