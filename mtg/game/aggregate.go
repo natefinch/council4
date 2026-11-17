@@ -154,6 +154,12 @@ const (
 	// triggering event for a permanent that entered from a cast spell. It fails
 	// closed for non-cast entries and other event kinds.
 	AggregateEventPermanentCastX
+
+	// AggregateControllerRingTemptedCount is the number of times the Ring has
+	// tempted the context controller this game ("if the Ring has tempted you
+	// four or more times this game", CR 701.54). It reads the controller's
+	// running Player.RingTemptedCount, which each temptation increments.
+	AggregateControllerRingTemptedCount
 )
 
 // AggregateComparison compares a player- or board-derived quantity against a

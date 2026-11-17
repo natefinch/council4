@@ -95,7 +95,7 @@ func dynamicAmountValueBeforeLayerWithGroupMember(g *game.Game, obj opt.V[*game.
 		game.DynamicAmountControllerGraveyardSize, game.DynamicAmountControllerBasicLandTypeCount,
 		game.DynamicAmountOpponentCount, game.DynamicAmountOpponentsAttackedThisCombat,
 		game.DynamicAmountControllerSpeed, game.DynamicAmountCommanderCastCount,
-		game.DynamicAmountPartySize:
+		game.DynamicAmountPartySize, game.DynamicAmountGreatestCommanderManaValue:
 		amount = controllerAggregateAmount(g, controller, dynamic, before)
 	case game.DynamicAmountOpponentControllingCount:
 		for _, opponent := range aliveOpponents(g, controller) {
@@ -632,6 +632,8 @@ func controllerAggregateAmount(g *game.Game, controller game.PlayerID, dynamic g
 		}
 	case game.DynamicAmountPartySize:
 		return controllerPartySize(g, controller)
+	case game.DynamicAmountGreatestCommanderManaValue:
+		return greatestCommanderManaValue(g, controller)
 	default:
 	}
 	return 0

@@ -96,6 +96,12 @@ func aggregateValue(g *game.Game, ctx conditionContext, kind game.AggregateKind)
 		return len(aliveOpponents(g, ctx.controller)), true
 	case game.AggregateAttackersAttackingController:
 		return attackersAttackingPlayerCount(g, ctx.controller), true
+	case game.AggregateControllerRingTemptedCount:
+		player, ok := playerByID(g, ctx.controller)
+		if !ok {
+			return 0, false
+		}
+		return player.RingTemptedCount, true
 	case game.AggregateControllerGainedLifeThisTurn:
 		return lifeChangedThisTurn(g, ctx.controller, game.EventLifeGained), true
 	case game.AggregateSpellX:
