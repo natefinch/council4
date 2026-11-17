@@ -647,7 +647,9 @@ func commanderDef(name string, colors ...color.Color) *game.CardDef {
 
 func creatureDef(name string, colors ...color.Color) *game.CardDef {
 	return &game.CardDef{CardFace: game.CardFace{Name: name,
-		Types: []types.Card{types.Creature}}, ColorIdentity: color.NewIdentity(colors...),
+		Types:     []types.Card{types.Creature},
+		Power:     opt.Val(game.PT{Value: 0}),
+		Toughness: opt.Val(game.PT{Value: 1})}, ColorIdentity: color.NewIdentity(colors...),
 	}
 }
 

@@ -23,7 +23,7 @@ func TestPaidCostNumericTokenReplacementReadsCapturedToughness(t *testing.T) {
 		{"at threshold", opt.Val(game.PT{Value: 4}), 0, 2},
 		{"effective not printed", opt.Val(game.PT{Value: 2}), 2, 2},
 		{"known zero", opt.Val(game.PT{Value: 0}), 0, 1},
-		{"unavailable denies both complements", opt.V[game.PT]{}, 0, 0},
+		{"undefined toughness is zero", opt.V[game.PT]{}, 0, 1},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})

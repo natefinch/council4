@@ -790,6 +790,28 @@ func applyContinuousLayers(g *game.Game, permanent *game.Permanent, values *perm
 		if layer == game.LayerCopy && permanent.FaceDown {
 			applyFaceDownCharacteristics(permanent, values)
 		}
+		if layer == game.LayerPowerToughnessSet {
+			defaultUndefinedCreaturePowerToughness(values)
+		}
+	}
+}
+
+// defaultUndefinedCreaturePowerToughness gives a creature that has no value for
+// its power or toughness once every defining and setting effect has applied
+// (layers 7a/7b) a value of 0 (CR 208.5), so layer-7c modifications and
+// counters apply to it and a no-toughness creature is put into its owner's
+// graveyard (CR 704.5f). An animated noncreature whose P/T-setting ability was
+// removed is the usual case. A noncreature permanent keeps no power or
+// toughness (CR 208.3).
+func defaultUndefinedCreaturePowerToughness(values *permanentEffectiveValues) {
+	if !slices.Contains(values.types, types.Creature) {
+		return
+	}
+	if !values.powerOK {
+		values.power, values.powerOK = 0, true
+	}
+	if !values.toughnessOK {
+		values.toughness, values.toughnessOK = 0, true
 	}
 }
 
@@ -893,6 +915,9 @@ func permanentValuesBeforeLayer(g *game.Game, permanent *game.Permanent, stop ga
 		applyLayerEffects(g, permanent, &values, layer, orderContinuousEffects(effects))
 		if layer == game.LayerCopy && permanent.FaceDown {
 			applyFaceDownCharacteristics(permanent, &values)
+		}
+		if layer == game.LayerPowerToughnessSet {
+			defaultUndefinedCreaturePowerToughness(&values)
 		}
 	}
 	if fc != nil && (stop <= game.LayerControl || fc.controlBoardState != controlBoardBuilding) {

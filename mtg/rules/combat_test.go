@@ -359,6 +359,8 @@ func addCombatCreaturePermanent(g *game.Game, controller game.PlayerID, keywords
 		Types: []types.Card{
 			types.Creature,
 		},
+		Power:     opt.Val(game.PT{Value: 0}),
+		Toughness: opt.Val(game.PT{Value: 1}),
 		StaticAbilities: []game.StaticAbility{{
 			KeywordAbilities: game.SimpleKeywords(keywords...),
 		}}},

@@ -377,11 +377,11 @@ func permanentDeathReason(g *game.Game, permanent *game.Permanent) (PermanentDea
 	if !permanentHasType(g, permanent, types.Creature) {
 		return "", false
 	}
+	// A creature without a toughness value has toughness 0 (CR 208.5).
 	toughness, ok := effectiveToughness(g, permanent)
 	if !ok {
-		return "", false
+		toughness = 0
 	}
-
 	if toughness <= 0 {
 		return PermanentDeathReasonZeroToughness, true
 	}
