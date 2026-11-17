@@ -272,8 +272,15 @@ type ControlledTriggerDoublerSnapshot struct {
 // may refer to this vocabulary, while mtg/rules owns emission and consumers.
 type Event struct {
 	AnnouncedManaCost string
-	// Announcement marks a public hidden-zone activation disclosure.
+	// Announcement marks a hidden-zone card disclosed to every player for the
+	// rest of the game's public record: an activation or splice announcement,
+	// or a card in a hand an effect reveals (CR 701.20a).
 	Announcement bool
+	// Unidentified marks an Announcement that discloses the card's
+	// characteristics but not its identity to players who can't see its zone,
+	// so the card can't be tracked into a later hidden object (CR 406.3), such
+	// as a card of a revealed hand later foretold face down.
+	Unidentified bool
 	// ManaTriggersResolved keeps immediately resolved CR 605.1b abilities out
 	// of the later ordinary-trigger stack-placement pass.
 	ManaTriggersResolved bool

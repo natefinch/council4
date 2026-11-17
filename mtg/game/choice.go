@@ -273,6 +273,12 @@ type ChoiceRequest struct {
 	// the same resolving effect, by any player, lists each completed clash's
 	// reveals and final placements (CR 701.20a).
 	ClashDecisions []ClashDecision
+	// RevealedCards lists every card of the publicly revealed hand a choice is
+	// made from, in hand order, including cards that are not options (CR
+	// 701.20a). Like that choice's option cards, they carry characteristics
+	// but no CardID, which would track a card into a later hidden object (CR
+	// 406.3).
+	RevealedCards []ChoiceCardInfo
 	// NumberRange is required for ChoiceNumber; Options must be empty.
 	NumberRange opt.V[NumberRange]
 	// CombatAttacker and CombatBlocker identify the current staged decision.

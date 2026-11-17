@@ -100,8 +100,12 @@ func (o PlayerObservation) CostDisclosures() []CostDisclosureView {
 	return result
 }
 
-// AnnouncedCards exposes cards publicly shown for activations (CR 602.2a)
-// and splice announcements (CR 601.2b), not the contents of hidden zones.
+// AnnouncedCards exposes hidden-zone cards publicly shown to every player:
+// for activations (CR 602.2a), splice announcements (CR 601.2b) and every card
+// of a hand an effect reveals (CR 701.20a), not other hidden-zone contents. A
+// revealed hand card's view carries no CardInstanceID unless the viewer can see
+// that hand, so the reveal can't track the card into a later hidden object,
+// such as a face-down foretold card (CR 406.3).
 func (o PlayerObservation) AnnouncedCards() []CardView {
 	var result []CardView
 	for _, event := range o.g.Events {
@@ -109,7 +113,11 @@ func (o PlayerObservation) AnnouncedCards() []CardView {
 			continue
 		}
 		if card, ok := o.g.GetCardInstance(event.CardID); ok {
-			result = append(result, o.cardViewForDef(card.ID, card.Owner, cardFaceOrDefault(card, event.Face)))
+			view := o.cardViewForDef(card.ID, card.Owner, cardFaceOrDefault(card, event.Face))
+			if event.Unidentified && !o.g.CanSeePlayerInformation(o.viewer, event.Player) {
+				view.CardInstanceID = 0
+			}
+			result = append(result, view)
 		}
 	}
 	return result
@@ -284,12 +292,22 @@ func (o PlayerObservation) Hand() []CardView {
 
 // HandOf exposes only a hand the viewer may see, including controlled players
 // and a hand the viewer is searching. A controlled player never gains
-// reciprocal access to their controller's hand.
+// reciprocal access to their controller's hand. A hand an effect is revealing
+// to every player (CR 701.20a) shows its cards without CardInstanceIDs to a
+// viewer who can't otherwise see it, so they can't be tracked into a later
+// hidden object (CR 406.3).
 func (o PlayerObservation) HandOf(player game.PlayerID) []CardView {
-	if !o.g.LookingAtHand(o.viewer, player) {
+	if o.g.LookingAtHand(o.viewer, player) {
+		return o.cardViews(&o.g.Players[player].Hand)
+	}
+	if !o.g.HandRevealedToAll(player) {
 		return nil
 	}
-	return o.cardViews(&o.g.Players[player].Hand)
+	views := o.cardViews(&o.g.Players[player].Hand)
+	for index := range views {
+		views[index].CardInstanceID = 0
+	}
+	return views
 }
 
 // LibraryLookable exposes a library only during an actual library search.
