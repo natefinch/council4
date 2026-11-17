@@ -218,7 +218,9 @@ type StaticAbility struct {
 	ZoneTransitionPolicy         ZoneTransitionPolicy
 	// ExertAsItAttacks declares "You may exert this creature as it attacks.",
 	// an optional cost to attack chosen as the creature is declared as an
-	// attacker (CR 508.1g, 701.43d).
+	// attacker (CR 508.1g, 701.43d). Condition, when set, limits the option to
+	// declarations where it holds for the attacker as the source ("If this
+	// creature hasn't been exerted this turn, you may exert it as it attacks.").
 	ExertAsItAttacks opt.V[ExertAttackCost]
 }
 

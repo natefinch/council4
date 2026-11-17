@@ -407,7 +407,7 @@ func (s *rulesPaymentState) AddCounters(playerID game.PlayerID, p *game.Permanen
 
 func (s *rulesPaymentState) ExertPermanent(playerID game.PlayerID, p *game.Permanent) bool {
 	s.assertWritable()
-	return exertPermanent(s.g, playerID, p)
+	return exertPermanent(s.g, playerID, p, 0)
 }
 
 func (s *rulesPaymentState) MillCards(playerID game.PlayerID, amount int) {

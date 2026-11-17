@@ -461,6 +461,7 @@ func triggeringEventPlayer(event game.Event) (game.PlayerID, bool) {
 		game.EventScry,
 		game.EventSurveil,
 		game.EventClashed,
+		game.EventPermanentExerted,
 		game.EventAbilityActivated,
 		game.EventBeginningOfStep,
 		game.EventLifeGained,

@@ -627,9 +627,6 @@ func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Abili
 			if abilityBody.ZoneOfFunction != zone.None && abilityBody.ZoneOfFunction != zone.Battlefield {
 				v.add(faceName, exertPath, CardDefIssueInvalidAbilityBody, "exert-as-it-attacks must function on the battlefield")
 			}
-			if abilityBody.Condition.Exists {
-				v.add(faceName, exertPath, CardDefIssueInvalidAbilityBody, "exert-as-it-attacks does not support a static condition")
-			}
 			if abilityBody.ExertAsItAttacks.Val.WhenYouDo.Exists {
 				v.validateAbilityContent(faceName, appendPath(exertPath, "WhenYouDo"), abilityBody.ExertAsItAttacks.Val.WhenYouDo.Val, nil)
 			}

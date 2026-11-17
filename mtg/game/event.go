@@ -171,12 +171,20 @@ const (
 	// EventActionCostAnnounced publicly discloses a special action's cost.
 	// CardID is present only when the rules also require showing the card.
 	EventActionCostAnnounced
+	// EventPermanentExerted marks a player exerting a permanent (CR 701.43a),
+	// whether by an exert-as-it-attacks choice (CR 508.1g) or an exert cost
+	// (CR 601.2h). Player and Controller are the exerting player, and
+	// PermanentID and SourceObjectID are the exerted object, so "that creature"
+	// names it. Exertions made while declaring attackers share the attack
+	// declaration's SimultaneousID. A "doesn't untap during its controller's
+	// next untap step" effect is not exerting and never emits it.
+	EventPermanentExerted
 )
 
 // EventKindCount is the number of EventKind values, including EventUnknown. It
 // is appended at the end of the const block so existing wire values are
 // preserved; new kinds must be added immediately before this sentinel.
-const EventKindCount = int(EventActionCostAnnounced) + 1
+const EventKindCount = int(EventPermanentExerted) + 1
 
 // DamageRecipientKind identifies what received damage. Values are flags so a
 // trigger pattern can match either kind.
