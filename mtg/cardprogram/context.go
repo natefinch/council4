@@ -194,26 +194,38 @@ type SameNameResult struct {
 // zero Filter matches every card). Unless Optional, the controller must choose
 // Max matching cards, or every matching card when fewer match (CR 608.2c-d);
 // Optional ("you may choose") allows choosing none. Max zero only reveals.
+// All chooses every matching card without asking ("exile all ..."); it
+// excludes Max and Optional.
+//
+// Graveyard, when set, also offers the revealed player's graveyard cards
+// matching it in the same choice: "a nonland card from it or a card from their
+// graveyard" chooses one card from either zone, and with All "all <filter>
+// cards from that player's hand and graveyard" takes every match in both.
 type HandReveal struct {
-	Player   game.PlayerReference
-	Filter   game.Selection
-	Max      int
-	Optional bool
+	Player    game.PlayerReference
+	Filter    game.Selection
+	Graveyard opt.V[game.Selection]
+	Max       int
+	Optional  bool
+	All       bool
 }
 
 // HandRevealResult reports one hand reveal. Available is false when the
 // player was unavailable, so nothing was revealed. Revealed holds every card
 // that was in the revealed hand, Matching the revealed cards that matched the
-// filter, and Chosen the controller's chosen cards, each as a hand handle for
-// a later MoveCards placement; the cards stay in the hand until moved (CR
+// filter, GraveyardMatching the graveyard cards offered by HandReveal.Graveyard,
+// and Chosen the controller's chosen cards, hand cards first, each as a handle
+// whose Zone is its hand or graveyard origin, for one later MoveCards placement
+// of them all together; the cards stay where they are until moved (CR
 // 701.20b), and a handle stops authorizing placement once its card changes
 // zones.
 type HandRevealResult struct {
-	Available bool
-	Player    game.PlayerID
-	Revealed  []FoundCard
-	Matching  []FoundCard
-	Chosen    []FoundCard
+	Available         bool
+	Player            game.PlayerID
+	Revealed          []FoundCard
+	Matching          []FoundCard
+	GraveyardMatching []FoundCard
+	Chosen            []FoundCard
 }
 
 // ClashReveal is one clashing player's public reveal and placement (CR
@@ -317,8 +329,8 @@ type Context interface {
 	// RevealHand has one player reveal their hand to every player, as a
 	// public announcement of each card's characteristics (not its identity,
 	// CR 406.3), and the source's controller choose among the revealed cards
-	// (CR 701.20a). Move the chosen handles with MoveCards ("exile that
-	// card").
+	// (CR 701.20a), optionally together with that player's graveyard cards.
+	// Move the chosen handles with MoveCards ("exile that card").
 	RevealHand(HandReveal) (HandRevealResult, error)
 	// LinkedExiledCards returns the cards the resolving ability's original
 	// source permanent exiled through producer (CardPlacement or primitive
