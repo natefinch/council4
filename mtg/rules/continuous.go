@@ -619,6 +619,18 @@ func offStackCardManaValue(card *game.CardInstance) int {
 	return manaValue
 }
 
+// offStackCardHasColor reports whether a card in a zone other than the stack
+// or battlefield has c: its front face's colors, combined with a split card's
+// alternate half (CR 709.4; Assault // Battery is red and green in a library
+// or exile).
+func offStackCardHasColor(card *game.CardInstance, c color.Color) bool {
+	if slices.Contains(cardFaceOrDefault(card, game.FaceFront).Colors, c) {
+		return true
+	}
+	return card.Def.Layout == game.LayoutSplit && card.Def.Alternate.Exists &&
+		slices.Contains(card.Def.Alternate.Val.Colors, c)
+}
+
 func countControlledPermanentsWithType(g *game.Game, controller game.PlayerID, cardType types.Card) int {
 	count := 0
 	for _, permanent := range g.Battlefield {

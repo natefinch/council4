@@ -176,6 +176,10 @@ func triggerMatchesEventForController(g *game.Game, source *game.Permanent, sour
 			return false
 		}
 	}
+	if !pattern.SpellSharesWithLinkedExiledCard.Empty() &&
+		!spellSharesWithLinkedExiledCard(g, source, pattern.SpellSharesWithLinkedExiledCard, event) {
+		return false
+	}
 
 	var sourceObjectID id.ID
 	if source != nil {

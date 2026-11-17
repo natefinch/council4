@@ -2751,6 +2751,11 @@ func (v *cardDefValidator) validateTriggerPattern(faceName, path string, pattern
 	if pattern.RequireKickerPaid && pattern.Event != EventSpellCast {
 		v.add(faceName, appendPath(path, "RequireKickerPaid"), CardDefIssueInvalidSelection, "kicker-paid trigger filter is only supported for spell-cast events")
 	}
+	if linked := pattern.SpellSharesWithLinkedExiledCard; !linked.Empty() &&
+		(pattern.Event != EventSpellCast || !linked.Producer.valid() || !linked.SharesColor && !linked.SameManaValue) {
+		v.add(faceName, appendPath(path, "SpellSharesWithLinkedExiledCard"), CardDefIssueInvalidSelection,
+			"linked exiled card comparison requires a spell-cast event, a valid producer and a color or mana value comparison")
+	}
 	if pattern.RequireHistoric && pattern.Event != EventSpellCast {
 		v.add(faceName, appendPath(path, "RequireHistoric"), CardDefIssueInvalidSelection, "historic trigger filter is only supported for spell-cast events")
 	}

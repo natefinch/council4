@@ -146,6 +146,17 @@ func (v *cardDefValidator) validateDeclaredLinkedProducers() {
 			owners[producer] = true
 		}
 	}
+	for _, face := range []*CardFace{&v.card.CardFace, faceIfPresent(v.card.Back.Exists, &v.card.Back.Val), faceIfPresent(v.card.Alternate.Exists, &v.card.Alternate.Val)} {
+		if face == nil {
+			continue
+		}
+		for i := range face.TriggeredAbilities {
+			if producer := face.TriggeredAbilities[i].Trigger.Pattern.SpellSharesWithLinkedExiledCard.Producer; producer != "" && !owners[producer] {
+				v.add(v.card.Name, "LinkedProducers", CardDefIssueInvalidAbilityBody,
+					fmt.Sprintf("linked producer %q has no declared owner", producer))
+			}
+		}
+	}
 	for _, content := range contents {
 		var sequence func([]Instruction)
 		sequence = func(instructions []Instruction) {
