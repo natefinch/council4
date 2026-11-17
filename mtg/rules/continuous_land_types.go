@@ -116,6 +116,7 @@ func cloneTypeLayerValues(values permanentEffectiveValues) permanentEffectiveVal
 	values.resolutionUses = maps.Clone(values.resolutionUses)
 	values.triggerOrigins = maps.Clone(values.triggerOrigins)
 	values.triggerGrantOrigins = maps.Clone(values.triggerGrantOrigins)
+	values.grantedStatics = slices.Clone(values.grantedStatics)
 	return values
 }
 

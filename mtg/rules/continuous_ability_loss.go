@@ -11,7 +11,7 @@ import (
 func needsAbilityLayerEvaluation(g *game.Game, sources []staticAbilitySource) bool {
 	for index := range g.ContinuousEffects {
 		effect := &g.ContinuousEffects[index]
-		if effect.Layer == game.LayerAbility && abilityEffectMayDepend(effect) {
+		if effect.Layer == game.LayerAbility && (abilityEffectMayDepend(effect) || grantsBoardDependentStatic(effect)) {
 			return true
 		}
 	}
@@ -24,7 +24,7 @@ func needsAbilityLayerEvaluation(g *game.Game, sources []staticAbilitySource) bo
 			for index := range body.ContinuousEffects {
 				effect := &body.ContinuousEffects[index]
 				if effect.Layer == game.LayerAbility &&
-					(abilityEffectMayDepend(effect) || body.Condition.Exists) {
+					(abilityEffectMayDepend(effect) || body.Condition.Exists || grantsBoardDependentStatic(effect)) {
 					return true
 				}
 			}
@@ -102,6 +102,10 @@ type abilityLayerEffect struct {
 	landTypeEffect
 
 	effectIndex int
+	// granted identifies the static ability granted to recipientID whose
+	// layer-6 effects on that permanent this candidate applies.
+	granted     grantedStaticKey
+	recipientID id.ID
 }
 
 // Ability removal can erase an unapplied generator anywhere on the battlefield.
@@ -157,7 +161,7 @@ func continuousBoardLayer(g *game.Game, recipient *game.Permanent, sources []sta
 			for _, permanent := range permanents {
 				values := cloneTypeLayerValues(result.values[permanent.ObjectID])
 				if abilityLossEffectApplies(g, other, permanent, result.values, sources) {
-					applyAbilityLayerCandidate(g, permanent, &values, other)
+					applyAbilityLayerCandidate(g, permanent, &values, other, result.values)
 				}
 				after[permanent.ObjectID] = values
 			}
@@ -193,9 +197,13 @@ func continuousBoardLayer(g *game.Game, recipient *game.Permanent, sources []sta
 				affected = append(affected, permanent)
 			}
 		}
+		remaining = slices.Delete(remaining, next, next+1)
 		for _, permanent := range affected {
 			values := result.values[permanent.ObjectID]
-			applyAbilityLayerCandidate(g, permanent, &values, chosen)
+			applyAbilityLayerCandidate(g, permanent, &values, chosen, result.values)
+			if layer == game.LayerAbility {
+				remaining = scheduleGrantedStaticAbilityEffects(remaining, permanent, &values)
+			}
 			result.values[permanent.ObjectID] = values
 			if chosen.body != nil {
 				if result.started[chosen.key] == nil {
@@ -204,7 +212,6 @@ func continuousBoardLayer(g *game.Game, recipient *game.Permanent, sources []sta
 				result.started[chosen.key][permanent.ObjectID] = true
 			}
 		}
-		remaining = slices.Delete(remaining, next, next+1)
 	}
 	if fc != nil && found {
 		if fc.layerBoards == nil {
@@ -260,6 +267,10 @@ func continuousLayerCandidates(g *game.Game, sources []staticAbilitySource, laye
 }
 
 func abilityLossEffectApplies(g *game.Game, candidate abilityLayerEffect, recipient *game.Permanent, board map[id.ID]permanentEffectiveValues, sources []staticAbilitySource) bool {
+	if candidate.granted.body != nil {
+		_, ok := grantedStaticCandidateEffects(g, candidate, recipient, board)
+		return ok
+	}
 	layer := candidate.effect.Layer
 	if candidate.body != nil {
 		first := firstStaticLayer(candidate.body)
@@ -284,7 +295,11 @@ func abilityLossEffectApplies(g *game.Game, candidate abilityLayerEffect, recipi
 	return continuousEffectApplies(g, recipient, &values, &candidate.effect)
 }
 
-func applyAbilityLayerCandidate(g *game.Game, recipient *game.Permanent, values *permanentEffectiveValues, candidate abilityLayerEffect) {
+func applyAbilityLayerCandidate(g *game.Game, recipient *game.Permanent, values *permanentEffectiveValues, candidate abilityLayerEffect, board map[id.ID]permanentEffectiveValues) {
+	if candidate.granted.body != nil {
+		applyGrantedStaticCandidate(g, recipient, values, candidate, board)
+		return
+	}
 	effect := candidate.effect
 	if candidate.body != nil && len(effect.AddAbilities) > 0 {
 		effect.AddAbilities = slices.Clone(effect.AddAbilities)
