@@ -294,6 +294,27 @@ type CardPlacement struct {
 	// placement, those cards don't move (CR 610.3a-b). It requires an exile
 	// placement of hand handles made by an activated or triggered ability.
 	UntilSourceLeaves bool
+	// CastWhileExiled lets the resolving spell's or ability's controller cast
+	// each card of an exile placement that actually reaches exile face up, for
+	// as long as that card remains exiled ("You may cast that card for as long
+	// as it remains exiled.", CR 611.2b), even after the source leaves the
+	// battlefield. Ordinary timing and costs apply (CR 601.3). The permission
+	// ends when the card leaves exile, including by being cast, so it allows
+	// one cast. It requires an exile placement.
+	CastWhileExiled bool
+}
+
+// CardDelayedTrigger schedules a fixed-timing delayed triggered ability (CR
+// 603.7) bound to one card handle minted by this invocation, normally a
+// MoveCards result ("At the beginning of the next end step, ... return it to
+// its owner's hand."). The trigger captures that exact card incarnation: its
+// content acts on it with game.CardReferenceCaptured, which finds nothing once
+// the card has changed zones (CR 400.7, 603.7c). Trigger must not set an event
+// pattern or its own capture references; it may set
+// InterveningIfCapturedCardNotCast ("if you haven't cast the card", CR 603.4).
+type CardDelayedTrigger struct {
+	Card    FoundCard
+	Trigger game.DelayedTriggerDef
 }
 
 // View resolves invocation metadata and read-only references.
@@ -353,4 +374,7 @@ type Context interface {
 	// hand"). A card that left exile is a new object and is not returned (CR
 	// 400.7). A spell has no source permanent and finds nothing.
 	LinkedExiledCards(producer game.LinkedProducerKey) ([]FoundCard, error)
+	// DelayCardTrigger schedules a delayed triggered ability bound to one card
+	// handle. It reports false when nothing was scheduled.
+	DelayCardTrigger(CardDelayedTrigger) (bool, error)
 }

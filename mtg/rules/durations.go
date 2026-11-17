@@ -192,6 +192,7 @@ func scheduleDelayedTrigger(g *game.Game, obj *game.StackObject, def *game.Delay
 	if def.InterveningCondition.Exists {
 		ability.Trigger.InterveningCondition = def.InterveningCondition
 	}
+	ability.Trigger.InterveningIfCapturedCardNotCast = def.InterveningIfCapturedCardNotCast
 	capturedCardID, capturedCardZoneVersion := capturedCard(g, obj, def)
 	g.DelayedTriggers = append(g.DelayedTriggers, game.DelayedTrigger{
 		ID:                          g.IDGen.Next(),
@@ -358,6 +359,32 @@ func capturedObjectIDs(g *game.Game, obj *game.StackObject, def *game.DelayedTri
 		}
 	}
 	return ids
+}
+
+// capturedCardCastBy reports whether controller cast the captured card
+// incarnation identified by cardID and version, for a delayed trigger's
+// intervening "if you haven't cast the card" (CR 603.4). Casting moves that
+// exact object to the stack (CR 601.2a), the zone change that gives the card its
+// next incarnation, so the cast event names version+1. The scan stops at the
+// captured incarnation's own arrival; earlier casts of the card were different
+// objects (CR 400.7).
+func capturedCardCastBy(g *game.Game, cardID id.ID, version uint64, controller game.PlayerID) bool {
+	if cardID == 0 {
+		return false
+	}
+	for index := len(g.Events) - 1; index >= 0; index-- {
+		event := &g.Events[index]
+		if event.CardID != cardID {
+			continue
+		}
+		if event.CardZoneVersion == version && event.Kind == game.EventZoneChanged {
+			return false
+		}
+		if event.Kind == game.EventSpellCast && event.CardZoneVersion == version+1 && event.Controller == controller {
+			return true
+		}
+	}
+	return false
 }
 
 // capturedCard freezes the card a fixed-phase delayed trigger binds to from the
@@ -666,6 +693,13 @@ func drainReadyDelayedTriggers(g *game.Game, events []game.Event) []pendingTrigg
 		trigger := &g.DelayedTriggers[i]
 		if !delayedTriggerReadyAtBoundary(g, trigger, timing) {
 			remaining = append(remaining, *trigger)
+			continue
+		}
+		// An intervening "if you haven't cast the card" is checked as the
+		// trigger event occurs; when false, the ability doesn't trigger and,
+		// like any delayed trigger, is used up (CR 603.4, 603.7b).
+		if trigger.Ability.Trigger.InterveningIfCapturedCardNotCast &&
+			capturedCardCastBy(g, trigger.CapturedCardID, trigger.CapturedCardZoneVersion, trigger.Controller) {
 			continue
 		}
 		ability := trigger.Ability

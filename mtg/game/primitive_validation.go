@@ -3725,6 +3725,8 @@ func (p CreateDelayedTrigger) validatePrimitive(targets []TargetSpec, checkTarge
 		if err := validateObjectReference(p.Trigger.CapturedCard.Val, targets, checkTargets); err != nil {
 			return err
 		}
+	} else if p.Trigger.InterveningIfCapturedCardNotCast {
+		return errors.New("delayed trigger InterveningIfCapturedCardNotCast requires a CapturedCard")
 	}
 	return nil
 }

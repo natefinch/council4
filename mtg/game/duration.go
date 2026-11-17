@@ -246,6 +246,15 @@ type DelayedTriggerDef struct {
 	// zone incarnation after a modeled zone transition. It is only valid with a
 	// fixed-phase Timing and a linked-object, source, or event reference.
 	CapturedCard opt.V[ObjectReference]
+	// InterveningIfCapturedCardNotCast is the intervening "if you haven't cast
+	// the card" of a fixed-phase delayed trigger bound to a captured card ("At
+	// the beginning of the next end step, if you haven't cast the card, return
+	// it to its owner's hand.", Psychic Theft). The condition is checked when
+	// the trigger would trigger and again as it resolves (CR 603.4): it fails
+	// once the delayed trigger's controller has cast that exact captured card
+	// incarnation, even if the spell is still on the stack. It requires a
+	// fixed-phase timing and a captured card.
+	InterveningIfCapturedCardNotCast bool
 }
 
 // DelayedTrigger is a runtime delayed triggered ability waiting for its timing
