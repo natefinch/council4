@@ -114,6 +114,35 @@ func TestLinkedProducerOwnershipValidation(t *testing.T) {
 	}
 }
 
+func TestSpellSharesWithLinkedExiledCardValidation(t *testing.T) {
+	for _, scenario := range []string{"valid", "wrong event", "no comparison", "invalid key", "undeclared producer"} {
+		t.Run(scenario, func(t *testing.T) {
+			def := producerValidationCard()
+			pattern := TriggerPattern{Event: EventSpellCast, Controller: TriggerControllerAny,
+				SpellSharesWithLinkedExiledCard: LinkedExiledCardComparison{Producer: "test/exile", SharesColor: true, SameManaValue: true}}
+			switch scenario {
+			case "wrong event":
+				pattern.Event = EventCardPlayedFromExile
+			case "no comparison":
+				pattern.SpellSharesWithLinkedExiledCard.SharesColor = false
+				pattern.SpellSharesWithLinkedExiledCard.SameManaValue = false
+			case "invalid key":
+				pattern.SpellSharesWithLinkedExiledCard.Producer = " "
+			case "undeclared producer":
+				pattern.SpellSharesWithLinkedExiledCard.Producer = "test/other"
+			default:
+			}
+			def.TriggeredAbilities = append(def.TriggeredAbilities, TriggeredAbility{
+				Trigger: TriggerCondition{Pattern: pattern},
+				Content: Mode{Sequence: []Instruction{{Primitive: GainLife{Player: ControllerReference(), Amount: Fixed(1)}}}}.Ability(),
+			})
+			if issues := ValidateCardDef(def); (len(issues) == 0) != (scenario == "valid") {
+				t.Fatalf("validation=%+v, want valid=%t", issues, scenario == "valid")
+			}
+		})
+	}
+}
+
 func TestLinkedProducerNamespacesAreExplicitAndCannotMix(t *testing.T) {
 	for _, primitive := range []Primitive{
 		MovePermanent{Object: SourcePermanentReference(), Destination: zone.Hand, PublishLinkedProducer: "test/exile"},

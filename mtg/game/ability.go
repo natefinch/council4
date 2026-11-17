@@ -1516,6 +1516,32 @@ type TriggerPattern struct {
 	// for every other pattern; a non-empty value is only valid with
 	// Event == EventCardPlayedFromExile.
 	PlaysLinkedExileCard LinkedKey
+
+	// SpellSharesWithLinkedExiledCard restricts an EventSpellCast pattern to
+	// spells that share a characteristic with a card still in exile in the
+	// source permanent's CR 607 linked producer channel ("Whenever a player casts
+	// a spell that shares a color or mana value with the exiled card", Thought
+	// Prison). It is part of the trigger event (CR 603.2), so no ability
+	// triggers when there is no such card. It is zero for every other pattern.
+	SpellSharesWithLinkedExiledCard LinkedExiledCardComparison
+}
+
+// LinkedExiledCardComparison compares a cast spell, as it was cast on the
+// stack, with each face-up card still in exile in the trigger source's linked
+// producer channel, read with that card's current characteristics in exile
+// (a split card's halves combined, CR 709.4). The spell matches when any enabled comparison holds for any such card.
+type LinkedExiledCardComparison struct {
+	// Producer names the declared linked producer channel on this card.
+	Producer LinkedProducerKey
+	// SharesColor matches a spell that has at least one color the exiled card has.
+	SharesColor bool
+	// SameManaValue matches a spell whose mana value equals the exiled card's.
+	SameManaValue bool
+}
+
+// Empty reports whether the comparison imposes no restriction.
+func (c LinkedExiledCardComparison) Empty() bool {
+	return c == LinkedExiledCardComparison{}
 }
 
 // TriggerTurnRelation restricts a trigger by whose turn the triggering event

@@ -1,7 +1,10 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
 )
@@ -86,4 +89,32 @@ func (r *effectResolver) returnOriginalProducerCards(prim game.PutOnBattlefield)
 	// remains linked in exile for a later resolving copy. Exact incarnations
 	// make successful or redirected moves unavailable without consuming others.
 	return returned
+}
+
+// spellSharesWithLinkedExiledCard reports whether a cast spell, as recorded by
+// its cast event, shares a compared characteristic with a face-up card still in
+// exile in the trigger source's linked producer channel (CR 603.2, 607.2a).
+// The exiled card is read with its characteristics in exile, so a split card's
+// halves are combined (CR 709.4, 709.4b), while the spell has only the
+// characteristics it was cast with (CR 709.4a, 709.4d). Cards that left exile
+// are new objects and no longer linked (CR 400.7).
+func spellSharesWithLinkedExiledCard(g *game.Game, source *game.Permanent, comparison game.LinkedExiledCardComparison, event game.Event) bool {
+	if source == nil {
+		return false
+	}
+	event = eventWithCardCharacteristics(g, event)
+	key := game.LinkedObjectKey{SourceID: source.ObjectID, LinkID: string(comparison.Producer), Producer: comparison.Producer}
+	for _, ref := range linkedObjects(g, key) {
+		card, ok := linkedCardInstance(g, ref)
+		if !ok || card.Def == nil || !g.Players[card.Owner].Exile.Contains(card.ID) || g.Players[card.Owner].Exile.IsFaceDown(card.ID) {
+			continue
+		}
+		if comparison.SharesColor && slices.ContainsFunc(event.Colors, func(c color.Color) bool { return offStackCardHasColor(card, c) }) {
+			return true
+		}
+		if comparison.SameManaValue && event.ManaValue.Exists && offStackCardManaValue(card) == event.ManaValue.Val {
+			return true
+		}
+	}
+	return false
 }
