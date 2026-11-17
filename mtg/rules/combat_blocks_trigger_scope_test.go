@@ -201,7 +201,7 @@ func TestEquippedBlocksACreatureTriggerFiresPerBandMember(t *testing.T) {
 		if !ok {
 			t.Fatalf("attacker %v left the battlefield", attacker.ObjectID)
 		}
-		if !afterAttacker.Exerted {
+		if !afterAttacker.SkipsNextUntap {
 			t.Fatalf("attacker %v will untap: Shield of the Righteous triggers per blocked creature (CR 509.3b)", attacker.ObjectID)
 		}
 	}

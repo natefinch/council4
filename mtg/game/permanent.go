@@ -88,9 +88,16 @@ type Permanent struct {
 	// Tapped is true if the permanent is tapped (turned sideways).
 	Tapped bool
 
-	// Exerted is true if this permanent should not untap during its
-	// controller's next untap step.
-	Exerted bool
+	// SkipsNextUntap is true if this permanent should not untap during its
+	// controller's next untap step ("tap and freeze" effects such as
+	// SkipNextUntap). It is not exert; see ExertedBy.
+	SkipsNextUntap bool
+
+	// ExertedBy[p] is true while an exert by player p is pending: the permanent
+	// won't untap during p's next untap step, where the effect expires whether
+	// or not it kept the permanent tapped (CR 701.43a-b). Exerting again before
+	// then changes nothing. A new object never carries an earlier exert.
+	ExertedBy [NumPlayers]bool
 
 	// SummoningSick is true if this permanent has not been under its
 	// controller's control since the start of that player's most recent turn.

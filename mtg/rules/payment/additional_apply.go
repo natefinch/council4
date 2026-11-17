@@ -152,7 +152,7 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) []game.PaidCostSu
 	if plan.untapSource != nil {
 		s.SetTapped(plan.untapSource, false)
 	}
-	if plan.exertSource != nil && !s.ExertPermanent(plan.exertSource) {
+	if plan.exertSource != nil && !s.ExertPermanent(plan.player, plan.exertSource) {
 		panic("additional cost plan became invalid while exerting source")
 	}
 	for _, placement := range plan.counterAdds {

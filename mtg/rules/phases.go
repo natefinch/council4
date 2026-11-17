@@ -220,6 +220,7 @@ func (e *Engine) beginningPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 	// Only the turn's own beginning phase starts that continuous control; an
 	// additional beginning phase leaves summoning sickness unchanged.
 	observeControlForSummoningSickness(g)
+	exerted := consumeExertions(g, g.Turn.ActivePlayer)
 	for _, permanent := range g.Battlefield {
 		if !activeBattlefieldPermanent(permanent) ||
 			effectiveController(g, permanent) != g.Turn.ActivePlayer {
@@ -228,8 +229,11 @@ func (e *Engine) beginningPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 		if turnStart {
 			permanent.SummoningSick = false
 		}
-		if permanent.Exerted {
-			permanent.Exerted = false
+		if permanent.SkipsNextUntap {
+			permanent.SkipsNextUntap = false
+			continue
+		}
+		if exerted[permanent] {
 			continue
 		}
 		if ruleEffectPreventsUntap(g, permanent) {
@@ -237,7 +241,7 @@ func (e *Engine) beginningPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 		}
 		setPermanentTapped(g, permanent, false)
 	}
-	untapDuringOtherPlayersUntapStep(g)
+	untapDuringOtherPlayersUntapStep(g, exerted)
 	completeTurnBoundary(g)
 
 	e.runUpkeepStep(g, agents, log)
@@ -317,9 +321,11 @@ func (e *Engine) runUpkeepStep(g *game.Game, agents [game.NumPlayers]PlayerAgent
 // Because the active player's permanents have already untapped, it untaps only
 // the permanents of controllers other than the active player whose static
 // RuleEffectUntapDuringOtherPlayersUntapStep applies. Summoning sickness is not
-// cleared (that is tied to the controller's own turn) and exert is not consumed
-// (it is spent only on the controller's own untap step).
-func untapDuringOtherPlayersUntapStep(g *game.Game) {
+// cleared (that is tied to the controller's own turn) and a skipped next untap
+// is not consumed (it is spent only on the controller's own untap step). A
+// permanent the active player exerted won't untap during this untap step even
+// though another player controls it now (CR 701.43a).
+func untapDuringOtherPlayersUntapStep(g *game.Game, exerted map[*game.Permanent]bool) {
 	effects := activeRuleEffects(g)
 	seen := make(map[*game.Permanent]bool)
 	for i := range effects {
@@ -329,7 +335,7 @@ func untapDuringOtherPlayersUntapStep(g *game.Game) {
 			continue
 		}
 		if effect.AffectedSource {
-			if permanent, ok := permanentByObjectID(g, effect.AffectedObjectID); ok && !seen[permanent] {
+			if permanent, ok := permanentByObjectID(g, effect.AffectedObjectID); ok && !seen[permanent] && !exerted[permanent] {
 				seen[permanent] = true
 				untapForOtherPlayersStep(g, permanent)
 			}
@@ -337,7 +343,7 @@ func untapDuringOtherPlayersUntapStep(g *game.Game) {
 		}
 		for _, permanent := range g.Battlefield {
 			if !activeBattlefieldPermanent(permanent) ||
-				!ruleEffectMatchesPermanent(g, effect, permanent) || seen[permanent] {
+				!ruleEffectMatchesPermanent(g, effect, permanent) || seen[permanent] || exerted[permanent] {
 				continue
 			}
 			seen[permanent] = true

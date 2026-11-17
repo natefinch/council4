@@ -25,20 +25,20 @@ func TestCompiledCombatStunUsesOtherCombatantAndItsNextUntap(t *testing.T) {
 		t.Fatal("compiled blocker trigger did not fire")
 	}
 	engine.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
-	if !other.Tapped || !other.Exerted || source.Tapped || source.Exerted || decoy.Tapped || decoy.Exerted {
+	if !other.Tapped || !other.SkipsNextUntap || source.Tapped || source.SkipsNextUntap || decoy.Tapped || decoy.SkipsNextUntap {
 		t.Fatal("stun did not isolate the related combatant")
 	}
 	g.Turn.ActivePlayer = game.Player1
 	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Draw"}})
 	engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
-	if !other.Tapped || !other.Exerted {
+	if !other.Tapped || !other.SkipsNextUntap {
 		t.Fatal("source controller's untap consumed another player's stun")
 	}
 	g.Turn.ActivePlayer = game.Player2
 	for step := range 2 {
 		addCardToLibrary(g, game.Player2, &game.CardDef{CardFace: game.CardFace{Name: "Draw"}})
 		engine.runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
-		if other.Tapped != (step == 0) || other.Exerted {
+		if other.Tapped != (step == 0) || other.SkipsNextUntap {
 			t.Fatal("related creature did not skip exactly its next untap")
 		}
 	}

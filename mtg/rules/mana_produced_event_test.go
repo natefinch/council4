@@ -401,7 +401,7 @@ func TestManaProducedEventPermanentBindingMarksTappedLand(t *testing.T) {
 	engine.putTriggeredAbilitiesOnStack(g)
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	if !forest.Exerted {
+	if !forest.SkipsNextUntap {
 		t.Fatal("tapped-for-mana land was not marked to skip its next untap step")
 	}
 }

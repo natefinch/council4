@@ -70,7 +70,7 @@ func TestStunUntapStepRestrictionsPrecedeReplacement(t *testing.T) {
 				target := addCombatPermanent(g, game.Player1, def)
 				target.Tapped = true
 				target.Counters.Add(counter.Stun, 2)
-				target.Exerted = restriction == "exerted"
+				target.SkipsNextUntap = restriction == "exerted"
 				active := game.Player1
 				if otherStep {
 					active = game.Player2
@@ -96,7 +96,7 @@ func TestStunUntapStepRestrictionsPrecedeReplacement(t *testing.T) {
 				if !target.Tapped || target.Counters.Get(counter.Stun) != wantStun || len(stunUntappedEvents(g)) != 0 {
 					t.Fatalf("restricted step = tapped %v, stun %d; want true, %d", target.Tapped, target.Counters.Get(counter.Stun), wantStun)
 				}
-				if restriction == "exerted" && target.Exerted != otherStep {
+				if restriction == "exerted" && target.SkipsNextUntap != otherStep {
 					t.Fatal("exertion was not consumed only in the controller's untap step")
 				}
 				if restriction == "doesnt-untap" {
