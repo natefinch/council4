@@ -217,9 +217,12 @@ type ForetellKeyword struct {
 	Cost cost.Mana
 }
 
-// MorphKeyword parameterizes Morph turn-face-up costs.
+// MorphKeyword parameterizes Morph turn-face-up costs. Megamorph marks the
+// megamorph variant (CR 702.37b): its cost is a morph cost, and paying it to
+// turn the permanent face up also puts a +1/+1 counter on it.
 type MorphKeyword struct {
-	Cost cost.Mana
+	Cost      cost.Mana
+	Megamorph bool
 }
 
 // DisguiseKeyword parameterizes Disguise turn-face-up costs.
