@@ -103,9 +103,12 @@ type abilityLayerEffect struct {
 
 	effectIndex int
 	// granted identifies the static ability granted to recipientID whose
-	// layer-6 effects on that permanent this candidate applies.
+	// layer-6 effects on that permanent this candidate applies, or, with
+	// holder, the static ability granted to holder whose layer-6 effect on
+	// other objects this candidate is.
 	granted     grantedStaticKey
 	recipientID id.ID
+	holder      *game.Permanent
 }
 
 // Ability removal can erase an unapplied generator anywhere on the battlefield.
@@ -133,8 +136,9 @@ func continuousBoardLayer(g *game.Game, recipient *game.Permanent, sources []sta
 		permanents = append(permanents, recipient)
 	}
 	result := &landTypeLayerResult{
-		values:  make(map[id.ID]permanentEffectiveValues, len(permanents)),
-		started: make(map[staticBodyKey]map[id.ID]bool),
+		values:         make(map[id.ID]permanentEffectiveValues, len(permanents)),
+		started:        make(map[staticBodyKey]map[id.ID]bool),
+		grantedStarted: make(map[grantedHolderKey]map[id.ID]bool),
 	}
 	for _, permanent := range permanents {
 		values := cloneTypeLayerValues(permanentValuesBeforeLayer(g, permanent, layer))
@@ -202,7 +206,7 @@ func continuousBoardLayer(g *game.Game, recipient *game.Permanent, sources []sta
 			values := result.values[permanent.ObjectID]
 			applyAbilityLayerCandidate(g, permanent, &values, chosen, result.values)
 			if layer == game.LayerAbility {
-				remaining = scheduleGrantedStaticAbilityEffects(remaining, permanent, &values)
+				remaining = scheduleGrantedStaticAbilityEffects(g, remaining, permanent, &values)
 			}
 			result.values[permanent.ObjectID] = values
 			if chosen.body != nil {
@@ -210,6 +214,13 @@ func continuousBoardLayer(g *game.Game, recipient *game.Permanent, sources []sta
 					result.started[chosen.key] = make(map[id.ID]bool)
 				}
 				result.started[chosen.key][permanent.ObjectID] = true
+			}
+			if chosen.holder != nil {
+				key := grantedHolderKey{key: chosen.granted, holder: chosen.holder.ObjectID}
+				if result.grantedStarted[key] == nil {
+					result.grantedStarted[key] = make(map[id.ID]bool)
+				}
+				result.grantedStarted[key][permanent.ObjectID] = true
 			}
 		}
 	}
@@ -267,6 +278,9 @@ func continuousLayerCandidates(g *game.Game, sources []staticAbilitySource, laye
 }
 
 func abilityLossEffectApplies(g *game.Game, candidate abilityLayerEffect, recipient *game.Permanent, board map[id.ID]permanentEffectiveValues, sources []staticAbilitySource) bool {
+	if candidate.holder != nil {
+		return grantedGroupCandidateApplies(g, candidate, recipient, board)
+	}
 	if candidate.granted.body != nil {
 		_, ok := grantedStaticCandidateEffects(g, candidate, recipient, board)
 		return ok
@@ -296,7 +310,7 @@ func abilityLossEffectApplies(g *game.Game, candidate abilityLayerEffect, recipi
 }
 
 func applyAbilityLayerCandidate(g *game.Game, recipient *game.Permanent, values *permanentEffectiveValues, candidate abilityLayerEffect, board map[id.ID]permanentEffectiveValues) {
-	if candidate.granted.body != nil {
+	if candidate.granted.body != nil && candidate.holder == nil {
 		applyGrantedStaticCandidate(g, recipient, values, candidate, board)
 		return
 	}
