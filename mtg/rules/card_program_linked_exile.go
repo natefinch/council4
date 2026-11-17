@@ -8,14 +8,15 @@ import (
 	"github.com/natefinch/council4/mtg/game/zone"
 )
 
-// validateExileDuration checks a placement's CR 607 linked publication and CR
-// 610.3 "until this leaves the battlefield" duration before anything moves.
+// validateExileDuration checks a placement's CR 607 linked publication, CR
+// 610.3 "until this leaves the battlefield" duration and CR 611.2b cast
+// permission before anything moves.
 func (c *programContext) validateExileDuration(placement cardprogram.CardPlacement) error {
-	if placement.PublishLinkedProducer == "" && !placement.UntilSourceLeaves {
+	if placement.PublishLinkedProducer == "" && !placement.UntilSourceLeaves && !placement.CastWhileExiled {
 		return nil
 	}
 	if placement.Destination != zone.Exile {
-		return errors.New("linked or until-source-leaves placement requires exile")
+		return errors.New("linked, until-source-leaves or cast-while-exiled placement requires exile")
 	}
 	if placement.PublishLinkedProducer != "" {
 		if err := game.ValidateLinkedProducerOperation(
@@ -42,21 +43,38 @@ func (c *programContext) validateExileDuration(placement cardprogram.CardPlaceme
 }
 
 // placementExileRecord accumulates the exact card incarnations one exile
-// placement actually put into exile, for its linked publication and its
-// until-source-leaves duration.
+// placement actually put into exile, for its linked publication, its
+// until-source-leaves duration and its cast permission.
 type placementExileRecord struct {
 	publish game.LinkedObjectKey
 	until   *untilSourceLeavesRecorder
+	cast    *game.RuleEffect
 }
 
 // startPlacementExileRecord begins a validated placement's exile records. With
 // UntilSourceLeaves, proceed is false when the source permanent already left
 // the battlefield: CR 610.3a-b says the cards don't move.
 func (c *programContext) startPlacementExileRecord(placement cardprogram.CardPlacement) (record *placementExileRecord, proceed bool) {
-	if placement.PublishLinkedProducer == "" && !placement.UntilSourceLeaves {
+	if placement.PublishLinkedProducer == "" && !placement.UntilSourceLeaves && !placement.CastWhileExiled {
 		return nil, true
 	}
 	record = &placementExileRecord{}
+	if placement.CastWhileExiled {
+		// A resolved effect's permission persists while the card stays exiled,
+		// independent of its source, and ends once the card leaves exile
+		// (persistsWhileCardExiled, clearCardCastPermissions).
+		record.cast = &game.RuleEffect{
+			Kind:           game.RuleEffectCastFromZone,
+			Controller:     c.obj.Controller,
+			SourceCardID:   c.obj.SourceCardID,
+			SourceObjectID: c.obj.SourceID,
+			AffectedPlayer: game.PlayerYou,
+			Duration:       game.DurationPermanent,
+			CreatedTurn:    c.game.Turn.TurnNumber,
+			CastFromZone:   zone.Exile,
+			ExpiresFor:     c.obj.Controller,
+		}
+	}
 	if placement.UntilSourceLeaves {
 		sourceObjectID, present := untilSourceLeavesSource(c.game, c.obj)
 		if !present {
@@ -72,10 +90,16 @@ func (c *programContext) startPlacementExileRecord(placement cardprogram.CardPla
 
 // add records card if its move actually put it into its owner's exile; a
 // replacement effect can send it elsewhere instead. Only a face-up card is
-// published for later linked abilities (CR 607.2a).
+// published for later linked abilities (CR 607.2a) or may be cast.
 func (r *placementExileRecord) add(g *game.Game, card *game.CardInstance) {
 	if r == nil || !g.Players[card.Owner].Exile.Contains(card.ID) {
 		return
+	}
+	if r.cast != nil && !g.Players[card.Owner].Exile.IsFaceDown(card.ID) {
+		permission := *r.cast
+		permission.ID = g.IDGen.Next()
+		permission.AffectedCardID = card.ID
+		g.RuleEffects = append(g.RuleEffects, permission)
 	}
 	ref := game.LinkedObjectRef{CardID: card.ID, CardZoneVersion: card.ZoneVersion, CardZoneVersionSet: true}
 	if r.until != nil {

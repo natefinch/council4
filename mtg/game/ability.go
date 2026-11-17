@@ -1012,6 +1012,13 @@ type TriggerCondition struct {
 	// creature uses its last known information once it has left the battlefield.
 	InterveningIfEventPermanentEvolvesSource bool
 
+	// InterveningIfCapturedCardNotCast is a scheduled delayed trigger's "if you
+	// haven't cast the card" (DelayedTriggerDef.InterveningIfCapturedCardNotCast).
+	// mtg/rules sets it only when scheduling a delayed trigger with a captured
+	// card and checks it against that card incarnation and the trigger's
+	// controller (CR 603.4).
+	InterveningIfCapturedCardNotCast bool
+
 	// State describes a state trigger. State triggers latch while true and only
 	// trigger again after becoming false, then true again (CR 603.8).
 	State opt.V[StateTriggerCondition]

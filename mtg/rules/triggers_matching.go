@@ -918,6 +918,10 @@ func triggerInterveningIfWithObject(g *game.Game, source *game.Permanent, contro
 	if trigger.InterveningIfEventPermanentEvolvesSource && !eventPermanentEvolvesSource(g, source, event) {
 		return false
 	}
+	if trigger.InterveningIfCapturedCardNotCast && obj != nil &&
+		capturedCardCastBy(g, obj.CapturedCardID, obj.CapturedCardZoneVersion, controller) {
+		return false
+	}
 	if !conditionSatisfied(g, conditionContext{
 		controller: controller,
 		source:     source,
