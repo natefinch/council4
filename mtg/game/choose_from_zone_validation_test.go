@@ -141,7 +141,17 @@ func TestChooseFromZoneFamilyValidation(t *testing.T) {
 		{
 			name:    "choosers reject attacking entry",
 			prim:    ChooseFromZone{Choosers: opt.Val(AllPlayersReference()), SourceZone: zone.Graveyard, Quantity: Fixed(1), Destination: ChooseDestination{Zone: zone.Battlefield}, Riders: ChooseRiders{EntersAttacking: true}},
-			wantErr: "choose from zone choosers exclude face-down and attacking entry",
+			wantErr: "choose from zone choosers exclude face-down, attacking and blocking entry",
+		},
+		{
+			name:    "blocking entry requires a battlefield destination",
+			prim:    ChooseFromZone{Player: ControllerReference(), SourceZone: zone.Hand, Quantity: Fixed(1), Destination: ChooseDestination{Zone: zone.Exile}, Riders: ChooseRiders{EntersBlocking: opt.Val(EventRelatedPermanentReference())}},
+			wantErr: "choose from zone blocking entry requires a battlefield destination",
+		},
+		{
+			name:    "blocking entry excludes attacking entry",
+			prim:    ChooseFromZone{Player: ControllerReference(), SourceZone: zone.Hand, Quantity: Fixed(1), Destination: ChooseDestination{Zone: zone.Battlefield}, Riders: ChooseRiders{EntersAttacking: true, EntersBlocking: opt.Val(EventRelatedPermanentReference())}},
+			wantErr: "choose from zone blocking entry cannot enter face down or attacking",
 		},
 		{
 			name:    "entry controller requires a battlefield destination",

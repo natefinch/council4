@@ -684,6 +684,9 @@ func (p CreateToken) instructionRefs() primitiveRefs {
 	if p.EntryAttachedTo.Exists {
 		refs = mergePrimitiveRefs(refs, objectReferenceRefs(p.EntryAttachedTo.Val))
 	}
+	if p.EntryBlocking.Exists {
+		refs = mergePrimitiveRefs(refs, objectReferenceRefs(p.EntryBlocking.Val))
+	}
 	refs.publishesLinked = p.PublishLinked
 	refs.publishesLinkedGroup = p.PublishCountGroup
 	return refs
@@ -817,6 +820,9 @@ func (p ChooseFromZone) instructionRefs() primitiveRefs {
 	refs := quantityRefs(p.Quantity)
 	if p.Riders.FromLinked != "" {
 		refs.consumesLinked = append(refs.consumesLinked, p.Riders.FromLinked)
+	}
+	if p.Riders.EntersBlocking.Exists {
+		refs = mergePrimitiveRefs(refs, objectReferenceRefs(p.Riders.EntersBlocking.Val))
 	}
 	refs.publishesLinked = p.Riders.PublishLinked
 	return refs

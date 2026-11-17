@@ -205,6 +205,15 @@ type ChooseRiders struct {
 	// card simply enters without attacking.
 	EntersAttacking bool
 
+	// EntersBlocking puts each card entering the battlefield onto the
+	// battlefield blocking the referenced attacking creature ("put a creature
+	// card from your hand onto the battlefield blocking that creature",
+	// CR 509.4). It is meaningful only for a battlefield Destination and excludes
+	// EntersAttacking and FaceDown. A card blocks only if that creature is still
+	// attacking and the card's controller is a defending player for it
+	// (CR 509.4a); otherwise it simply enters.
+	EntersBlocking opt.V[ObjectReference]
+
 	// EntryCounters places counters on each card entering the battlefield, the
 	// "enters with N counters" rider. It is meaningful only for a battlefield
 	// Destination.

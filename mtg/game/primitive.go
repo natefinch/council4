@@ -1025,6 +1025,19 @@ type CreateToken struct {
 	// mode.
 	AttackSameAsObject opt.V[ObjectReference]
 
+	// EntryBlocking, when set, puts each created token onto the battlefield
+	// blocking the referenced attacking creature ("create a 1/1 ... token that's
+	// blocking that creature", CR 509.4). A token blocks only if that creature is
+	// still attacking and the token's controller is a defending player for it
+	// (CR 509.4a); otherwise it simply enters. It is mutually exclusive with every
+	// attack-entry mode and with EntryBlockingCopySource.
+	EntryBlocking opt.V[ObjectReference]
+	// EntryBlockingCopySource, for a TokenCopySourceEachInGroup copy, puts each
+	// created copy onto the battlefield blocking the creature it copies ("create
+	// a token that's a copy of that creature that's blocking that creature",
+	// Mirror Match), under the same CR 509.4a conditions as EntryBlocking.
+	EntryBlockingCopySource bool
+
 	// MustAttackEachOpponentThisTurn, when set, creates Amount tokens for each
 	// living opponent of the ability's controller ("For each opponent, create a
 	// token copy that attacks that opponent this turn if able.", Encore,
