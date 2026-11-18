@@ -297,7 +297,7 @@ func (e *Engine) canCastFaceDownFromZone(g *game.Game, player game.PlayerID, cas
 func legalFaceDownFaces(card *game.CardDef) []game.FaceIndex {
 	var faces []game.FaceIndex
 	for _, face := range card.FaceIndexes() {
-		if def, ok := card.FaceDef(face); ok && len(faceDownKindsForCard(def)) > 0 {
+		if def, ok := card.FaceDefView(face); ok && len(faceDownKindsForCard(def)) > 0 {
 			faces = append(faces, face)
 		}
 	}

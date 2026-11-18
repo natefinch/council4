@@ -1,6 +1,7 @@
 package rules
 
 import (
+	"os"
 	"reflect"
 	"slices"
 	"testing"
@@ -672,9 +673,20 @@ func TestDelayedTriggerOwnWordingPrefersRecordedText(t *testing.T) {
 // creating text. A granted ability's delayed trigger is created from that
 // granted ability's own text.
 func TestRegisteredFixedDelayedTriggersHaveOwnText(t *testing.T) {
+	card := os.Getenv("COUNCIL4_DELAYED_TRIGGER_AUDIT")
+	if card == "" {
+		t.Skip("set COUNCIL4_DELAYED_TRIGGER_AUDIT to a card name, or * to audit all definitions")
+	}
 	reg := cards.NewDefaultRegistry()
-	for _, name := range reg.All() {
+	names := []string{card}
+	if card == "*" {
+		names = reg.All()
+	}
+	for _, name := range names {
 		def := reg.Lookup(name)
+		if def == nil {
+			t.Fatalf("no registered card %q", name)
+		}
 		faces := []*game.CardFace{&def.CardFace}
 		if def.Back.Exists {
 			faces = append(faces, &def.Back.Val)

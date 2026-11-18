@@ -254,50 +254,61 @@ func (a *castOnceAgent) ChooseAction(_ PlayerObservation, legal []action.Action)
 // activation and the one completed cast remain publicly logged (CR 601.2g-i).
 func TestCompletedCastLogsAllPaymentManaActivations(t *testing.T) {
 	t.Parallel()
-	for _, test := range []struct {
-		name  string
-		order []string
-	}{
-		{name: "lands around Phyrexian Altar", order: []string{clearingMana, altarMana, groveMana}},
-		{name: "land spent on Sacrifice Filter", order: []string{clearingMana, "Add {C}{C}"}},
-	} {
-		t.Run(test.name, func(t *testing.T) {
+	for _, source := range []string{"Phyrexian Altar", "Sacrifice Filter"} {
+		t.Run(source, func(t *testing.T) {
 			t.Parallel()
-			g, e, rites, _ := villageRitesLibraryGame(t, "Future Sight", 0)
-			for range 2 {
-				card := addCardToHand(g, game.Player1, registryCardDef(t, "Forest"))
-				g.Players[game.Player1].Hand.Remove(card)
-				g.Players[game.Player1].Library.AddToBottom(card)
-			}
+			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+			giveMainPhasePriority(g, game.Player1)
+			addCombatPermanent(g, game.Player1, registryCardDef(t, "Future Sight"))
+			bear := addCombatPermanent(g, game.Player1, vanillaCreature("Bear", 2, 2))
+			addCardToLibraryNamed(g, game.Player1, "First draw")
+			addCardToLibraryNamed(g, game.Player1, "Second draw")
+			rites := addCardToLibrary(g, game.Player1, registryCardDef(t, "Village Rites"))
 			addCombatPermanent(g, game.Player2, registryCardDef(t, "Thalia, Guardian of Thraben"))
-			for _, name := range []string{"Silent Clearing", "Waterlogged Grove"} {
-				addCombatPermanent(g, game.Player1, registryCardDef(t, name))
+			clearing := addCombatPermanent(g, game.Player1, registryCardDef(t, "Silent Clearing"))
+			colossus := addBorrowedColossus(t, g, game.Player1)
+			order := &manaOrderAgent{colors: []string{"W", "G"}}
+			if source == "Phyrexian Altar" {
+				addCombatPermanent(g, game.Player1, registryCardDef(t, "Phyrexian Altar"))
+				addCombatPermanent(g, game.Player1, registryCardDef(t, "Waterlogged Grove"))
+				order.order = []string{clearingMana, altarMana, groveMana}
+			} else {
+				addCombatPermanent(g, game.Player1, colossusFilterDef())
+				// Spend the Clearing's white mana on the filter; only the Swamp
+				// can supply {B}. Its automatic activation must be logged too.
+				addCombatPermanent(g, game.Player1, registryCardDef(t, "Swamp"))
+				order.order = []string{clearingMana, "Add {C}{C}"}
 			}
-			addCombatPermanent(g, game.Player1, colossusFilterDef())
-			colossus := addAltarAndColossus(t, g, game.Player1)
 			cast := action.CastSpellFaceFromZone(rites, zone.Library, game.FaceFront, nil, 0, nil)
-			order := &manaOrderAgent{order: test.order, colors: []string{"W", "G"}}
 			agent := &castOnceAgent{sacrificingAgent: &sacrificingAgent{next: order, victim: "Blightsteel Colossus"}, cast: cast}
 			log := &TurnLog{}
+			life := g.Players[game.Player1].Life
+			NewEngine(nil).runPriorityLoop(g, reboundKickerAgents(agent), log)
 
-			e.runPriorityLoop(g, reboundKickerAgents(agent), log)
-
-			if agent.casts != 1 || order.activated != len(test.order) {
+			if agent.casts != 1 || order.activated != len(order.order) {
 				t.Fatalf("casts = %d, activated = %d, sacrifices = %d; want one cast with every activation", agent.casts, order.activated, agent.sacrifices)
 			}
 			if !g.Players[game.Player1].Graveyard.Contains(rites) || !g.Stack.IsEmpty() || spellCastEventCount(g) != 1 {
 				t.Fatal("Village Rites did not become cast and resolve once")
 			}
+			requireColossusShuffled(t, g, colossus)
+			if !g.Players[game.Player1].Graveyard.Contains(bear.CardInstanceID) {
+				t.Fatal("Village Rites didn't pay its separate sacrifice cost")
+			}
+			assertEvent(t, g.Events, game.EventSpellCast, func(e game.Event) bool {
+				return e.CardID == rites && e.ManaSpentToCast.Exists && e.ManaSpentToCast.Val == 2
+			})
+			if !clearing.Tapped || g.Players[game.Player1].Life >= life {
+				t.Fatal("the cast didn't pay for Silent Clearing's mana")
+			}
 			var activated []id.ID
-			shuffled := false
 			for _, event := range g.Events {
 				if event.Kind == game.EventAbilityActivated && event.ManaAbility {
 					activated = append(activated, event.SourceObjectID)
 				}
-				shuffled = shuffled || event.Kind == game.EventZoneChanged && event.CardID == colossus && event.ToZone == zone.Library
 			}
-			if !shuffled || len(activated) < len(test.order) {
-				t.Fatal("the chosen legal mana actions were lost")
+			if len(activated) != 3 {
+				t.Fatalf("mana sources activated = %v, want three", activated)
 			}
 			requirePaymentManaActivationsLogged(t, log, activated...)
 			casts := 0

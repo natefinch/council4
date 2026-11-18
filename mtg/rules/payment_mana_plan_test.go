@@ -196,6 +196,32 @@ func TestManaHistoryPresentResourcesNeedNoActivationSearch(t *testing.T) {
 	}
 }
 
+func TestLandInHandDoesNotTriggerManaHistorySearch(t *testing.T) {
+	e, g := newEffectiveCascadeGame()
+	forest := &game.CardDef{CardFace: game.CardFace{Name: "Forest", Types: []types.Card{types.Land},
+		ManaAbilities: []game.ManaAbility{game.TapManaAbility(mana.G)}}}
+	addCardToHand(g, game.Player1, forest)
+	for range 3 {
+		addCombatPermanent(g, game.Player1, forest)
+	}
+	forecasts := 0
+	state := countedManaHistoryState{ManaState: &rulesPaymentState{g: g, engine: e}, forecasts: &forecasts}
+	manaCost := cost.Mana{cost.O(4)}
+	request := payment.ForGeneric(payment.GenericRequest{PlayerID: game.Player1, Cost: &manaCost})
+	if _, ok, _ := payment.New(state).Complete(request, payment.Partial{}); ok || forecasts != 0 {
+		t.Fatalf("three Forests in play, one in hand: payable=%t forecasts=%d, want false and zero", ok, forecasts)
+	}
+	guide := addCardToHand(g, game.Player1, spiritGuideHandCard("Elvish Spirit Guide", mana.G))
+	planner := e.PaymentPlanner(g)
+	plan, ok, reason := planner.Complete(request, payment.Partial{})
+	if !ok {
+		t.Fatal("Spirit Guide should supply the fourth mana:", reason)
+	}
+	if _, paid, reason := planner.Apply(plan); !paid || !g.Players[game.Player1].Exile.Contains(guide) {
+		t.Fatal("payment did not use Spirit Guide from hand:", reason)
+	}
+}
+
 func TestManaHistoryUsesDirectWitnessWithoutSubsetSearch(t *testing.T) {
 	for _, sources := range []int{4, 6, 8} {
 		t.Run(fmt.Sprint(sources), func(t *testing.T) {

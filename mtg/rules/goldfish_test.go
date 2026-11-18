@@ -2,39 +2,57 @@ package rules
 
 import (
 	"math/rand/v2"
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/mana"
 	"github.com/natefinch/council4/mtg/game/types"
 )
 
-func TestRunGoldfishCompletesExactTurnLimit(t *testing.T) {
+func forestGoldfishConfig() game.PlayerConfig {
 	commander := &game.CardDef{CardFace: game.CardFace{
 		Name:       "Goldfish Commander",
 		Supertypes: []types.Super{types.Legendary},
 		Types:      []types.Card{types.Creature},
 	}}
 	forest := &game.CardDef{CardFace: game.CardFace{
-		Name:       "Forest",
-		Supertypes: []types.Super{types.Basic},
-		Types:      []types.Card{types.Land},
+		Name:          "Forest",
+		Supertypes:    []types.Super{types.Basic},
+		Types:         []types.Card{types.Land},
+		ManaAbilities: []game.ManaAbility{game.TapManaAbility(mana.G)},
 	}}
-	config := game.PlayerConfig{
+	return game.PlayerConfig{
 		Name:      "Goldfish",
 		Commander: commander,
 		Deck:      repeatedCard(forest, 99),
 	}
+}
 
+// The zero-toughness commander dies after resolving. As the commander tax
+// rises, the planner must reject unaffordable casts without trying land subsets.
+func BenchmarkGoldfishCommanderTax(b *testing.B) {
+	config := forestGoldfishConfig()
+	b.ReportAllocs()
+	for b.Loop() {
+		engine := NewEngine(rand.New(rand.NewPCG(1, 2)))
+		engine.RunGoldfish(engine.NewGoldfishGame(config), goldfishTestAgent{}, 10)
+	}
+}
+
+func TestRunGoldfishCompletesExactTurnLimit(t *testing.T) {
+	config := forestGoldfishConfig()
 	engine := NewEngine(rand.New(rand.NewPCG(1, 2)))
 	g := engine.NewGoldfishGame(config)
 	players := NewObservation(g, game.Player1).Players()
 	if len(players) != 1 || players[0].ID != game.Player1 {
 		t.Fatalf("observed players = %#v", players)
 	}
-	result := engine.RunGoldfish(g, goldfishTestAgent{}, 10)
-	if result.TurnCount != 10 || len(result.Turns) != 10 {
-		t.Fatalf("turns = %d/%d, want 10", result.TurnCount, len(result.Turns))
+	const turns = 2
+	result := engine.RunGoldfish(g, goldfishTestAgent{}, turns)
+	if result.TurnCount != turns || len(result.Turns) != turns {
+		t.Fatalf("turns = %d/%d, want %d", result.TurnCount, len(result.Turns), turns)
 	}
 
 	if !result.TurnLimitReached {
@@ -46,6 +64,10 @@ func TestRunGoldfishCompletesExactTurnLimit(t *testing.T) {
 	for index, turn := range result.Turns {
 		if turn.TurnNumber != index+1 || turn.ActivePlayer != game.Player1 {
 			t.Fatalf("turn %d = number %d player %d", index, turn.TurnNumber, turn.ActivePlayer)
+		}
+		if turn.LandsPlayed != 1 || turn.ManaAvailable != index+1 || !slices.Equal(turn.ManaColors, []string{"G"}) {
+			t.Fatalf("turn %d: logged %d land drops, %d sources, colors %v; want one drop and %d green sources after it",
+				turn.TurnNumber, turn.LandsPlayed, turn.ManaAvailable, turn.ManaColors, index+1)
 		}
 	}
 	firstTurnStructure := []struct {
@@ -84,8 +106,8 @@ func TestRunGoldfishCompletesExactTurnLimit(t *testing.T) {
 				i, structure[i], want.kind, want.phase, want.step)
 		}
 	}
-	if result.EndState.Players[game.Player1].LibrarySize != 82 {
-		t.Fatalf("library size = %d, want 82", result.EndState.Players[game.Player1].LibrarySize)
+	if got, want := result.EndState.Players[game.Player1].LibrarySize, len(config.Deck)-7-turns; got != want {
+		t.Fatalf("library size = %d, want %d", got, want)
 	}
 	for playerID := game.Player2; playerID < game.NumPlayers; playerID++ {
 		if !result.EndState.Players[playerID].Eliminated {

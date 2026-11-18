@@ -41,6 +41,11 @@ It backtracks over finite resource assignments, with search-local memoization
 of failed mana resource states, not game clones or speculative activations.
 Shared resource matching rejects impossible fixed-count payments before subset
 enumeration, and later mandatory source-counter kinds are reserved up front.
+For generic mana, an optimistic total of pool mana, source outputs, and
+cost mechanics rejects impossible amounts before trying individual land
+subsets. It never establishes that a payment is legal. A mana ability printed
+on a card in hand requires activation-history planning only if it functions
+from hand.
 Fixed-count and threshold selections share the existing eligibility predicates.
 Costs reserve resources by what they consume: two zone moves cannot share an
 object, but a tap followed by a sacrifice/return can (CR 601.2h). Phyrexian life

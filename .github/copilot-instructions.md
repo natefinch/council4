@@ -86,6 +86,24 @@ do not create another authoring checklist.
 
 This is the authoritative validation policy; skills and guides link here.
 
+- Before adding a test, name a plausible bug it would catch and look for the
+  nearest existing assertion. If that assertion already catches the bug, reuse
+  it; if it misses one case, prefer adding the case. Reviewers should ask what
+  would go undetected without it. No written justification per test is needed.
+- Test at the smallest boundary where the bug is observable. For available
+  mana, set up a board and query it; for a turn-log timing bug, exercise the
+  relevant phase and inspect the log. Use a whole game only for a property of
+  the whole game. A real Engine scenario need not start at turn one.
+- Avoid scanning every registered card to test one rule. Test the rule once
+  with representative inputs. If every definition must satisfy a constraint,
+  prefer checking new or changed definitions at admission, with a failing
+  example for the validator. Scan the existing population when the constraint
+  changes, not on unrelated PRs.
+- Treat any single test or subtest over one second as a review signal, not a
+  timing assertion. Check existing CI timings; cut irrelevant setup first. If
+  a minimal fixture is still slow, investigate the production path rather than
+  weakening the assertion, adding parallelism, or just raising the timeout.
+
 - Ordinary code work: run affected-package behavioral tests. Shared rules also
   need affected interaction/rules scenarios. Run `go test ./...` locally only for
   broad changes or an explicit request; CI runs it once for code changes.

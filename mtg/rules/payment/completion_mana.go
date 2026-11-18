@@ -115,6 +115,9 @@ func completeMana(s State, playerID game.PlayerID, manaCost *cost.Mana, x int, r
 			if branch.amount < 0 || plan.lifePayment+branch.life+lifeReserved > player.Life || branch.life > 0 && !s.CanPayLife(playerID) {
 				continue
 			}
+			if branch.generic && branch.amount > 1 && !canReachGenericAmount(branch.amount, pool, sources, len(convoke)+len(improvise)+len(delve)) {
+				continue
+			}
 			trial := clonePaymentPlan(plan)
 			trial.lifePayment += branch.life
 			trial.symbolPayments = append(trial.symbolPayments, game.SymbolPayment{
@@ -223,6 +226,31 @@ func completeMana(s State, playerID game.PlayerID, manaCost *cost.Mana, x int, r
 	}
 	ok = visit(0, paymentPlan{poolSpend: make(map[mana.Unit]int)}, snapshotPool(s, player, ctx))
 	return result, ok
+}
+
+// An upper bound, not a payment plan. Count even overlapping choices (e.g. a
+// multicolor land or a mana creature with convoke): if they still cannot pay,
+// there is no reason to try subsets of lands to cover a large generic cost.
+func canReachGenericAmount(needed int, pool map[mana.Unit]int, sources map[mana.Color][]manaSource, alternatives int) bool {
+	needed -= alternatives
+	if needed <= 0 {
+		return true
+	}
+	for _, amount := range pool {
+		needed -= amount
+		if needed <= 0 {
+			return true
+		}
+	}
+	for _, color := range paymentColors {
+		for _, source := range sources[color] {
+			needed -= source.amount
+			if needed <= 0 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func permanentIDs(permanents []*game.Permanent) []id.ID {
