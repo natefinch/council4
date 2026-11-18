@@ -277,3 +277,9 @@ func ValidatePrimitive(primitive Primitive, targets []TargetSpec) error {
 	}
 	return primitive.validatePrimitive(targets, true)
 }
+
+// ValidateDynamicAmount checks an authored rules-derived amount against its
+// declared target scope with the validator used for Dynamic quantities.
+func ValidateDynamicAmount(amount DynamicAmount, targets []TargetSpec) error {
+	return validateQuantity(Dynamic(amount), targets, true)
+}
