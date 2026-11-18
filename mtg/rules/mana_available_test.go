@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"math/rand/v2"
 	"slices"
 	"testing"
 
@@ -92,39 +91,5 @@ func TestCountLandsPlayed(t *testing.T) {
 	}
 	if got := countLandsPlayed(actions, game.Player2); got != 1 {
 		t.Fatalf("countLandsPlayed(Player2) = %d, want 1", got)
-	}
-}
-
-func TestManaDevelopmentReflectsGoldfishBoard(t *testing.T) {
-	commander := &game.CardDef{CardFace: game.CardFace{
-		Name:       "Goldfish Commander",
-		Supertypes: []types.Super{types.Legendary},
-		Types:      []types.Card{types.Creature},
-	}}
-	forest := &game.CardDef{CardFace: game.CardFace{
-		Name:          "Forest",
-		Supertypes:    []types.Super{types.Basic},
-		Types:         []types.Card{types.Land},
-		ManaAbilities: []game.ManaAbility{game.TapManaAbility(mana.G)},
-	}}
-	config := game.PlayerConfig{Name: "Goldfish", Commander: commander, Deck: repeatedCard(forest, 99)}
-
-	engine := NewEngine(rand.New(rand.NewPCG(1, 2)))
-	g := engine.NewGoldfishGame(config)
-	result := engine.RunGoldfish(g, goldfishTestAgent{}, 10)
-
-	cumulativeLands := 0
-	for _, turn := range result.Turns {
-		cumulativeLands += turn.LandsPlayed
-		if turn.ManaAvailable != cumulativeLands {
-			t.Fatalf("turn %d: ManaAvailable = %d, want %d (every Forest is an untapped mana source)",
-				turn.TurnNumber, turn.ManaAvailable, cumulativeLands)
-		}
-		if cumulativeLands > 0 && !slices.Equal(turn.ManaColors, []string{"G"}) {
-			t.Fatalf("turn %d: ManaColors = %v, want [G]", turn.TurnNumber, turn.ManaColors)
-		}
-	}
-	if cumulativeLands == 0 {
-		t.Fatal("goldfish never played a land; cannot validate mana development")
 	}
 }

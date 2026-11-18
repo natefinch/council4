@@ -260,8 +260,15 @@ func (s *rulesPaymentState) OrdinaryManaOnly(player game.PlayerID) bool {
 	}
 	for _, cardID := range payer.Hand.All() {
 		card, ok := s.g.GetCardInstance(cardID)
-		if ok && len(cardFaceOrDefault(card, game.FaceFront).ManaAbilities) != 0 {
-			return false
+		if !ok {
+			continue
+		}
+		if face := cardFaceOrDefault(card, game.FaceFront); face != nil {
+			for i := range face.ManaAbilities {
+				if game.BodyFunctionZone(&face.ManaAbilities[i]) == zone.Hand {
+					return false
+				}
+			}
 		}
 	}
 	return true

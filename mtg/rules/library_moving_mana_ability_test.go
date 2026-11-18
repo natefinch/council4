@@ -253,11 +253,16 @@ func (a *activationOptionsAgent) ChooseChoice(obs PlayerObservation, request gam
 // repeats identically when an earlier mana ability is reversed around it.
 func addAltarAndColossus(t *testing.T, g *game.Game, player game.PlayerID) id.ID {
 	t.Helper()
+	addCombatPermanent(g, player, registryCardDef(t, "Phyrexian Altar"))
+	return addBorrowedColossus(t, g, player)
+}
+
+func addBorrowedColossus(t *testing.T, g *game.Game, player game.PlayerID) id.ID {
+	t.Helper()
 	owner := game.Player2
 	if player == owner {
 		owner = game.Player1
 	}
-	addCombatPermanent(g, player, registryCardDef(t, "Phyrexian Altar"))
 	colossus := addCombatPermanent(g, player, registryCardDef(t, "Blightsteel Colossus"))
 	colossus.Owner = owner
 	g.CardInstances[colossus.CardInstanceID].Owner = owner

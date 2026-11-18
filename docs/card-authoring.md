@@ -44,8 +44,11 @@ Ordinary non-mana activations, triggers and resolving spells can use Go programs
    (`mtg/rules/ability_paragraphs.go`); `TestRegisteredUntextedAbilitiesHaveOwnParagraphs`
    fails when that is ambiguous, so then record the ability's exact `Text`.
    Likewise a fixed-timing delayed trigger carries its own sentence of the
-   creating text; `TestRegisteredFixedDelayedTriggersHaveOwnText` fails when
-   that sentence cannot be singled out, so then record `DelayedTriggerDef.Text`.
+   creating text. When that sentence cannot be singled out, record
+   `DelayedTriggerDef.Text`. For cards with such triggers, check the changed
+   definition with `COUNCIL4_DELAYED_TRIGGER_AUDIT='Card Name' go test ./mtg/rules
+   -run '^TestRegisteredFixedDelayedTriggersHaveOwnText$'`. Use `'*'` instead
+   of a name for a registry audit when the wording rules change.
 4. Execute one named scenario per card through the real Engine that plays its
    own Oracle text: its costs, choices, targets and result, not just CardDef
    shapes or a smoke game's winner. Shared-operation behavior (copies, clones,

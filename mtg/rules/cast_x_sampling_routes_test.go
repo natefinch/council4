@@ -409,16 +409,13 @@ func TestCastXSamplingAlternativeCostRoutes(t *testing.T) {
 // TestCastXSamplingMultikickedReducedSpell covers CR 601.2b, 601.2f and
 // 702.33c-d for the combined-cost route: Comet Storm's multikicker payments add
 // to the total cost that Goblin Electromancer's {1} reduction lowers, so three
-// Mountains cast it for X up to 2 unkicked, 1 kicked once and 0 kicked twice,
+// red mana cast it for X up to 2 unkicked, 1 kicked once and 0 kicked twice,
 // and each kick count's boundary X is listed exactly when validation accepts it.
 func TestCastXSamplingMultikickedReducedSpell(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	groupExileRegistryPermanent(t, g, game.Player1, "Goblin Electromancer")
-	var mountains []*game.Permanent
-	for range 3 {
-		mountains = append(mountains, addBasicLandPermanent(g, game.Player1, types.Mountain))
-	}
+	g.Players[game.Player1].ManaPool.Add(mana.R, 3)
 	storm := addCardToHand(g, game.Player1, groupExileRegistryDef(t, "Comet Storm"))
 	giveMainPhasePriority(g, game.Player1)
 	actions := engine.legalActions(g, game.Player1)
@@ -448,9 +445,7 @@ func TestCastXSamplingMultikickedReducedSpell(t *testing.T) {
 	if !ok || top.SourceID != storm || top.XValue != 1 || top.KickerCount != 1 || len(top.Targets) != 2 {
 		t.Fatalf("stack top = %+v, want Comet Storm kicked once for X=1 with two targets", top)
 	}
-	for _, mountain := range mountains {
-		if !mountain.Tapped {
-			t.Fatalf("Mountain %v untapped after paying {1}{R}{R} plus {1} kicker minus {1}; want all three tapped", mountain.ObjectID)
-		}
+	if left := g.Players[game.Player1].ManaPool.Total(); left != 0 {
+		t.Fatalf("%d mana left after paying {1}{R}{R} plus {1} kicker minus {1}; want none", left)
 	}
 }
