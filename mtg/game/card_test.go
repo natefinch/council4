@@ -353,6 +353,9 @@ func TestCardFaceCloneClonesSpellCosts(t *testing.T) {
 				Kind: cost.AdditionalDiscard,
 				Text: "Discard a card",
 			}},
+			Conditions: []cost.AlternativePredicate{{
+				Kind: cost.AlternativeConditionOpponentControlsPermanentSubtype, Subtype: types.Island,
+			}},
 		}},
 		SpellAbility: opt.Val(AbilityContent{}),
 	}
@@ -363,10 +366,12 @@ func TestCardFaceCloneClonesSpellCosts(t *testing.T) {
 	face.AlternativeCosts[0].Label = "changed"
 	face.AlternativeCosts[0].ManaCost.Val[0] = cost.O(9)
 	face.AlternativeCosts[0].AdditionalCosts[0].Text = "changed"
+	face.AlternativeCosts[0].Conditions[0].Subtype = types.Mountain
 	if cloned.AdditionalCosts[0].Text != "Pay 2 life" ||
 		cloned.AlternativeCosts[0].Label != "Flashback" ||
 		cloned.AlternativeCosts[0].ManaCost.Val[0] != cost.O(3) ||
-		cloned.AlternativeCosts[0].AdditionalCosts[0].Text != "Discard a card" {
+		cloned.AlternativeCosts[0].AdditionalCosts[0].Text != "Discard a card" ||
+		cloned.AlternativeCosts[0].Conditions[0].Subtype != types.Island {
 		t.Fatalf("cloned face costs alias source costs: %+v %+v", cloned.AdditionalCosts, cloned.AlternativeCosts)
 	}
 }

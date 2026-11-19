@@ -43,6 +43,36 @@ func spellOptionByLabel(options []spellCostOption, label string) (spellCostOptio
 	return spellCostOption{}, false
 }
 
+func TestConditionalAlternativeExplicitRequest(t *testing.T) {
+	t.Parallel()
+	alternative := cost.Alternative{
+		ManaCost:  opt.Val(cost.Mana{}),
+		Condition: cost.AlternativeConditionYourTurn,
+		Conditions: []cost.AlternativePredicate{{
+			Kind: cost.AlternativeConditionOpponentGainedLifeThisTurn,
+		}},
+	}
+	request := ForSpell(SpellRequest{
+		PlayerID: game.Player1, Card: &game.CardDef{}, SourceZone: zone.Hand,
+		Alternative: opt.Val(alternative),
+	})
+	// A captured request must keep the original predicate if the caller edits
+	// its own declaration before options are evaluated.
+	alternative.Conditions[0].Kind = cost.AlternativeConditionNone
+	if options := spellCostOptionsForRequest(manaAlternativeState{}, request.spell); len(options) != 0 {
+		t.Fatal("explicit alternative ignored a false conjunct")
+	}
+	satisfied := manaAlternativeState{opponentGainedLife: true}
+	if options := spellCostOptionsForRequest(satisfied, request.spell); len(options) != 1 {
+		t.Fatal("explicit alternative missing with all conditions true")
+	}
+	opponentRequest := request.spell
+	opponentRequest.PlayerID = game.Player2
+	if options := spellCostOptionsForRequest(satisfied, opponentRequest); len(options) != 0 {
+		t.Fatal("explicit alternative ignored a false legacy condition")
+	}
+}
+
 // TestManaAlternativeCostOfferedOnlyWhenConditionSatisfied proves an opponent's
 // life-gain gate on a mana-only alternative cost is enforced at cast time: the
 // "Pay {B}" option appears alongside the normal cost only when the condition is
