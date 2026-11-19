@@ -139,6 +139,8 @@ Since policy 1.31.0, selection is card-driven. Card and Engine units keep separa
 
 When nothing is waiting, use the next executable saved batch or prepare a card attempt from the queue's families. Failed Engine work is retained rather than retried automatically; `retryGaps` explicitly retries a failed demonstrated need in a later run.
 
+The selector cannot file issues. That restriction does not carry over to the card author: if no existing issue covers a demonstrated blocker, the author may file one and return its number. On a first handoff, no earlier prerequisite evidence is needed.
+
 The run report shows observed Engine AIC per distinct linked card admitted or repaired **in the same run**. It reports `n/a` when there is no such card or accounting is incomplete. Cross-run follow-ups retain the originating Engine worktree and revision, but do not claim its spend in the later run.
 
 To continue a review-rejected or validation-failed Engine unit instead of

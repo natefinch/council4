@@ -748,6 +748,9 @@ Do not claim source review, implementation or issue completion.`,
               const plan = normalizeBatchPlan(selected.batchPlan, manifest);
               if (plan.records.some(r => waiting.has(r.oracle_id))) throw new Error("Card already has a waiting unit");
               selected.batchPlan = JSON.stringify(plan);
+              // The selector is read-only. Derive the author's assignment from
+              // the reviewed members, not prose that can carry over that restriction.
+              selected.instructions = batchTask({ batch: plan.batches[0], cards: plan.records }).instructions;
             }
             catch (error) {
               return { taskType: "invalid", id: `select-${index}`, title: `Invalid selection: ${error.message}`,
