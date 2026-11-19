@@ -57,6 +57,9 @@ type ObjectSnapshot struct {
 	// permanent this turn so a triggered ability can resolve after its source
 	// leaves the battlefield.
 	SaddleContributorIDs []id.ID
+	// BlitzDeathTrigger is present only if the granted dies ability was
+	// effective before departure (CR 603.10a).
+	BlitzDeathTrigger opt.V[TriggerOrigin]
 	// SneakPaid and SneakPaidTurn preserve the permanent's sneak-paid state
 	// (CR 702.190b) for an ability that resolves after it leaves.
 	SneakPaid        bool

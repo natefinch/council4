@@ -57,7 +57,8 @@ type permanentCreationOptions struct {
 	// Dash alternative cost (CR 702.109), feeding the Dash trigger's intervening
 	// "if its dash cost was paid" condition. It is false for every permanent that
 	// did not enter from a dashed cast.
-	Dashed bool
+	Dashed  bool
+	Blitzed bool
 	// Sneaked makes the entering permanent record that its spell's sneak cost
 	// was paid (CR 702.190b): the permanent and its enter event carry it for
 	// "if its sneak cost was paid" conditions. It is false for every permanent
@@ -186,6 +187,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	}
 	initializePermanentCounters(permanent, faceDef)
 	permanent.Bestowed = options.Bestowed
+	permanent.Blitzed = options.Blitzed
 	options.applySneakPaid(g, permanent)
 	applyInitialContinuousEffects(g, permanent, continuous)
 	registerPermanentReplacementEffects(g, permanent)
@@ -224,6 +226,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 		OffspringPaid:             options.OffspringPaid,
 		EnterEvoked:               options.Evoked,
 		EnterDashed:               options.Dashed,
+		EnterBlitzed:              permanent.Blitzed,
 		EnterSneaked:              options.Sneaked,
 		EnterWasCast:              options.WasCast,
 		EnterHasSpellAnnouncement: permanent.HasSpellAnnouncement,
@@ -294,6 +297,7 @@ func prepareCardPermanentFaceForSimultaneousEntry(
 	}
 	initializePermanentCounters(permanent, faceDef)
 	permanent.Bestowed = options.Bestowed
+	permanent.Blitzed = options.Blitzed
 	options.applySneakPaid(g, permanent)
 	// CR 611.2e characteristics participate in the entry replacement check.
 	// The entrant itself remains outside the battlefield until the batch commits.
@@ -383,6 +387,7 @@ func simultaneousCardPermanentEntryEvent(entry *preparedCardPermanentEntry) game
 		OffspringPaid:             entry.options.OffspringPaid,
 		EnterEvoked:               entry.options.Evoked,
 		EnterDashed:               entry.options.Dashed,
+		EnterBlitzed:              permanent.Blitzed,
 		EnterSneaked:              entry.options.Sneaked,
 		EnterWasCast:              entry.options.WasCast,
 		EnterHasSpellAnnouncement: permanent.HasSpellAnnouncement,

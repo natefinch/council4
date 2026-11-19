@@ -254,6 +254,10 @@ type Permanent struct {
 	// is attached to an illegal object (CR 702.103e–g), which clears this flag.
 	Bestowed bool
 
+	// Blitzed records the Blitz payment decision of the resolving spell.
+	// It is not a copiable value of the permanent (CR 400.7d, 707.2).
+	Blitzed bool
+
 	// ReanimationLinkedObject is set on a graveyard-reanimation Aura (Animate
 	// Dead, Dance of the Dead) after it resolves: it records the ObjectID of the
 	// creature the Aura returned to the battlefield and attached to. It models

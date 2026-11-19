@@ -597,6 +597,7 @@ func applyEnterBattlefieldReplacementEffects(ctx enterBattlefieldContext, g *gam
 		TokenDef:                  permanent.TokenDef,
 		KickerPaid:                ctx.kickerPaid,
 		Bargained:                 ctx.bargained,
+		EnterBlitzed:              permanent.Blitzed,
 		EnterHasSpellAnnouncement: ctx.wasCast || ctx.hasSpellAnnouncement,
 		EnterXValue:               ctx.xValue,
 		EnterWasCast:              ctx.wasCast,

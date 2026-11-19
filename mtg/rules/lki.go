@@ -62,6 +62,14 @@ func snapshotPermanent(g *game.Game, permanent *game.Permanent, zoneType zone.Ty
 		AttachedToPlayer: permanent.AttachedToPlayer,
 		ZoneOrderIndex:   -1,
 	}
+	if permanent.Blitzed {
+		for i, body := range values.abilities {
+			if body == game.BlitzDeathTriggeredBody {
+				snapshot.BlitzDeathTrigger = opt.Val(values.triggerOrigins[i])
+				break
+			}
+		}
+	}
 	if !permanent.Token {
 		if card, ok := g.GetCardInstance(permanent.CardInstanceID); ok {
 			snapshot.ZoneCards = append(snapshot.ZoneCards, game.ZoneCardSnapshot{

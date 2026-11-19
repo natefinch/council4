@@ -679,6 +679,7 @@ func prepareTokenEntryWithOptions(e *Engine, g *game.Game, controller game.Playe
 		Face:                 face,
 		Transformed:          face == game.FaceBack,
 		Bestowed:             options.Bestowed,
+		Blitzed:              options.Blitzed,
 		EnteredFromCast:      options.WasCast,
 		HasSpellAnnouncement: options.WasCast || options.HasSpellAnnouncement,
 	}
@@ -718,6 +719,7 @@ func commitTokenEntries(g *game.Game, entries []preparedTokenEntry, simultaneous
 			FromZone: zone.None, ToZone: entry.destination, SimultaneousID: simultaneousID,
 			KickerPaid: entry.options.KickerPaid, Bargained: entry.options.Bargained, OffspringPaid: entry.options.OffspringPaid,
 			EnterEvoked: entry.options.Evoked, EnterDashed: entry.options.Dashed, EnterSneaked: entry.options.Sneaked,
+			EnterBlitzed: permanent.Blitzed,
 			EnterWasCast: entry.options.WasCast, EnterHasSpellAnnouncement: permanent.HasSpellAnnouncement,
 			EnterXValue: permanent.CastXValue, EnterCastController: entry.options.CastController,
 			EnterHasCastController: entry.options.HasCastController, EnterCastFromZone: entry.options.CastFromZone,

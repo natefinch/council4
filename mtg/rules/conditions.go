@@ -281,6 +281,9 @@ func conditionSatisfied(g *game.Game, ctx conditionContext, condition opt.V[game
 	if cond.SourceBestowed {
 		matches = matches && ctx.source != nil && ctx.source.Bestowed
 	}
+	if cond.SourceBlitzed {
+		matches = matches && ctx.source != nil && ctx.source.Blitzed
+	}
 	if cond.SourceTributeNotPaid {
 		matches = matches && ctx.source != nil && !ctx.source.TributePaid
 	}

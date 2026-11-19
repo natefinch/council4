@@ -967,6 +967,23 @@ func eventTriggeredAbilities(g *game.Game, event game.Event, events []game.Event
 	}
 	if source, ok := leftBattlefieldTriggerSource(g, event); ok {
 		pending = append(pending, detectTriggeredAbilitiesFromPermanent(g, source, event)...)
+		if event.Kind == game.EventPermanentDied {
+			snapshot, _ := lastKnownObject(g, event.PermanentID)
+			if snapshot.BlitzDeathTrigger.Exists {
+				pending = append(pending, pendingTriggeredAbility{
+					triggerOrigin:   snapshot.BlitzDeathTrigger.Val,
+					controller:      snapshot.Controller,
+					sourceID:        source.ObjectID,
+					sourceCardID:    source.CardInstanceID,
+					sourceToken:     source.TokenDef,
+					face:            source.Face,
+					inline:          game.BlitzDeathTriggeredBody,
+					event:           event,
+					hasEvent:        true,
+					ordinaryTrigger: true,
+				})
+			}
+		}
 	}
 	pending = append(pending, cycledCardSelfTriggers(g, event)...)
 	pending = append(pending, graveyardStepSourceTriggers(g, event)...)
