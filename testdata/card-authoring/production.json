@@ -1771,6 +1771,13 @@
     "oracle_text_sha256": "fb8724684420742ea001bd8ed65f18a4e1afa38eb8fadee4ee710c35959da53e",
     "revision": "237e37fb-383d-432c-8ac3-1332096567db",
     "rulings_uri": "https://api.scryfall.com/cards/237e37fb-383d-432c-8ac3-1332096567db/rulings"
+   },
+   {
+    "name": "Memory Sluice",
+    "oracle_id": "a30b659e-ae2b-4736-9b4f-a9805905bf75",
+    "oracle_text_sha256": "cd0af652438696d50c62b3cac241d8d4c1bf37ebdbfa32f7924ef1b029e11b71",
+    "revision": "5fd93980-55f6-43a0-87db-5fa1203aa7b6",
+    "rulings_uri": "https://api.scryfall.com/cards/5fd93980-55f6-43a0-87db-5fa1203aa7b6/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8991,6 +8998,19 @@
     "game.ContinuousEffect.SetColorless"
    ],
    "review": "Capability-fit packet at origin/main 48e5af21576cf25d2bbbca58a749a70b25ce4f29: docs/card-authoring.md capability lookup; mtg/cardprogram/README.md; mtg/cards/authored/chaoslace.go; mtg/rules/chaoslace_test.go; mtg/rules/spell_color_effects_test.go; mtg/rules/continuous.go applyColorLayer; mtg/rules/continuous_test.go SetColorless prior art. This is not a claim of source or rules review for the selected cards."
+  },
+  {
+   "id": "memory-sluice-conspire-20261119",
+   "family": "single-card-conspire-mill",
+   "oracle_ids": [
+    "a30b659e-ae2b-4736-9b4f-a9805905bf75"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.ConspireStaticBody",
+    "game.MoveTopOfLibrary"
+   ],
+   "review": "Capability references: mtg/cardprogram/README.md#capability-lookup (Conspire); mtg/game/primitive_move_top_of_library.go (MoveTopOfLibrary); mtg/rules/conspire_test.go"
   }
  ],
  "records": [
@@ -192444,8 +192464,10 @@
    "oracle_id": "a30b659e-ae2b-4736-9b4f-a9805905bf75",
    "revision": "5fd93980-55f6-43a0-87db-5fa1203aa7b6",
    "name": "Memory Sluice",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "single-card-conspire-mill",
+   "batch": "memory-sluice-conspire-20261119",
+   "evidence": "mtg/rules/memory_sluice_test.go: TestMemorySluiceConspireMillsDifferentTargetPlayers; CR 2026-11-06 105.2, 601.2b/c/f-i, 608.2b/c/n, 701.17a-b, 702.78a, 707.10/.10c"
   },
   {
    "oracle_id": "a30d076b-c942-45e4-b943-3749ce955291",
