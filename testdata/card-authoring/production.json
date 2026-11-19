@@ -1722,6 +1722,13 @@
     "oracle_text_sha256": "d9d1d45ff914b8b9c1e2acdeca3c4ca9f0545b948e202d771885e9897fa68df2",
     "revision": "58b431d2-33c1-49d8-b45d-690c174bb456",
     "rulings_uri": "https://api.scryfall.com/cards/58b431d2-33c1-49d8-b45d-690c174bb456/rulings"
+   },
+   {
+    "name": "Mayhem Patrol",
+    "oracle_id": "f77a9160-1d37-476d-8908-29ddcc982328",
+    "oracle_text_sha256": "198ce508d410eaaa1801d38cd04c83a01541e2dcedff464611a29cb19f80c361",
+    "revision": "50162cdd-ba30-48df-93ff-197c7f4a2913",
+    "rulings_uri": "https://api.scryfall.com/cards/50162cdd-ba30-48df-93ff-197c7f4a2913/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8898,6 +8905,18 @@
     "Expected Caldaia Strongarm's entry trigger to put two +1/+1 counters on a target creature, alongside Blitz consequences; the Engine does not retain whether Blitz was paid, preventing correct conditional behavior."
    ],
    "review": "Card Caldaia Strongarm, checked Engine result for #4005 on 7209aba35e16cdc2dbd9bb514deaa7e47db5a59d: Implemented shared Blitz support: typed payment provenance, immediate haste, a draw on death, and a next-end-step sacrifice tied to the original permanent. No cards were registered; changes remain uncommitted in the isolated worktree.\nOn main c1089ccbb, `go test -overlay=.cardwork/gap-4005/overlay.json ./mtg/rules -run '^TestRiveteersDecoyBlitzPaymentProvenanceProbe$' -count=1` reproduced the missing payment marker.\n`go test ./mtg/rules -run '^TestBlitz(Paid|Early|Stack|Countered|Combines|Ability|Permanent)' -count=1 -v` passed all eight scenarios, including combined costs, copies, replay, and replaced entry.\n`go test ./mtg/game/... ./mtg/cardprogram/... ./mtg/rules/... -count=1` and `git diff --check` passed.\nSource review is in mtg/rules/blitz_test.go; verified rules and six rulings responses are retained under .cardwork/gap-4005/. Prepared copies are restricted to instants and sorceries and cannot become Blitz permanents."
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-0",
+   "family": "card-followup",
+   "oracle_ids": [
+    "f77a9160-1d37-476d-8908-29ddcc982328"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected Mayhem Patrol's menace and attack trigger to give a target creature +1/+0 until end of turn, alongside Blitz consequences; the Engine does not retain whether Blitz was paid, preventing correct conditional behavior."
+   ],
+   "review": "Card Mayhem Patrol, checked Engine result for #4005 on 7209aba35e16cdc2dbd9bb514deaa7e47db5a59d: Implemented shared Blitz support: typed payment provenance, immediate haste, a draw on death, and a next-end-step sacrifice tied to the original permanent. No cards were registered; changes remain uncommitted in the isolated worktree.\nOn main c1089ccbb, `go test -overlay=.cardwork/gap-4005/overlay.json ./mtg/rules -run '^TestRiveteersDecoyBlitzPaymentProvenanceProbe$' -count=1` reproduced the missing payment marker.\n`go test ./mtg/rules -run '^TestBlitz(Paid|Early|Stack|Countered|Combines|Ability|Permanent)' -count=1 -v` passed all eight scenarios, including combined costs, copies, replay, and replaced entry.\n`go test ./mtg/game/... ./mtg/cardprogram/... ./mtg/rules/... -count=1` and `git diff --check` passed.\nSource review is in mtg/rules/blitz_test.go; verified rules and six rulings responses are retained under .cardwork/gap-4005/. Prepared copies are restricted to instants and sorceries and cannot become Blitz permanents."
   }
  ],
  "records": [
@@ -263977,8 +263996,10 @@
    "oracle_id": "f77a9160-1d37-476d-8908-29ddcc982328",
    "revision": "50162cdd-ba30-48df-93ff-197c7f4a2913",
    "name": "Mayhem Patrol",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-0",
+   "evidence": "mtg/rules/mayhem_patrol_test.go: TestMayhemPatrolBlitzAttackTargetsAnyCreatureAndGivesPlusOnePower"
   },
   {
    "oracle_id": "f77dfcb6-72b0-4d50-8177-6f6c57a034b9",
