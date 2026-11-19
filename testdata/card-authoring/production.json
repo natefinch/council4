@@ -1547,6 +1547,13 @@
     "oracle_text_sha256": "1c1f44aff9d1eaa6411172ba4276a0b4c12ec26527f5480fdc76eee5670e8b50",
     "revision": "2b93e65e-8a10-444f-8b0a-9327dd30cce2",
     "rulings_uri": "https://api.scryfall.com/cards/2b93e65e-8a10-444f-8b0a-9327dd30cce2/rulings"
+   },
+   {
+    "name": "Refreshing Rain",
+    "oracle_id": "c6f69168-71c2-41a2-ab95-cfd7baf0ba68",
+    "oracle_text_sha256": "983ec0767a10003b7c9ed0328fbdb37ddb876ca830170e6f2f38b3283ce71d72",
+    "revision": "c5e24850-bd9b-40ab-878f-b8a554da1956",
+    "rulings_uri": "https://api.scryfall.com/cards/c5e24850-bd9b-40ab-878f-b8a554da1956/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8541,6 +8548,20 @@
     "Expected: offer the free cast only when the caster controls a Mountain and some opponent controls an Island at casting time. Actual: the available Mountain-only condition makes the free cast legal without an opponent-controlled Island."
    ],
    "review": "Card Mogg Salvage, checked Engine result for #3991 on 26f782b87f6cb163212f70c5bf9bcaaf9510f1b6: Implemented conjunctive alternative-cost predicates for #3991. Mogg Salvage’s free cast requires both a caster-controlled Mountain and an opponent-controlled Island. The Engine change is unmerged; card registration remains with the card worker.\nOn remote main 16e2bac0974430d377ed98460df4dd7e640f607a, `go test -overlay .cardwork/issue-3991/baseline-overlay.json -tags card_support_gap_probe ./mtg/rules -run '^TestMoggSalvageCompoundAlternativeCostConditionProbe$' -count=1` reproduced the free cast being offered without an opponent-controlled Island.\n`go test -v ./mtg/rules ./mtg/rules/payment -run '^(TestMoggSalvageConditionalAlternativeCost|TestConditionalAlternative.*)$' -count=1` passed. The scenarios cover each missing condition, current control, phasing, mana value 3, artifact destruction after the gate stops holding, combined costs, and exile cast routes.\n`go test ./mtg/game ./mtg/game/cost ./mtg/rules/payment ./mtg/rules -count=1` and `git diff --check` passed. Existing regressions cover stack copies, storm, cascade, clone/replay, countering, and fizzling. Predicates are used only during casting and add no stack or destination state.\nVerified Oracle, rulings, and the 2026-11-06 Comprehensive Rules are recorded in `mtg/rules/conditional_alternative_cost_test.go`; raw sources and the baseline probe remain in `.cardwork/issue-3991/`."
+  },
+  {
+   "id": "remaining-refreshing-rain-2026-11-19",
+   "family": "refreshing-rain-alternative-cost",
+   "oracle_ids": [
+    "c6f69168-71c2-41a2-ab95-cfd7baf0ba68"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "cost.Alternative.Conditions / AlternativePredicate",
+    "game.TargetSpec",
+    "game.GainLife"
+   ],
+   "review": "Capability-fit references: mtg/cardprogram/README.md:21; mtg/cards/authored/learn_spells.go:135-141. Primary-source and official-rules review remain assigned to the author."
   }
  ],
  "records": [
@@ -221920,8 +221941,10 @@
    "oracle_id": "c6f69168-71c2-41a2-ab95-cfd7baf0ba68",
    "revision": "c5e24850-bd9b-40ab-878f-b8a554da1956",
    "name": "Refreshing Rain",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "refreshing-rain-alternative-cost",
+   "batch": "remaining-refreshing-rain-2026-11-19",
+   "evidence": "mtg/rules/refreshing_rain_test.go: TestAuthoredRefreshingRainScenario"
   },
   {
    "oracle_id": "c6f7efad-381c-45ba-9976-159b7e78f7ed",
