@@ -1526,6 +1526,13 @@
     "oracle_text_sha256": "9ed8123d1b88d31f60387905ac33a195340c2a8f6ed7324ec8a85b9261564768",
     "revision": "a20d20f7-bc4d-42fa-9f5b-5bb330eb7f38",
     "rulings_uri": "https://api.scryfall.com/cards/a20d20f7-bc4d-42fa-9f5b-5bb330eb7f38/rulings"
+   },
+   {
+    "name": "Ghastly Discovery",
+    "oracle_id": "1ca875f0-50a7-4332-8643-c2b4bbda18b1",
+    "oracle_text_sha256": "06a9fd9d491051f419b81168449cd328282548f26fa0957319c63c2570aac097",
+    "revision": "9dbd510a-d71f-4b0c-bc6c-e403f632cbdb",
+    "rulings_uri": "https://api.scryfall.com/cards/9dbd510a-d71f-4b0c-bc6c-e403f632cbdb/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8481,6 +8488,20 @@
     "game.AddCounter"
    ],
    "review": "Pinned corpus identity and mtg/cardprogram/README.md#capability-lookup; primary-source review remains pending."
+  },
+  {
+   "id": "ghastly-discovery-2026-11-19",
+   "family": "conspire-cantrip",
+   "oracle_ids": [
+    "1ca875f0-50a7-4332-8643-c2b4bbda18b1"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.ConspireStaticBody",
+    "game.Draw",
+    "game.Discard"
+   ],
+   "review": "Capability packet at origin/main@9e2eb23: docs/card-authoring.md; mtg/cardprogram/README.md; Conspire declaration and behavior in mtg/game/ability.go and mtg/rules/conspire_test.go; Draw/Discard in mtg/game/primitive.go. Required primary-source and official-rules review remains for the author."
   }
  ],
  "records": [
@@ -78049,8 +78070,10 @@
    "oracle_id": "1ca875f0-50a7-4332-8643-c2b4bbda18b1",
    "revision": "9dbd510a-d71f-4b0c-bc6c-e403f632cbdb",
    "name": "Ghastly Discovery",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "conspire-cantrip",
+   "batch": "ghastly-discovery-2026-11-19",
+   "evidence": "mtg/rules/ghastly_discovery_test.go: TestGhastlyDiscoveryDrawsThenDiscardsWithConspire; CR 2026-11-06 105.2-3, 121.1-2, 307.1, 601.2a-i, 608.2c-e, 701.9a-b, 702.78a, 707.10"
   },
   {
    "oracle_id": "1ca8d2cb-58ba-476b-a4f2-1bf273a54cf3",
