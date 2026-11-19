@@ -20,6 +20,7 @@ func verifiedEntries() []cardset.Entry {
 	entries = append(entries, WarpWorld, PanglacialWurm)
 	entries = append(entries, GhostVacuum, NecromanticSelection, ToothCollector, MarchesaDealerOfDeath)
 	entries = append(entries, MyrCustodian)
+	entries = append(entries, MoggSalvage)
 	entries = append(entries, Reiterate, Allay, Capsize)
 	entries = append(entries, SearingTouch, SeethingAnger, MindPeel, ElvishFury)
 	entries = append(entries, RecruitTheWorthy, MindGames, HazeOfRage)
