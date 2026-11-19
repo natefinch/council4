@@ -211,14 +211,14 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 			}
 			castRoutes = permanentTypePlayCastRoutes(sourceRoutes, cast.Permission)
 			requests = mode.castRouteRequests(priorityCastRequest(playerID, spellDef, sourceZone, cast, permissions, nil), castRoutes)
-			complete := e.pendingSpellPayment(g, announcementDef, cast)
-			route, partial, ok = e.choosePrioritySpellPayment(g, castRoutes, requests, complete, agents, log)
+			complete := e.pendingSpellPayment(g, announcementDef, cast, exactSpellTargets)
+			route, partial, obj.AlternativeCost, ok = e.choosePrioritySpellPayment(g, castRoutes, requests, complete, agents, log)
 			if !ok {
 				return payment.Request{}, partial, false
 			}
 			request = requests[route]
 			if sourceZone == zone.Hand && !cast.Overloaded && spellIsArcane(spellDef) {
-				splice = e.choosePrioritySplice(g, playerID, card.ID, request, partial, complete, agents, log)
+				splice = e.choosePrioritySplice(g, playerID, card.ID, request, partial, obj.AlternativeCost, agents, log)
 				request.SpliceManaCosts = splice.manaCosts
 				obj.SplicedContent = splice.contents
 			}
@@ -228,12 +228,13 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 			complete := func(request payment.SpellRequest, partial payment.Partial) (payment.Plan, bool) {
 				return e.completeSplicedPayment(g, playerID, spellDef, splice.cards, request, partial)
 			}
-			cast.Targets, ok = e.chooseCostedSpellTargets(g, playerID, announcementDef, cast, request, partial, agents, log, complete)
+			branch := castBranchForObject(obj)
+			cast.Targets, ok = e.chooseCostedSpellTargets(g, playerID, announcementDef, cast, branch, request, partial, agents, log, complete)
 			if !ok {
 				return false
 			}
 			obj.Targets = slices.Clone(cast.Targets)
-			obj.TargetCounts, ok = spellTargetCounts(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, castBranchForCast(cast))
+			obj.TargetCounts, ok = spellTargetCounts(g, playerID, announcementDef, cast.ChosenModes, cast.Targets, branch)
 			if !ok || !e.completePrioritySpliceTargets(g, playerID, spellDef, cast, &splice, request, partial, agents, log) {
 				return false
 			}
@@ -408,7 +409,7 @@ func (e *Engine) attemptMutateCastWithChoices(g *game.Game, playerID game.Player
 				}
 				return payment.Plan{}, false
 			}
-			route, partial, ok = e.choosePrioritySpellPayment(g, castRoutes, requests, complete, agents, log)
+			route, partial, _, ok = e.choosePrioritySpellPayment(g, castRoutes, requests, complete, agents, log)
 			request = requests[route]
 			return payment.ForSpell(request), partial, ok
 		},
@@ -716,7 +717,8 @@ func (e *Engine) preparedCopyChoicesLegal(g *game.Game, playerID game.PlayerID, 
 	}
 	branch := game.CastBranch{XValue: opt.Val(xValue), KickerCount: opt.Val(0)}
 	if !modesValidForSpellAt(g, playerID, spellDef, chosenModes) ||
-		!spellTargetsValidForCast(g, playerID, spellDef, chosenModes, targets, xValue, 0, branch) {
+		(!spellHasAlternativeCostTarget(spellDef, chosenModes) &&
+			!spellTargetsValidForCast(g, playerID, spellDef, chosenModes, targets, xValue, 0, branch)) {
 		return false
 	}
 	request := payment.SpellRequest{
@@ -778,16 +780,17 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 		available: func(g *game.Game) bool { return e.priorityCastCostsAvailable(g, obj, []payment.SpellRequest{request}) },
 		cost:      activationCost{present: func(g *game.Game) bool { return costedSpellPresent(g, obj) }},
 		proposal: func(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (payment.Request, payment.Partial, bool) {
-			_, partial, ok = e.choosePrioritySpellPayment(g, nil, []payment.SpellRequest{request}, e.pendingSpellPayment(g, spellDef, cast), agents, log)
+			_, partial, obj.AlternativeCost, ok = e.choosePrioritySpellPayment(g, []castRoute{{}}, []payment.SpellRequest{request}, e.pendingSpellPayment(g, spellDef, cast, exactSpellTargets), agents, log)
 			return payment.ForSpell(request), partial, ok
 		},
 		targets: func(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) bool {
-			cast.Targets, ok = e.chooseCostedSpellTargets(g, playerID, spellDef, cast, request, partial, agents, log)
+			branch := castBranchForObject(obj)
+			cast.Targets, ok = e.chooseCostedSpellTargets(g, playerID, spellDef, cast, branch, request, partial, agents, log)
 			if !ok {
 				return false
 			}
 			obj.Targets = slices.Clone(cast.Targets)
-			obj.TargetCounts, ok = spellTargetCounts(g, playerID, spellDef, cast.ChosenModes, cast.Targets, castBranchForCast(cast))
+			obj.TargetCounts, ok = spellTargetCounts(g, playerID, spellDef, cast.ChosenModes, cast.Targets, branch)
 			request.Targets = cast.Targets
 			targetEvents = prepareTargetEvents(g, obj)
 			return ok
@@ -1046,7 +1049,8 @@ func (e *Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game
 		return false
 	}
 	if !modesValidForSpellAtBranch(g, playerID, announcementDef, chosenModes, branch) || !isSupportedSpell(spellDef) ||
-		!spellTargetsValidForCast(g, playerID, announcementDef, chosenModes, targets, xValue, kickerCount, branch) {
+		(!spellHasAlternativeCostTarget(announcementDef, chosenModes) &&
+			!spellTargetsValidForCast(g, playerID, announcementDef, chosenModes, targets, xValue, kickerCount, branch)) {
 		return false
 	}
 	castFace := castSelectionFace(g, playerID, cardID, spellDef, bestowed)

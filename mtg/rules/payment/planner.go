@@ -44,13 +44,7 @@ func (p Planner) SpellCostOptions(req SpellRequest) []SpellOptionSummary {
 	options := spellCostOptionsForRequest(p.s, req)
 	result := make([]SpellOptionSummary, 0, len(options))
 	for _, option := range options {
-		result = append(result, SpellOptionSummary{
-			Index:           option.index,
-			Label:           option.label,
-			ManaCost:        option.manaCost,
-			AdditionalCosts: option.additionalCosts,
-			CastPermission:  option.castPermission,
-		})
+		result = append(result, option.summary())
 	}
 	return result
 }
@@ -89,9 +83,8 @@ func (p Planner) PrepareSpellCosts(req SpellRequest) []PreparedSpellCost {
 		option.additionalCosts = lockedCosts
 		option.locked = true
 		result = append(result, PreparedSpellCost{
-			Summary: SpellOptionSummary{Index: option.index, Label: option.label,
-				ManaCost: option.manaCost, AdditionalCosts: option.additionalCosts, CastPermission: option.castPermission},
-			option: option,
+			Summary: option.summary(),
+			option:  option,
 		})
 	}
 	return result

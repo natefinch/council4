@@ -55,6 +55,17 @@ func (o spellCostOption) spendContext() spendContext {
 	return spendContext{spell: spell, spendAs: o.spendAs, faceDownSpell: o.faceDown}
 }
 
+func (o spellCostOption) summary() SpellOptionSummary {
+	var declared cost.AlternativeIndex
+	if o.card != nil && o.alternativeIndex > 0 && o.alternativeIndex <= len(o.card.AlternativeCosts) {
+		declared = cost.AlternativeIndex(o.alternativeIndex)
+	}
+	return SpellOptionSummary{
+		Index: o.index, DeclaredAlternative: declared, Label: o.label,
+		ManaCost: o.manaCost, AdditionalCosts: o.additionalCosts, CastPermission: o.castPermission,
+	}
+}
+
 // spellCostOptionsForZoneAndKicker returns the available cost options for
 // casting a spell from the given zone with the kicker flag. When bargained is
 // set the spell's fixed Bargain additional cost (CR 702.166a) is added to every
@@ -736,13 +747,7 @@ func payableSpellOptionsFromState(s State, req SpellRequest) []SpellOptionSummar
 	var result []SpellOptionSummary
 	for _, option := range spellCostOptionsForRequest(s, req) {
 		if _, ok := buildSpellCostPlanForOption(s, req.PlayerID, req.CardID, req.SourceZone, option, req.XValue, req.Targets, req.Bestowed, nil); ok {
-			result = append(result, SpellOptionSummary{
-				Index:           option.index,
-				Label:           option.label,
-				ManaCost:        option.manaCost,
-				AdditionalCosts: option.additionalCosts,
-				CastPermission:  option.castPermission,
-			})
+			result = append(result, option.summary())
 		}
 	}
 	return result

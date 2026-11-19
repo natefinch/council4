@@ -2,6 +2,7 @@ package cardprogram
 
 import (
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -14,6 +15,9 @@ type Source struct {
 	StackID    id.ID
 	Controller game.PlayerID
 	X          int
+	// AlternativeCost is the declared alternative selected for the resolving
+	// spell, including copies. Zero means no declared alternative was selected.
+	AlternativeCost cost.AlternativeIndex
 	// EventPlayer is a captured historical identity, even if that player left.
 	EventPlayer opt.V[game.PlayerID]
 	// EventClash is the captured clash fact of a triggered ability whose

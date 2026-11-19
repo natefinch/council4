@@ -1,8 +1,11 @@
 package rules
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/opt"
 )
 
@@ -30,13 +33,14 @@ func castBranchForObject(obj *game.StackObject) game.CastBranch {
 		return game.CastBranch{}
 	}
 	return game.CastBranch{
-		GiftPromised: obj.GiftPromised,
-		Kicked:       effectiveKickerCount(obj.KickerPaid, obj.KickerCount) > 0,
-		Bargained:    obj.Bargained,
-		Bestowed:     obj.Bestowed,
-		Offspring:    obj.OffspringPaid,
-		XValue:       opt.Val(obj.XValue),
-		KickerCount:  opt.Val(effectiveKickerCount(obj.KickerPaid, obj.KickerCount)),
+		AlternativeCost: obj.AlternativeCost,
+		GiftPromised:    obj.GiftPromised,
+		Kicked:          effectiveKickerCount(obj.KickerPaid, obj.KickerCount) > 0,
+		Bargained:       obj.Bargained,
+		Bestowed:        obj.Bestowed,
+		Offspring:       obj.OffspringPaid,
+		XValue:          opt.Val(obj.XValue),
+		KickerCount:     opt.Val(effectiveKickerCount(obj.KickerPaid, obj.KickerCount)),
 	}
 }
 
@@ -45,11 +49,31 @@ func castBranchForObject(obj *game.StackObject) game.CastBranch {
 // the identity path through applyCastBranchToSpecs and the target-slot remap.
 func specsHaveGate(specs []game.TargetSpec) bool {
 	for i := range specs {
-		if specs[i].Gate != game.TargetGateAlways {
+		if specs[i].Gate != game.TargetGateAlways || specs[i].AlternativeCost != 0 {
 			return true
 		}
 	}
 	return false
+}
+
+// targetCostBranches lists the distinct alternative-cost target patterns that
+// need policy witnesses. Zero also covers other alternatives with no gated specs.
+func targetCostBranches(specs []game.TargetSpec) []cost.AlternativeIndex {
+	var branches []cost.AlternativeIndex
+	for _, spec := range specs {
+		if spec.AlternativeCost > 0 && !slices.Contains(branches, spec.AlternativeCost) {
+			if len(branches) == 0 {
+				branches = append(branches, 0)
+			}
+			branches = append(branches, spec.AlternativeCost)
+		}
+	}
+	return branches
+}
+
+func spellHasAlternativeCostTarget(def *game.CardDef, modes []int) bool {
+	return def != nil && len(def.AlternativeCosts) > 0 &&
+		slices.ContainsFunc(spellTargetSpecsRaw(def, modes), func(spec game.TargetSpec) bool { return spec.AlternativeCost != 0 })
 }
 
 // applyCastBranchToSpecs returns the spec list a spell announces, validates, and
@@ -65,11 +89,11 @@ func applyCastBranchToSpecs(specs []game.TargetSpec, branch game.CastBranch) []g
 	}
 	out := make([]game.TargetSpec, len(specs))
 	for i := range specs {
-		if specs[i].Gate.ActiveIn(branch) {
+		if specs[i].ActiveIn(branch) {
 			out[i] = specs[i]
 			continue
 		}
-		out[i] = game.TargetSpec{Gate: specs[i].Gate}
+		out[i] = game.TargetSpec{Gate: specs[i].Gate, AlternativeCost: specs[i].AlternativeCost}
 	}
 	return applyTargetNumbersToSpecs(out, branch)
 }
@@ -114,7 +138,7 @@ func gatedTargetSlot(specs []game.TargetSpec, branch game.CastBranch, index int)
 		if index < compileStart+width {
 			break
 		}
-		if specs[j].Gate != game.TargetGateAlways && !specs[j].Gate.ActiveIn(branch) {
+		if !specs[j].ActiveIn(branch) {
 			removed += width
 		}
 		compileStart += width
@@ -163,7 +187,7 @@ func gatedCardSlot(specs []game.TargetSpec, branch game.CastBranch, cardIndex in
 		if cardIndex < compileStart+width {
 			break
 		}
-		if specs[j].Gate != game.TargetGateAlways && !specs[j].Gate.ActiveIn(branch) {
+		if !specs[j].ActiveIn(branch) {
 			removed += width
 		}
 		compileStart += width

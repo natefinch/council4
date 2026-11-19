@@ -84,7 +84,19 @@ func (e *Engine) priorityCastCostsAvailable(g *game.Game, object *game.StackObje
 		if !castRouteAllowsX(request.Card, request.XValue, request) {
 			continue
 		}
-		if !object.Mutate && !spellTargetsValidForCast(view, request.PlayerID, priorityAnnouncementDef(request.Card, object.Overloaded),
+		def := priorityAnnouncementDef(request.Card, object.Overloaded)
+		if !object.Mutate && spellHasAlternativeCostTarget(def, request.ChosenModes) {
+			cast := action.CastSpellAction{XValue: request.XValue, ChosenModes: request.ChosenModes, Targets: request.Targets,
+				KickerPaid: request.KickerPaid, KickerCount: request.KickerCount, Bargained: request.Bargained,
+				Bestowed: request.Bestowed, Offspring: request.Offspring, GiftPromised: object.GiftPromised}
+			// Enumerated and direct casts must already have a legal target
+			// announcement and payable cost on the *same* branch.
+			if _, ok := e.pendingSpellPayment(view, def, cast, exactSpellTargets)(request, payment.Partial{}); ok {
+				return true
+			}
+			continue
+		}
+		if !object.Mutate && !spellTargetsValidForCast(view, request.PlayerID, def,
 			request.ChosenModes, request.Targets, request.XValue, effectiveKickerCount(request.KickerPaid, request.KickerCount),
 			game.CastBranch{XValue: opt.Val(request.XValue), KickerCount: opt.Val(effectiveKickerCount(request.KickerPaid, request.KickerCount)),
 				Kicked: request.KickerPaid, Bargained: request.Bargained, Bestowed: request.Bestowed, Offspring: request.Offspring, GiftPromised: object.GiftPromised}) {
@@ -93,7 +105,7 @@ func (e *Engine) priorityCastCostsAvailable(g *game.Game, object *game.StackObje
 		if slices.ContainsFunc(request.Targets, func(target game.Target) bool { return target.Kind == game.TargetDeferred }) {
 			cast := action.CastSpellAction{XValue: request.XValue, ChosenModes: request.ChosenModes, KickerPaid: request.KickerPaid,
 				KickerCount: request.KickerCount, Bargained: request.Bargained, Bestowed: request.Bestowed, Offspring: request.Offspring, GiftPromised: object.GiftPromised}
-			if _, ok := e.pendingSpellPayment(view, priorityAnnouncementDef(request.Card, object.Overloaded), cast)(request, payment.Partial{}); ok {
+			if _, ok := e.pendingSpellPayment(view, def, cast)(request, payment.Partial{}); ok {
 				return true
 			}
 			continue
@@ -118,13 +130,16 @@ func costedSpellPresent(g *game.Game, object *game.StackObject) bool {
 
 type spellPaymentCompletion func(payment.SpellRequest, payment.Partial) (payment.Plan, bool)
 
+const exactSpellTargets = true
+
 // Search lazily until a complete payment with exact targets is found. A
 // policy's target sample is never a feasibility proof (CR 601.2b/c/f/h).
-func (e *Engine) pendingSpellPayment(g *game.Game, def *game.CardDef, cast action.CastSpellAction) spellPaymentCompletion {
-	specs := prioritySpellTargetSpecs(def, cast.ChosenModes, castBranchForCast(cast), effectiveKickerCount(cast.KickerPaid, cast.KickerCount))
-	return func(request payment.SpellRequest, partial payment.Partial) (payment.Plan, bool) {
-		g.BeginStaticSourceFrame()
-		defer g.EndStaticSourceFrame()
+// A priority cast already supplies targets; use them to identify a compatible
+// cost branch. Casts during resolution have not announced any targets yet.
+func (e *Engine) pendingSpellPayment(g *game.Game, def *game.CardDef, cast action.CastSpellAction, exactTargets ...bool) spellPaymentCompletion {
+	branch := castBranchForCast(cast)
+	kicker := branch.KickerCount.Val
+	visit := func(request payment.SpellRequest, partial payment.Partial, specs []game.TargetSpec) (payment.Plan, bool) {
 		var plan payment.Plan
 		found := false
 		visitTargetChoicesForSpec(g, request.PlayerID, def, 0, game.Event{}, specs, 0, nil, nil,
@@ -134,6 +149,45 @@ func (e *Engine) pendingSpellPayment(g *game.Game, def *game.CardDef, cast actio
 				return !found
 			}})
 		return plan, found
+	}
+	if !spellHasAlternativeCostTarget(def, cast.ChosenModes) {
+		specs := prioritySpellTargetSpecs(def, cast.ChosenModes, branch, kicker)
+		return func(request payment.SpellRequest, partial payment.Partial) (payment.Plan, bool) {
+			g.BeginStaticSourceFrame()
+			defer g.EndStaticSourceFrame()
+			return visit(request, partial, specs)
+		}
+	}
+	exact := len(exactTargets) > 0 && exactTargets[0]
+	deferred := slices.ContainsFunc(cast.Targets, func(target game.Target) bool { return target.Kind == game.TargetDeferred })
+	return func(request payment.SpellRequest, partial payment.Partial) (payment.Plan, bool) {
+		g.BeginStaticSourceFrame()
+		defer g.EndStaticSourceFrame()
+		for _, option := range e.PaymentPlanner(g).SpellCostOptions(request) {
+			if partial.Option.Exists && partial.Option.Val != option.Index {
+				continue
+			}
+			announced := branch
+			announced.AlternativeCost = option.DeclaredAlternative
+			if exact && !spellTargetsValidForCast(g, request.PlayerID, def,
+				cast.ChosenModes, cast.Targets, cast.XValue, kicker, announced) {
+				continue
+			}
+			selected := partial
+			selected.Option = opt.Val(option.Index)
+			if exact && !deferred {
+				request.Targets = cast.Targets
+				if plan, found, _ := e.PaymentPlanner(g).Complete(payment.ForSpell(request), selected); found {
+					return plan, true
+				}
+				continue
+			}
+			specs := prioritySpellTargetSpecs(def, cast.ChosenModes, announced, kicker)
+			if plan, found := visit(request, selected, specs); found {
+				return plan, true
+			}
+		}
+		return payment.Plan{}, false
 	}
 }
 
@@ -150,7 +204,7 @@ func prioritySpellTargetSpecs(def *game.CardDef, modes []int, branch game.CastBr
 // Routes differ in permission, alternative costs and spending riders, not in
 // their procedure. Announce an option and each Phyrexian symbol only when the
 // pending target choices have a joint completion honoring that announcement.
-func (e *Engine) choosePrioritySpellPayment(g *game.Game, routes []castRoute, requests []payment.SpellRequest, complete spellPaymentCompletion, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (int, payment.Partial, bool) {
+func (e *Engine) choosePrioritySpellPayment(g *game.Game, routes []castRoute, requests []payment.SpellRequest, complete spellPaymentCompletion, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (int, payment.Partial, cost.AlternativeIndex, bool) {
 	type option struct {
 		route   int
 		summary payment.SpellOptionSummary
@@ -169,7 +223,7 @@ func (e *Engine) choosePrioritySpellPayment(g *game.Game, routes []castRoute, re
 		}
 	}
 	if len(choices) == 0 {
-		return 0, payment.Partial{}, false
+		return 0, payment.Partial{}, 0, false
 	}
 	selected := 0
 	if len(choices) > 1 {
@@ -227,7 +281,7 @@ func (e *Engine) choosePrioritySpellPayment(g *game.Game, routes []castRoute, re
 				payments = append(payments, choice)
 			}
 			if len(payments) == 0 {
-				return 0, partial, false
+				return 0, partial, 0, false
 			}
 			selected := e.chooseChoice(g, agents, game.ChoiceRequest{
 				Kind: game.ChoicePayment, Player: requests[0].PlayerID, Prompt: fmt.Sprintf("Pay %s", (cost.Mana{symbol}).String()),
@@ -237,13 +291,13 @@ func (e *Engine) choosePrioritySpellPayment(g *game.Game, routes []castRoute, re
 			phyrexian++
 		}
 	}
-	return chosen.route, partial, true
+	return chosen.route, partial, chosen.summary.DeclaredAlternative, true
 }
 
 // Choose one next target at a time. Every candidate extends the fixed prefix
 // to a full set whose exact target-dependent total can be paid; two individually
 // affordable targets can never combine into an unpayable announced set.
-func (e *Engine) chooseCostedSpellTargets(g *game.Game, player game.PlayerID, def *game.CardDef, cast action.CastSpellAction, request payment.SpellRequest, partial payment.Partial, agents [game.NumPlayers]PlayerAgent, log *TurnLog, completion ...spellPaymentCompletion) ([]game.Target, bool) {
+func (e *Engine) chooseCostedSpellTargets(g *game.Game, player game.PlayerID, def *game.CardDef, cast action.CastSpellAction, branch game.CastBranch, request payment.SpellRequest, partial payment.Partial, agents [game.NumPlayers]PlayerAgent, log *TurnLog, completion ...spellPaymentCompletion) ([]game.Target, bool) {
 	complete := func(request payment.SpellRequest, partial payment.Partial) (payment.Plan, bool) {
 		plan, ok, _ := e.PaymentPlanner(g).Complete(payment.ForSpell(request), partial)
 		return plan, ok
@@ -251,7 +305,7 @@ func (e *Engine) chooseCostedSpellTargets(g *game.Game, player game.PlayerID, de
 	if len(completion) > 0 {
 		complete = completion[0]
 	}
-	specs := prioritySpellTargetSpecs(def, cast.ChosenModes, castBranchForCast(cast), effectiveKickerCount(cast.KickerPaid, cast.KickerCount))
+	specs := prioritySpellTargetSpecs(def, cast.ChosenModes, branch, branch.KickerCount.Val)
 	var targets []game.Target
 	var counts []int
 	preferredCounts, _ := targetCountsForSpecs(g, player, def, 0, game.Event{}, specs, cast.Targets)
@@ -396,6 +450,32 @@ func (e *Engine) prioritySpellTargets(g *game.Game, player game.PlayerID, cardID
 	if len(kickers) > 0 {
 		kicker = kickers[0]
 	}
+	var alternatives []cost.AlternativeIndex
+	if len(def.AlternativeCosts) > 0 {
+		alternatives = targetCostBranches(spellTargetSpecsRaw(def, modes))
+	}
+	if len(alternatives) == 0 {
+		return e.prioritySpellTargetsOnBranch(g, player, cardID, source, face, def, modes, branch, kicker)
+	}
+	result := targetChoiceResult{kind: targetNoLegalChoices}
+	for _, alternative := range alternatives {
+		branch.AlternativeCost = alternative
+		next := e.prioritySpellTargetsOnBranch(g, player, cardID, source, face, def, modes, branch, kicker)
+		if next.kind == targetInvalidSpec {
+			return next
+		}
+		for i, targets := range next.choices {
+			if !slices.ContainsFunc(result.choices, func(previous []game.Target) bool { return slices.Equal(previous, targets) }) {
+				result.kind = targetLegalChoicesFound
+				result.choices = append(result.choices, targets)
+				result.targetCounts = append(result.targetCounts, next.targetCounts[i])
+			}
+		}
+	}
+	return result
+}
+
+func (e *Engine) prioritySpellTargetsOnBranch(g *game.Game, player game.PlayerID, cardID id.ID, source zone.Type, face game.FaceIndex, def *game.CardDef, modes []int, branch game.CastBranch, kicker int) targetChoiceResult {
 	specs := prioritySpellTargetSpecs(def, modes, branch, kicker)
 	numeric := costHasVariableMana(manaCostPtr(def.ManaCost)) || additionalCostsUseX(def.AdditionalCosts) || spellHasMultikicker(def)
 	combinatorial := len(specs) > 1 || slices.ContainsFunc(specs, func(spec game.TargetSpec) bool { return spec.MaxTargets > 1 })
@@ -408,7 +488,7 @@ func (e *Engine) prioritySpellTargets(g *game.Game, player game.PlayerID, cardID
 	result := targetChoiceResult{kind: targetNoLegalChoices}
 	object := &game.StackObject{
 		Kind: game.StackSpell, SourceID: cardID, Controller: player, SourceZone: source, Face: face,
-		XValue: branch.XValue.Val, ChosenModes: modes, Copy: source == zone.Battlefield, Bestowed: branch.Bestowed,
+		XValue: branch.XValue.Val, ChosenModes: modes, Copy: source == zone.Battlefield, Bestowed: branch.Bestowed, AlternativeCost: branch.AlternativeCost,
 	}
 	view := priorityCastView(g, object)
 	view.BeginStaticSourceFrame()

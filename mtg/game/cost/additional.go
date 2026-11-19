@@ -319,6 +319,10 @@ type Alternative struct {
 	Mechanic AlternativeMechanic
 }
 
+// AlternativeIndex identifies a declared alternative in CardFace.AlternativeCosts.
+// One selects the first entry; zero means no declared alternative was selected.
+type AlternativeIndex int
+
 // AlternativePredicate is one state requirement on an alternative cost.
 // Its parameters have the same meanings as the corresponding single
 // Condition fields on Alternative.

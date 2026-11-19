@@ -413,7 +413,7 @@ func (e *Engine) castFaceDownSpell(g *game.Game, player game.PlayerID, cast acti
 				plan, ok, _ := e.PaymentPlanner(g).Complete(payment.ForSpell(request), partial)
 				return plan, ok
 			}
-			selected, partial, ok := e.choosePrioritySpellPayment(g, routes, requests, complete, agents, log)
+			selected, partial, _, ok := e.choosePrioritySpellPayment(g, routes, requests, complete, agents, log)
 			if !ok {
 				return payment.Request{}, partial, false
 			}

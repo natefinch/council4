@@ -137,7 +137,7 @@ func (e *Engine) resolveProgram(g *game.Game, obj *game.StackObject, mode game.M
 		specs:   applyCastBranchToSpecs(append(slices.Clone(shared), mode.Targets...), castBranchForObject(obj)),
 		source: cardprogram.Source{
 			CardID: cardID, ObjectID: objectID, StackID: obj.ID, Controller: obj.Controller, X: obj.XValue,
-			SneakPaid: obj.Sneaked, SneakPaidThisTurn: obj.Sneaked,
+			AlternativeCost: obj.AlternativeCost, SneakPaid: obj.Sneaked, SneakPaidThisTurn: obj.Sneaked,
 		},
 	}
 	if source := abilitySourceLastKnownPermanent(g, obj); source != nil && source.SneakPaid {

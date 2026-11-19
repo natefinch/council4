@@ -257,11 +257,14 @@ type CounterRemovalChoice struct {
 
 // SpellOptionSummary is a summary of one payable spell cost option for choice presentation.
 type SpellOptionSummary struct {
-	Index           int
-	Label           string
-	ManaCost        *cost.Mana
-	AdditionalCosts []cost.Additional
-	CastPermission  SpellCastPermission
+	Index int
+	// DeclaredAlternative is the original face's index, not the expanded
+	// payment option Index or the index of an alternative granted by a route.
+	DeclaredAlternative cost.AlternativeIndex
+	Label               string
+	ManaCost            *cost.Mana
+	AdditionalCosts     []cost.Additional
+	CastPermission      SpellCastPermission
 }
 
 // PreparedSpellCost is an invocation-local immutable total, not a payment plan.
