@@ -53,6 +53,9 @@ export async function prepareCardBatch({ workPath, task, corpus, owner, planPath
     "-operation", operation, "-manifest", manifest, "-owner", owner, "-corpus", corpus, ...args], signal);
   const queue = JSON.parse(await readFile(manifest, "utf8"));
   const saved = queue.batches.find(batch => batch.id === task.id);
+  if (task.followup && saved && !saved.oracle_ids.includes(task.followup.oracleId)) {
+    throw new Error("Saved batch does not contain its waiting card");
+  }
   if (!saved) {
     if (!task.batchPlan?.trim()) throw new Error("Card selection needs a saved batch or an explicit reviewed batch plan");
     const plan = JSON.parse(task.batchPlan);
@@ -82,9 +85,13 @@ export async function prepareCardBatch({ workPath, task, corpus, owner, planPath
   } else if (task.batchPlan?.trim()) {
     throw new Error("A reviewed plan cannot rewrite an existing saved batch");
   }
-  const next = JSON.parse(await run("next"));
-  if (next.batch?.id !== task.id) throw new Error("Selected card family is not the next executable saved batch");
-  await run("claim", ["-batch", task.id]);
+  if (task.followup || task.skippedWaitingBatch) {
+    await run("claim-followup", ["-batch", task.id]);
+  } else {
+    const next = JSON.parse(await run("next"));
+    if (next.batch?.id !== task.id) throw new Error("Selected card family is not the next executable saved batch");
+    await run("claim", ["-batch", task.id]);
+  }
   const resumed = JSON.parse(await run("next"));
   if (resumed.batch?.id !== task.id || !resumed.cards?.length ||
       resumed.cards.some(card => card.status !== "claimed" || card.owner !== owner)) {

@@ -47,6 +47,32 @@ func queueFixture(t *testing.T) (manifest, []carddata.ScryfallCard, supportinven
 	return q, corpus, inventory
 }
 
+func TestFollowupCanClaimOneWaitingCardBeforeOtherReadyWork(t *testing.T) {
+	q, _, inv := queueFixture(t)
+	q.Batches[1].OracleIDs = []string{"d"}
+	for i := range q.Records {
+		if q.Records[i].OracleID == "e" || q.Records[i].OracleID == "f" {
+			q.Records[i].Batch = ""
+		}
+	}
+	if err := transition(&q, "claim-followup", "second", "writer", 0, "", inv); err != nil {
+		t.Fatal(err)
+	}
+	if next, err := nextBatch(q, "writer"); err != nil || next.ID != "second" {
+		t.Fatalf("follow-up claim not resumed: %v, %v", next, err)
+	}
+	if err := transition(&q, "claim-followup", "first", "writer", 0, "", inv); err == nil {
+		t.Fatal("follow-up displaced an active claim")
+	}
+	if err := transition(&q, "release", "second", "writer", 0, "", inv); err != nil {
+		t.Fatal(err)
+	}
+	q.Batches[1].PrerequisiteEvidence = nil
+	if err := transition(&q, "claim-followup", "second", "writer", 0, "", inv); err == nil {
+		t.Fatal("follow-up bypassed missing prerequisite evidence")
+	}
+}
+
 func TestQueueAccountingAndClaims(t *testing.T) {
 	q, corpus, inventory := queueFixture(t)
 	if err := validate(q, corpus, inventory); err != nil {

@@ -138,7 +138,23 @@ export function reviewHistory(unit, stages) {
   return [{ phase: "final review", round: null, verdict: unit.verdict.verdict, findings: unit.verdict.findings ?? [] }];
 }
 
+// Same-run conversion only. Retained worktrees link outcomes across ledgers;
+// don't charge a previous run's fix to an unrelated unit in this report.
+export function engineYield(units, groups, reconciliation) {
+  const engine = units.filter(u => u.task?.taskType === "engine" && u.worktree);
+  const converted = new Set(engine.filter(u => u.status === "landed" && u.task.defect).map(u => u.task.defect.oracleId));
+  for (const u of units) {
+    const link = u.task?.followup;
+    if (u.status !== "landed" || !link || !engine.some(e => e.worktree === link.engineWorktree)) continue;
+    if (u.prepared?.delivered?.newlySupported?.some(c => c.oracleId === link.oracleId)) converted.add(link.oracleId);
+  }
+  const aic = groups.filter(g => g.taskType === "engine").reduce((n, g) => n + g.observedAic, 0);
+  return { observedEngineAic: aic, cards: converted.size,
+    aicPerCard: reconciliation === "matched" && converted.size ? aic / converted.size : null };
+}
+
 export function writeReport(directory, report) {
+  report.engineYield = engineYield(report.units ?? [], report.groups, report.reconciliation);
   const destination = `${directory}/report.json`;
   writeJSON(destination, report);
   const cells = value => `"${String(value ?? "").replaceAll('"', '""')}"`;
@@ -152,6 +168,7 @@ export function writeReport(directory, report) {
     `Run: \`${report.runId}\` · policy: \`${report.policyVersion}\` · status: **${report.outcome ?? report.runtimeStatus}**${report.finishedAt ? ` · finished: ${report.finishedAt}` : ""}`,
     "",
     `Native total: **${report.runtimeAic.toFixed(6)} AIC**. Accounting: **${report.reconciliation}**. Unallocated: **${(report.unallocatedNanoAiu / 1e9).toFixed(6)} AIC**.`,
+    `Engine: ${report.engineYield.observedEngineAic.toFixed(2)} observed AIC; ${report.engineYield.cards} linked cards admitted or repaired in this run; AIC/card: ${report.engineYield.aicPerCard?.toFixed(2) ?? "n/a"}.`,
     "",
     "| Unit | Task type | Task | Stage | Actual model | Agent active seconds | Observed AIC | Complete accounting |",
     "| --- | --- | --- | --- | --- | ---: | ---: | --- |",

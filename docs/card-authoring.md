@@ -139,7 +139,7 @@ registered and is verified as with `verify`. At least one member must be
 admitted; otherwise block or release the whole batch.
 
 Use `-operation add-reviewed-batch -plan PATH -batch NEW_ID -owner SESSION_ID`
-to append **one** reviewed batch of three to twenty cards. The plan is a small JSON
+to append **one** reviewed batch of one to twenty cards. The plan is a small JSON
 object, not a replacement manifest:
 
 ```json
@@ -241,7 +241,7 @@ do not falsely classify ready siblings or partially verify a claim. Instead:
    `retired_batches`, clears those released memberships and blocks only the
    specified cards. Retired batch IDs cannot be reused.
 3. Review eligible siblings and additional unassigned candidates, then
-   `add-reviewed-batch` under a new ID with three to twenty exact identities and
+   `add-reviewed-batch` under a new ID with one to twenty exact identities and
    checked prerequisites. Preserve any existing draft/scenario work; retirement
    neither admits it nor discards it. Blocked members remain available for
    explicit reassessment after their prerequisite, never automatic admission.

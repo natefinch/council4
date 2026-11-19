@@ -66,7 +66,7 @@ func loadReviewedPlan(path string) (reviewedPlan, error) {
 // Batch size bounds. Card units only author cards on operations already on
 // main, so a batch is one family of cards sharing those operations.
 const (
-	minBatchCards = 3
+	minBatchCards = 1
 	maxBatchCards = 20
 )
 

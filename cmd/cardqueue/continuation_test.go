@@ -188,7 +188,7 @@ func TestInvalidBatchErrorsExplainWhy(t *testing.T) {
 	for want, b := range map[string]batch{
 		"missing id":     {Family: "f", OracleIDs: []string{"a", "b", "c"}, Operations: []string{"op"}},
 		"missing family": {ID: "x", OracleIDs: []string{"a", "b", "c"}, Operations: []string{"op"}},
-		"needs 3–20":     {ID: "x", Family: "f", OracleIDs: []string{"a", "b"}, Operations: []string{"op"}},
+		"needs 1–20":     {ID: "x", Family: "f", Operations: []string{"op"}},
 		"operations":     {ID: "x", Family: "f", OracleIDs: []string{"a", "b", "c"}},
 	} {
 		if err := validateBatch(b); err == nil || !strings.Contains(err.Error(), want) {
@@ -237,8 +237,8 @@ func TestAddReviewedBatchRejectsInvalidPlansAtomically(t *testing.T) {
 			case "review":
 				plan.Batches[0].Review = " "
 			case "size":
-				plan.Batches[0].OracleIDs = plan.Batches[0].OracleIDs[:2]
-				plan.Records = plan.Records[:2]
+				plan.Batches[0].OracleIDs = nil
+				plan.Records = nil
 			case "duplicate member":
 				plan.Batches[0].OracleIDs[2] = plan.Batches[0].OracleIDs[0]
 			case "duplicate record":
