@@ -1729,6 +1729,13 @@
     "oracle_text_sha256": "198ce508d410eaaa1801d38cd04c83a01541e2dcedff464611a29cb19f80c361",
     "revision": "50162cdd-ba30-48df-93ff-197c7f4a2913",
     "rulings_uri": "https://api.scryfall.com/cards/50162cdd-ba30-48df-93ff-197c7f4a2913/rulings"
+   },
+   {
+    "name": "Chaoslace",
+    "oracle_id": "08842aa3-f923-46e9-a106-f542331e9cc1",
+    "oracle_text_sha256": "8935e9964cfec36e872bb79e5a28713e2dc789f633bd1b226f453b1b5efb1f36",
+    "revision": "476180df-8b88-4ead-b6c5-6ccb3e8a2cfd",
+    "rulings_uri": "https://api.scryfall.com/cards/476180df-8b88-4ead-b6c5-6ccb3e8a2cfd/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8917,6 +8924,18 @@
     "Expected Mayhem Patrol's menace and attack trigger to give a target creature +1/+0 until end of turn, alongside Blitz consequences; the Engine does not retain whether Blitz was paid, preventing correct conditional behavior."
    ],
    "review": "Card Mayhem Patrol, checked Engine result for #4005 on 7209aba35e16cdc2dbd9bb514deaa7e47db5a59d: Implemented shared Blitz support: typed payment provenance, immediate haste, a draw on death, and a next-end-step sacrifice tied to the original permanent. No cards were registered; changes remain uncommitted in the isolated worktree.\nOn main c1089ccbb, `go test -overlay=.cardwork/gap-4005/overlay.json ./mtg/rules -run '^TestRiveteersDecoyBlitzPaymentProvenanceProbe$' -count=1` reproduced the missing payment marker.\n`go test ./mtg/rules -run '^TestBlitz(Paid|Early|Stack|Countered|Combines|Ability|Permanent)' -count=1 -v` passed all eight scenarios, including combined costs, copies, replay, and replaced entry.\n`go test ./mtg/game/... ./mtg/cardprogram/... ./mtg/rules/... -count=1` and `git diff --check` passed.\nSource review is in mtg/rules/blitz_test.go; verified rules and six rulings responses are retained under .cardwork/gap-4005/. Prepared copies are restricted to instants and sorceries and cannot become Blitz permanents."
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-3",
+   "family": "card-followup",
+   "oracle_ids": [
+    "08842aa3-f923-46e9-a106-f542331e9cc1"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Chaoslace must make a target spell or permanent red. Its permanent-target scenario succeeds, but after casting it for {R} at a blue {U} stack spell, that spell remains blue instead of becoming red."
+   ],
+   "review": "Card Chaoslace, checked Engine result for #4015 on 52cc22a5d7c7074328261386061ab8280ecd261a: Fixed #4015’s review finding: target rechecks now use the resolving spell’s effective color, including for copies, spliced text, Auras, bestow, and mutate. Chaoslace remains unregistered.\nReproduced red Unsummon incorrectly resolving before the fix. Afterward, `go test -overlay=.cardwork/gap-4015/review-overlay.json ./mtg/rules -run '^(TestReviewChaoslace|TestChaoslaceTarget|TestResolvingSpellColor)' -count=1 -json` passed, including both named Chaoslace plays and the new protection regressions.\n`go test ./mtg/rules ./mtg/game ./mtg/cardprogram -count=1 -json` and `git diff --check` passed.\nCombined-cost cases do not carry the new state: recoloring occurs after payment."
   }
  ],
  "records": [
@@ -60725,8 +60744,10 @@
    "oracle_id": "08842aa3-f923-46e9-a106-f542331e9cc1",
    "revision": "476180df-8b88-4ead-b6c5-6ccb3e8a2cfd",
    "name": "Chaoslace",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-3",
+   "evidence": "mtg/rules/chaoslace_test.go: TestChaoslaceTargetPermanentBecomesRed; TestChaoslaceTargetSpellBecomesRed; CR 2026-11-06 105.3, 202.2, 400.7a, 601.2c/f/h, 608.2b, 611.2a/c, 613.1e"
   },
   {
    "oracle_id": "0887dc95-3e75-4f72-bf05-4067d3785376",

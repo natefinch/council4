@@ -69,6 +69,7 @@ func verifiedEntries() []cardset.Entry {
 	entries = append(entries, PlasmaJockey)
 	entries = append(entries, CaldaiaStrongarm)
 	entries = append(entries, MayhemPatrol)
+	entries = append(entries, Chaoslace)
 	entries = append(entries, MerfolkRaiders, TeferisDrake, TolarianDrake, SandbarCrocodile)
 	entries = append(entries, GoblinGrappler, CrestedCraghorn, Brontotherium,
 		DeftbladeElite, KrosanVorine, LowlandTracker)
