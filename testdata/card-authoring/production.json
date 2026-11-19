@@ -1512,6 +1512,13 @@
     "oracle_text_sha256": "5b9e1b7b59e7b657b65eb7943baa87d84e7585f3dc8028d7752c841edfb86e22",
     "revision": "7802c7f8-ca2a-4bac-a579-77a8204aa5d4",
     "rulings_uri": "https://api.scryfall.com/cards/7802c7f8-ca2a-4bac-a579-77a8204aa5d4/rulings"
+   },
+   {
+    "name": "Burn Trail",
+    "oracle_id": "566b4dcc-b7d7-4443-b2d0-954f1fc33a11",
+    "oracle_text_sha256": "4289d2e5f5de1d0407f6fc7094a7f8133c6848d7f271324c3c350f63a9497c82",
+    "revision": "7f01f9a0-f1d0-4241-a270-df4ed673d1fd",
+    "rulings_uri": "https://api.scryfall.com/cards/7f01f9a0-f1d0-4241-a270-df4ed673d1fd/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8441,6 +8448,19 @@
     "Expected: optionally tap two untapped green creatures while casting, then copy the cast spell with an optional new target. Actual: the optional cost branch is rejected, and there is no typed Conspire-paid state to gate the self-cast trigger."
    ],
    "review": "Card Gleeful Sabotage, checked Engine result for #192 on eaa10fbc7cc8b2cd4c4824b0c65896c2bfda1683: Implemented printed Conspire for Gleeful Sabotage. Declare game.ConspireStaticBody to offer the optional tap payment and trigger an independently retargetable copy. The card remains unregistered; changes are uncommitted in the isolated worktree.\nVerified the declaration boundary on current main (247409ec32d): go test ./mtg/game -run '^TestValidateCardDefRejectsEmptyAdditionalCostChoiceBranch$' -v -count=1 passed; the existing choice model rejects a no-payment branch.\ngo test ./mtg/rules -run '^TestConspire' -v -count=1 passed: payment and retargeting, decline and unavailable costs, stale selections, alternate and free casts, cast card copies, Storm copies, countered-source LKI, clone and replay.\ngo test ./mtg/game/... ./mtg/rules ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1 passed. Inspected the diff; git diff --check passed.\nPinned Oracle revision, empty live rulings, and the official 2026-11-06 rules passages are recorded in mtg/rules/conspire_test.go."
+  },
+  {
+   "id": "burn-trail-conspire-7f01f9a0",
+   "family": "conspire-damage-spell",
+   "oracle_ids": [
+    "566b4dcc-b7d7-4443-b2d0-954f1fc33a11"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.ConspireStaticBody",
+    "game.Damage"
+   ],
+   "review": "Capability-fit references: mtg/cardprogram/README.md (Conspire); mtg/rules/conspire_test.go; mtg/cards/authored/gleeful_sabotage.go; mtg/cards/authored/stat_damage_spells.go."
   }
  ],
  "records": [
@@ -126325,8 +126345,10 @@
    "oracle_id": "566b4dcc-b7d7-4443-b2d0-954f1fc33a11",
    "revision": "7f01f9a0-f1d0-4241-a270-df4ed673d1fd",
    "name": "Burn Trail",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "conspire-damage-spell",
+   "batch": "burn-trail-conspire-7f01f9a0",
+   "evidence": "mtg/rules/burn_trail_test.go: TestBurnTrailDealsDamageWithConspire; CR 2026-11-06 105.2, 115.4, 120.1, 120.2b, 120.3a, 601.2a-i, 603.2-3, 608.2b, 702.78a-b, 707.10/.10c"
   },
   {
    "oracle_id": "566b65bb-fa5d-4da6-a766-b08128ee0049",
