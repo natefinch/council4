@@ -1610,6 +1610,48 @@
     "oracle_text_sha256": "8b9f4d2504c79b61e8da8c57b2cb748645fae561a2999b7f4c99716f7164457c",
     "revision": "beaefa77-6e4a-4724-a443-fa6b45803db5",
     "rulings_uri": "https://api.scryfall.com/cards/beaefa77-6e4a-4724-a443-fa6b45803db5/rulings"
+   },
+   {
+    "name": "Goblin Grappler",
+    "oracle_id": "48c1c84c-f690-42ce-9c5a-dd09b1e4197c",
+    "oracle_text_sha256": "3e7b55c5916ffd40605e26646623aa7c4ad3e9cd1646526cf4c6a1102ac45a93",
+    "revision": "5c948872-295c-41b9-8094-db7db7578b0d",
+    "rulings_uri": "https://api.scryfall.com/cards/5c948872-295c-41b9-8094-db7db7578b0d/rulings"
+   },
+   {
+    "name": "Crested Craghorn",
+    "oracle_id": "597c390e-deeb-4452-aeda-7cf9312a8b01",
+    "oracle_text_sha256": "61d5eb2029cc33853d122ea864b9ef35303a348012ee44bf2e4235b88b314841",
+    "revision": "aadb40c8-3d54-4705-82dc-54e8d6e315d5",
+    "rulings_uri": "https://api.scryfall.com/cards/aadb40c8-3d54-4705-82dc-54e8d6e315d5/rulings"
+   },
+   {
+    "name": "Brontotherium",
+    "oracle_id": "6e3301a5-a99b-4b17-aa40-34ccc5904977",
+    "oracle_text_sha256": "686004881fa75d729b362fc6c3937fcdbaad8e25549d6136a8d47cbfdae238cd",
+    "revision": "a171f5e2-ed3d-4675-a4fc-953ebb907aa0",
+    "rulings_uri": "https://api.scryfall.com/cards/a171f5e2-ed3d-4675-a4fc-953ebb907aa0/rulings"
+   },
+   {
+    "name": "Deftblade Elite",
+    "oracle_id": "9a3e3a8f-7c19-4b52-a1b4-08eb09f6127a",
+    "oracle_text_sha256": "b1273ba73147795349240c7fac7e2b151043d8c31451f62db2267683ee45bb37",
+    "revision": "d576b8f2-9b5b-47c0-8f9f-faa209d59595",
+    "rulings_uri": "https://api.scryfall.com/cards/d576b8f2-9b5b-47c0-8f9f-faa209d59595/rulings"
+   },
+   {
+    "name": "Krosan Vorine",
+    "oracle_id": "ddb95c3a-b383-4987-ba24-72e95f8e33bf",
+    "oracle_text_sha256": "f5372a2f3c5d85e9e41df5e42c36f0c6cf73f604ee151a6ccd66df0399a53360",
+    "revision": "31bd1b2f-6bea-4bd1-8a6e-50ab2d34bf82",
+    "rulings_uri": "https://api.scryfall.com/cards/31bd1b2f-6bea-4bd1-8a6e-50ab2d34bf82/rulings"
+   },
+   {
+    "name": "Lowland Tracker",
+    "oracle_id": "de06b33f-0793-419a-bf65-1961634af8e7",
+    "oracle_text_sha256": "1f9ecc36e79a413ad2fa044727853300b70c6979e45539ca6c3b3d1c7a05e510",
+    "revision": "f8eaaded-b18a-4614-b5b5-b4bb49a2e1b1",
+    "rulings_uri": "https://api.scryfall.com/cards/f8eaaded-b18a-4614-b5b5-b4bb49a2e1b1/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8675,6 +8717,26 @@
     "Expected: after casting Breezekeeper for {3}{U}, it remains phased in during the opponent's untap and phases out before its controller untaps. Actual: it remains phased in during its controller's untap."
    ],
    "review": "Card Breezekeeper, checked Engine result for #3999 on cfbe485b9d51a076055999aa95f58b6e5e585f80: Added game.PhasingStaticBody and simultaneous phase-in and phase-out before untapping. Breezekeeper remains unregistered; its test fixture is retained for the card worker.\nOn current main (3e1f95598), `go test ./mtg/rules -run '^TestBreezekeeperPhasesOutBeforeItsControllerUntaps$' -count=1 -v` reproduced the missing automatic phase-out.\nAfter the fix, `go test -vet=off ./mtg/rules -run '^(TestBreezekeeperPhasesOutBeforeItsControllerUntaps|TestAutomaticPhasingUsesPreEventBoard)$' -count=1 -v` passed both named scenarios.\n`go test -vet=off ./mtg/game ./mtg/rules -count=1` and `git diff --check` passed. Verified Oracle, rulings, and Comprehensive Rules citations are retained in mtg/rules/breezekeeper_phasing_test.go."
+  },
+  {
+   "id": "provoke-family-20261119-01",
+   "family": "provoke",
+   "oracle_ids": [
+    "48c1c84c-f690-42ce-9c5a-dd09b1e4197c",
+    "597c390e-deeb-4452-aeda-7cf9312a8b01",
+    "6e3301a5-a99b-4b17-aa40-34ccc5904977",
+    "9a3e3a8f-7c19-4b52-a1b4-08eb09f6127a",
+    "ddb95c3a-b383-4987-ba24-72e95f8e33bf",
+    "de06b33f-0793-419a-bf65-1961634af8e7"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "TriggerPattern.EventAttackerDeclared",
+    "Selection.ControlledByDefendingPlayer",
+    "Untap",
+    "ApplyRule with RuleEffectMustBlock and RequiredBlockAttackerRef"
+   ],
+   "review": "Capability-only check against origin/main a7aaaa3b4557f0b9061b0b546a8374fc42b72b91: mtg/cardprogram/README.md; mtg/game/ability.go, selection.go, primitive.go, cost_modifier.go; mtg/rules/combat_must_block_test.go (TestMustBlockDirectedRequiresThatPair and TestMustBlockDirectedDoesNothingWhenUnobeyable). Card source and rules review remain for the author."
   }
  ],
  "records": [
@@ -115004,8 +115066,10 @@
    "oracle_id": "48c1c84c-f690-42ce-9c5a-dd09b1e4197c",
    "revision": "5c948872-295c-41b9-8094-db7db7578b0d",
    "name": "Goblin Grappler",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "provoke",
+   "batch": "provoke-family-20261119-01",
+   "evidence": "mtg/rules/provoke_family_test.go: TestGoblinGrapplerProvokesDefendingCreature"
   },
   {
    "oracle_id": "48c97aeb-6591-4175-a24b-d3488bf3ab0b",
@@ -129172,8 +129236,10 @@
    "oracle_id": "597c390e-deeb-4452-aeda-7cf9312a8b01",
    "revision": "aadb40c8-3d54-4705-82dc-54e8d6e315d5",
    "name": "Crested Craghorn",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "provoke",
+   "batch": "provoke-family-20261119-01",
+   "evidence": "mtg/rules/provoke_family_test.go: TestCrestedCraghornHasteAndProvoke"
   },
   {
    "oracle_id": "597ca66c-6bb1-4661-8ed9-8236f546e536",
@@ -147031,8 +147097,10 @@
    "oracle_id": "6e3301a5-a99b-4b17-aa40-34ccc5904977",
    "revision": "a171f5e2-ed3d-4675-a4fc-953ebb907aa0",
    "name": "Brontotherium",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "provoke",
+   "batch": "provoke-family-20261119-01",
+   "evidence": "mtg/rules/provoke_family_test.go: TestBrontotheriumTrampleAndProvoke"
   },
   {
    "oracle_id": "6e3b3a3f-e32f-4c72-a9fb-dd1e877876b6",
@@ -184672,8 +184740,10 @@
    "oracle_id": "9a3e3a8f-7c19-4b52-a1b4-08eb09f6127a",
    "revision": "d576b8f2-9b5b-47c0-8f9f-faa209d59595",
    "name": "Deftblade Elite",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "provoke",
+   "batch": "provoke-family-20261119-01",
+   "evidence": "mtg/rules/provoke_family_test.go: TestDeftbladeElitePreventsCombatDamage"
   },
   {
    "oracle_id": "9a40614b-50a3-422c-849e-53c8b7d3d204",
@@ -241796,8 +241866,10 @@
    "oracle_id": "ddb95c3a-b383-4987-ba24-72e95f8e33bf",
    "revision": "31bd1b2f-6bea-4bd1-8a6e-50ab2d34bf82",
    "name": "Krosan Vorine",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "provoke",
+   "batch": "provoke-family-20261119-01",
+   "evidence": "mtg/rules/provoke_family_test.go: TestKrosanVorineCannotBeBlockedByMoreThanOne"
   },
   {
    "oracle_id": "ddbacb74-1f98-4607-a92e-d14973b9d0ef",
@@ -242021,8 +242093,10 @@
    "oracle_id": "de06b33f-0793-419a-bf65-1961634af8e7",
    "revision": "f8eaaded-b18a-4614-b5b5-b4bb49a2e1b1",
    "name": "Lowland Tracker",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "provoke",
+   "batch": "provoke-family-20261119-01",
+   "evidence": "mtg/rules/provoke_family_test.go: TestLowlandTrackerFirstStrikeAndProvoke"
   },
   {
    "oracle_id": "de085c51-2555-450e-a479-ddbb3bea9e8c",
