@@ -75,13 +75,15 @@ func firstLegalSpellCastChoice(g *game.Game, playerID game.PlayerID, spellDef *g
 	if !isSupportedSpell(spellDef) {
 		return nil, nil, false
 	}
+	// This preflight is for casting without paying the mana cost, so X is 0.
+	branch := game.CastBranch{XValue: opt.Val(0)}
 	for _, modes := range modeChoicesForSpellAt(g, playerID, spellDef) {
-		targetResult := targetChoicesForSpell(g, playerID, spellDef, modes, game.CastBranch{})
+		targetResult := targetChoicesForSpell(g, playerID, spellDef, modes, branch)
 		if targetResult.kind == targetInvalidSpec {
 			continue
 		}
 		for _, targets := range targetResult.choices {
-			if modesValidForSpellAt(g, playerID, spellDef, modes) && targetsValidForSpell(g, playerID, spellDef, modes, targets, game.CastBranch{}) {
+			if modesValidForSpellAt(g, playerID, spellDef, modes) && targetsValidForSpell(g, playerID, spellDef, modes, targets, branch) {
 				return append([]int(nil), modes...), append([]game.Target(nil), targets...), true
 			}
 		}

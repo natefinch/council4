@@ -65,9 +65,9 @@ func TestBodyTargetsSatisfyManaValueXBoundsByExactX(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := bodyTargetsSatisfyManaValueX(g, game.Player1, def, land.ObjectID, body, nil, targets, tc.xValue)
+			got := bodyTargetsSatisfyXBounds(g, game.Player1, def, land.ObjectID, body, nil, targets, tc.xValue)
 			if got != tc.want {
-				t.Fatalf("bodyTargetsSatisfyManaValueX(mv3 artifact, X=%d) = %v, want %v", tc.xValue, got, tc.want)
+				t.Fatalf("bodyTargetsSatisfyXBounds(mv3 artifact, X=%d) = %v, want %v", tc.xValue, got, tc.want)
 			}
 		})
 	}
