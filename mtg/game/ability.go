@@ -342,6 +342,8 @@ const (
 	// Conspire is the optional creature-tap additional cost and self-cast
 	// copy trigger (CR 702.78). Keep existing keyword ordinals unchanged.
 	Conspire
+	// Phasing modifies the untap step (CR 702.26a).
+	Phasing
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount
@@ -401,6 +403,9 @@ var (
 
 	// MenaceStaticBody is the reusable StaticAbilityBody for menace.
 	MenaceStaticBody = simpleKeywordStaticBody("Menace", Menace)
+
+	// PhasingStaticBody declares a permanent's automatic phasing ability.
+	PhasingStaticBody = simpleKeywordStaticBody("Phasing", Phasing)
 
 	// ReachStaticBody is the reusable StaticAbilityBody for reach.
 	ReachStaticBody = simpleKeywordStaticBody("Reach", Reach)
@@ -874,6 +879,8 @@ func KeywordStaticBody(keyword Keyword) (StaticAbility, bool) {
 		return LifelinkStaticBody, true
 	case Menace:
 		return MenaceStaticBody, true
+	case Phasing:
+		return PhasingStaticBody, true
 	case Reach:
 		return ReachStaticBody, true
 	case Shroud:

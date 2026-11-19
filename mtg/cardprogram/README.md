@@ -65,6 +65,11 @@ Do not infer absence from one truncated read or a guessed identifier. Before
 declaring a blocker, check for an existing canonical issue and establish the
 actual missing behavior as described in the authoring guide.
 
+For the phasing keyword, add [`game.PhasingStaticBody`](../game/ability.go) to
+the face's `StaticAbilities`. The Engine handles both directions simultaneously
+before untapping. Use `game.PhaseOut` instead when a resolving spell or ability
+instructs a permanent to phase out.
+
 ## An ordinary body
 
 ```go
