@@ -137,6 +137,7 @@ func (e *Engine) resolutionSpell(g *game.Game, source *game.Player, card *game.C
 			result := paid.Spell
 			object.Casting = false
 			object.BuybackPaid = result.BuybackPaid
+			object.ConspirePaid = result.ConspirePaid
 			object.AdditionalCostsPaid = result.AdditionalCostsPaid
 			object.SacrificedAsCostIDs = result.SacrificedIDs
 			object.PaidCostSubjects = result.PaidCostSubjects

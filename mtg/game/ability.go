@@ -339,6 +339,9 @@ const (
 	// cost.Alternative with AlternativeMechanicSneak. Appended at the end of the
 	// enum so existing keyword ordinals are unchanged.
 	Sneak
+	// Conspire is the optional creature-tap additional cost and self-cast
+	// copy trigger (CR 702.78). Keep existing keyword ordinals unchanged.
+	Conspire
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount
@@ -422,6 +425,9 @@ var (
 
 	// StormStaticBody is the reusable StaticAbilityBody for storm.
 	StormStaticBody = simpleKeywordStaticBody("Storm", Storm)
+
+	// ConspireStaticBody declares a printed instance of Conspire.
+	ConspireStaticBody = simpleKeywordStaticBody("Conspire", Conspire)
 
 	// CascadeStaticBody is the reusable StaticAbilityBody for cascade.
 	CascadeStaticBody = simpleKeywordStaticBody("Cascade", Cascade)

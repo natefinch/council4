@@ -642,6 +642,7 @@ func (p Planner) Apply(plan Plan) (ApplyResult, bool, string) {
 	subjects := applyAdditionalCostPlan(p.s, current.additional)
 	spell := SpellPaymentResult{
 		AlternativeIndex: current.option.alternativeIndex, BuybackPaid: current.option.buybackPaid,
+		ConspirePaid:        current.option.conspirePaid,
 		AdditionalCostsPaid: slices.Clone(current.additional.paid), PaidCostSubjects: subjects,
 		SacrificedIDs: sacrificedPermanentIDs(current.additional), ReturnedAttackerIDs: returnedAttackerIDs(current.additional),
 		PoolSpend: clonePoolSpend(current.mana.poolSpend), CastPermission: current.option.castPermission, Sneaked: current.option.sneak,

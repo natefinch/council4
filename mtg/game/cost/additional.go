@@ -144,6 +144,10 @@ type Additional struct {
 	MatchCardColor bool
 	CardColor      color.Color
 
+	// ColorsAny, when populated, requires an object to have at least one of
+	// these colors. Unused slots are empty; the cost remains comparable.
+	ColorsAny [5]color.Color `json:",omitzero"`
+
 	// SubtypesAny constrains card costs to cards with at least one listed
 	// subtype. It is independent of MatchCardType and remains bounded so
 	// Additional values are comparable.

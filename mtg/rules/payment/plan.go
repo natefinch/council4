@@ -112,6 +112,7 @@ func paySpellCosts(s State, req SpellRequest) (SpellPaymentResult, bool) {
 	return SpellPaymentResult{
 		AlternativeIndex:    plan.option.alternativeIndex,
 		BuybackPaid:         plan.option.buybackPaid,
+		ConspirePaid:        plan.option.conspirePaid,
 		AdditionalCostsPaid: plan.additional.paid,
 		PaidCostSubjects:    subjects,
 		SacrificedIDs:       sacrificedPermanentIDs(plan.additional),

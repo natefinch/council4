@@ -193,6 +193,10 @@ type StackObject struct {
 	// Copies inherit it without paying again, but have no physical card to return.
 	BuybackPaid bool
 
+	// ConspirePaid is the number of Conspire costs paid as the spell was
+	// cast. Non-cast copies inherit this decision, but do not trigger Conspire.
+	ConspirePaid int
+
 	// KickerCount is the number of times the kicker cost was paid as the spell
 	// was cast (CR 702.32). For Multikicker it can exceed one; for ordinary
 	// Kicker it is zero (KickerPaid carries the paid-once state). It scales

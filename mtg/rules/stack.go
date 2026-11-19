@@ -360,6 +360,9 @@ func (e *Engine) resolveTriggeredAbilityBodyWithChoices(g *game.Game, obj *game.
 	if game.BodyHasKeyword(body, game.Storm) {
 		return e.resolveStormTriggeredAbility(g, obj, agents, log)
 	}
+	if game.BodyHasKeyword(body, game.Conspire) {
+		return e.resolveConspireTriggeredAbility(g, obj, agents, log)
+	}
 	var event *game.Event
 	if obj.HasTriggerEvent {
 		event = &obj.TriggerEvent
