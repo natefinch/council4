@@ -51,12 +51,13 @@ skipped-required, stale-head, draft or unmergeable PRs do not merge.
 
 Actual CI failures can trigger bounded `ci_fix` work, local validation and an
 independent `ci_review`. Only then does the workflow commit/push the repair and
-wait for fresh CI on its new head. Before watching CI, the watcher makes up to
-nine exact-head registration reads with eight 15-second retry waits; API request
-time is additional. It does this even when no checks (or only unrelated checks)
-exist yet. Registered checks use GitHub's normal CI watcher.
-Persistently missing checks or external approvals
-pause with the PR and resume checkpoint, not a manufactured success. A paused
+wait for fresh CI on its new head. The workflow allows eight 15-second waits for
+required checks to register, even if unrelated checks already exist. Once they
+register, it polls the PR and the reviewed commit's checks every 30 seconds.
+Queued and running checks do not need a manual resume, including checks that
+appear at the final merge gate. If checks are still pending after 240 active
+waits (two hours plus API request time), the workflow pauses with the head and
+PR to inspect. Missing registrations and external approvals also pause. A paused
 run does not wake automatically when CI later changes; inspect its current PR
 and resume the same run. If main advances, the workflow integrates it and
 repeats the affected checks/review before merging.
