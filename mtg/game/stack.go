@@ -2,6 +2,7 @@ package game
 
 import (
 	"github.com/natefinch/council4/mtg/game/color"
+	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
 	"github.com/natefinch/council4/opt"
@@ -213,6 +214,10 @@ type StackObject struct {
 	// so a copy inherits the paid cost decision (CR 707.10). It is carried to the resulting
 	// permanent's enter event to drive the Offspring enter trigger.
 	OffspringPaid bool
+
+	// AlternativeCost is the declared alternative announced before choosing
+	// targets. Copies retain it as a decision made in casting (CR 707.10).
+	AlternativeCost cost.AlternativeIndex
 
 	// GiftPromised is true if this spell's Gift keyword action promised a gift to
 	// an opponent as it was cast (CR 702.171). It gates the spell's "if the gift

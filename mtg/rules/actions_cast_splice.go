@@ -70,7 +70,7 @@ func (e *Engine) completeSplicedPayment(g *game.Game, player game.PlayerID, host
 	return plan, found
 }
 
-func (e *Engine) choosePrioritySplice(g *game.Game, player game.PlayerID, hostID id.ID, request payment.SpellRequest, partial payment.Partial, _ spellPaymentCompletion, agents [game.NumPlayers]PlayerAgent, log *TurnLog) spliceCastResult {
+func (e *Engine) choosePrioritySplice(g *game.Game, player game.PlayerID, hostID id.ID, request payment.SpellRequest, partial payment.Partial, alternative cost.AlternativeIndex, agents [game.NumPlayers]PlayerAgent, log *TurnLog) spliceCastResult {
 	var result spliceCastResult
 	for {
 		var candidates []spliceCandidate
@@ -93,7 +93,9 @@ func (e *Engine) choosePrioritySplice(g *game.Game, player game.PlayerID, hostID
 			next := request
 			next.SpliceManaCosts = append(slices.Clone(result.manaCosts), candidate.spliceCost)
 			cast := action.CastSpellAction{XValue: request.XValue, ChosenModes: request.ChosenModes, KickerPaid: request.KickerPaid, KickerCount: request.KickerCount, Bargained: request.Bargained, Bestowed: request.Bestowed, Offspring: request.Offspring}
-			specs := prioritySpellTargetSpecs(request.Card, cast.ChosenModes, castBranchForCast(cast), effectiveKickerCount(cast.KickerPaid, cast.KickerCount))
+			branch := castBranchForCast(cast)
+			branch.AlternativeCost = alternative
+			specs := prioritySpellTargetSpecs(request.Card, cast.ChosenModes, branch, branch.KickerCount.Val)
 			found := false
 			visitTargetChoicesForSpec(g, player, request.Card, 0, game.Event{}, specs, 0, nil, nil,
 				&[][]game.Target{}, &[][]int{}, targetChoiceOptions{xValue: opt.Val(request.XValue), external: true, visit: func(targets []game.Target, _ []int) bool {
@@ -133,7 +135,8 @@ func (e *Engine) completePrioritySpliceTargets(g *game.Game, player game.PlayerI
 			request.Targets = append(slices.Clone(fixed), request.Targets...)
 			return e.completeSplicedPayment(g, player, host, splice.cards[index+1:], request, partial)
 		}
-		targets, ok := e.chooseCostedSpellTargets(g, player, def, action.CastSpellAction{XValue: cast.XValue}, request, partial, agents, log, complete)
+		announcement := action.CastSpellAction{XValue: cast.XValue}
+		targets, ok := e.chooseCostedSpellTargets(g, player, def, announcement, castBranchForCast(announcement), request, partial, agents, log, complete)
 		if !ok {
 			return false
 		}

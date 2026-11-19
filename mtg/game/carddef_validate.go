@@ -160,7 +160,21 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 	v.validateEntryChoiceDependencies(faceName, path, face)
 	v.validateLinkedExileColorDependencies(faceName, path, face)
 	if face.SpellAbility.Exists {
-		v.validateAbilityBody(faceName, appendPath(path, "SpellAbility"), &face.SpellAbility.Val, nil)
+		spellPath := appendPath(path, "SpellAbility")
+		content := &face.SpellAbility.Val
+		v.validateAbilityBody(faceName, spellPath, content, nil)
+		checkGates := func(path string, specs []TargetSpec) {
+			for i, spec := range specs {
+				if int(spec.AlternativeCost) > len(face.AlternativeCosts) {
+					v.add(faceName, fmt.Sprintf("%s[%d].AlternativeCost", path, i),
+						CardDefIssueInvalidTargetSpec, "target references an undeclared alternative cost")
+				}
+			}
+		}
+		checkGates(appendPath(spellPath, "SharedTargets"), content.SharedTargets)
+		for i, mode := range content.Modes {
+			checkGates(appendPath(spellPath, fmt.Sprintf("Modes[%d].Targets", i)), mode.Targets)
+		}
 	}
 
 	v.validatePrototype(faceName, path, face)
@@ -1265,6 +1279,9 @@ func (v *cardDefValidator) validateTargetSpec(faceName, path string, target *Tar
 	}
 	if !target.Gate.Valid() {
 		v.add(faceName, appendPath(path, "Gate"), CardDefIssueInvalidTargetSpec, "unknown target gate")
+	}
+	if target.AlternativeCost < 0 {
+		v.add(faceName, appendPath(path, "AlternativeCost"), CardDefIssueInvalidTargetSpec, "target alternative cost index must be non-negative")
 	}
 	v.validateStackObjectTargetPredicate(faceName, path, target)
 	allowsPermanents := target.Allow&TargetAllowPermanent != 0

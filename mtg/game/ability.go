@@ -2314,6 +2314,10 @@ type TargetSpec struct {
 	// ignored on the branch that does not have it.
 	Gate TargetGate
 
+	// AlternativeCost, if nonzero, restricts this spell target to the indexed
+	// alternative cost declared on this face (CR 601.2c).
+	AlternativeCost cost.AlternativeIndex
+
 	// ControlledBy restricts a permanent target to permanents controlled by this
 	// exact seat. It is the per-player slot of "For each player, <verb> up to
 	// one target <permanent> that player controls": PlayerSlotTargetSpecs

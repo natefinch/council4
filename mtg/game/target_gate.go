@@ -1,6 +1,9 @@
 package game
 
-import "github.com/natefinch/council4/opt"
+import (
+	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/opt"
+)
 
 // TargetGate names the cast-time branch a target spec depends on. A spell may
 // have a target only if a condition is met, and that target is chosen only if
@@ -62,6 +65,7 @@ const (
 // object's captured state when copying or retargeting. New cast-branch mechanics
 // add a field here rather than a boolean to every targeting entry point.
 type CastBranch struct {
+	AlternativeCost cost.AlternativeIndex
 	// GiftPromised reports that the Gift keyword action promised a gift as the
 	// spell was cast.
 	GiftPromised bool
@@ -81,6 +85,11 @@ type CastBranch struct {
 	// Unset values are used only while producing policy candidates.
 	XValue      opt.V[int]
 	KickerCount opt.V[int]
+}
+
+// ActiveIn reports whether this target participates on the selected cast branch.
+func (spec TargetSpec) ActiveIn(branch CastBranch) bool {
+	return (spec.AlternativeCost == 0 || spec.AlternativeCost == branch.AlternativeCost) && spec.Gate.ActiveIn(branch)
 }
 
 // ActiveIn reports whether a spec carrying this gate participates in targeting on

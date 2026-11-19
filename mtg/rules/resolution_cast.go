@@ -104,10 +104,11 @@ func (e *Engine) resolutionSpell(g *game.Game, source *game.Player, card *game.C
 		},
 		proposal: func(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) (payment.Request, payment.Partial, bool) {
 			complete := e.pendingSpellPayment(g, def, cast)
-			_, announced, ok := e.choosePrioritySpellPayment(g, []castRoute{{}}, []payment.SpellRequest{request}, complete, agents, log)
+			_, announced, alternative, ok := e.choosePrioritySpellPayment(g, []castRoute{{}}, []payment.SpellRequest{request}, complete, agents, log)
 			partial = announced
+			object.AlternativeCost = alternative
 			if ok && cast.SourceZone == zone.Hand && spellIsArcane(def) {
-				splice = e.choosePrioritySplice(g, player, request.CardID, request, partial, complete, agents, log)
+				splice = e.choosePrioritySplice(g, player, request.CardID, request, partial, alternative, agents, log)
 				request.SpliceManaCosts = splice.manaCosts
 				object.SplicedContent = splice.contents
 			}
@@ -118,12 +119,13 @@ func (e *Engine) resolutionSpell(g *game.Game, source *game.Player, card *game.C
 				return e.completeSplicedPayment(g, player, def, splice.cards, request, partial)
 			}
 			var ok bool
-			cast.Targets, ok = e.chooseCostedSpellTargets(g, player, def, cast, request, partial, agents, log, complete)
+			branch := castBranchForObject(object)
+			cast.Targets, ok = e.chooseCostedSpellTargets(g, player, def, cast, branch, request, partial, agents, log, complete)
 			if !ok {
 				return false
 			}
 			object.Targets = slices.Clone(cast.Targets)
-			object.TargetCounts, ok = spellTargetCounts(g, player, def, cast.ChosenModes, cast.Targets, castBranchForCast(cast))
+			object.TargetCounts, ok = spellTargetCounts(g, player, def, cast.ChosenModes, cast.Targets, branch)
 			if !ok || !e.completePrioritySpliceTargets(g, player, def, cast, &splice, request, partial, agents, log) {
 				return false
 			}
