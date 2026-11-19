@@ -1540,6 +1540,13 @@
     "oracle_text_sha256": "f53085086f5c70eaf18dc6b406cf0de978a64ce87190f01365073144a17aa4a4",
     "revision": "cd273ef2-4aed-4c7e-8c97-fe8b1af9ce69",
     "rulings_uri": "https://api.scryfall.com/cards/cd273ef2-4aed-4c7e-8c97-fe8b1af9ce69/rulings"
+   },
+   {
+    "name": "Mogg Salvage",
+    "oracle_id": "0923ad85-2ea4-4463-8f71-b7d0a162b486",
+    "oracle_text_sha256": "1c1f44aff9d1eaa6411172ba4276a0b4c12ec26527f5480fdc76eee5670e8b50",
+    "revision": "2b93e65e-8a10-444f-8b0a-9327dd30cce2",
+    "rulings_uri": "https://api.scryfall.com/cards/2b93e65e-8a10-444f-8b0a-9327dd30cce2/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8522,6 +8529,18 @@
     "game.ModifyPT"
    ],
    "review": "Capability-fit review only: mtg/cardprogram/README.md (Conspire) and existing counter-pump card/scenario prior art. Primary-source and rules review are deferred to the author."
+  },
+  {
+   "id": "resume-20a43e50-d0e0-43aa-95cf-1f3448c6e7b9-8",
+   "family": "card-followup",
+   "oracle_ids": [
+    "0923ad85-2ea4-4463-8f71-b7d0a162b486"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected: offer the free cast only when the caster controls a Mountain and some opponent controls an Island at casting time. Actual: the available Mountain-only condition makes the free cast legal without an opponent-controlled Island."
+   ],
+   "review": "Card Mogg Salvage, checked Engine result for #3991 on 26f782b87f6cb163212f70c5bf9bcaaf9510f1b6: Implemented conjunctive alternative-cost predicates for #3991. Mogg Salvage’s free cast requires both a caster-controlled Mountain and an opponent-controlled Island. The Engine change is unmerged; card registration remains with the card worker.\nOn remote main 16e2bac0974430d377ed98460df4dd7e640f607a, `go test -overlay .cardwork/issue-3991/baseline-overlay.json -tags card_support_gap_probe ./mtg/rules -run '^TestMoggSalvageCompoundAlternativeCostConditionProbe$' -count=1` reproduced the free cast being offered without an opponent-controlled Island.\n`go test -v ./mtg/rules ./mtg/rules/payment -run '^(TestMoggSalvageConditionalAlternativeCost|TestConditionalAlternative.*)$' -count=1` passed. The scenarios cover each missing condition, current control, phasing, mana value 3, artifact destruction after the gate stops holding, combined costs, and exile cast routes.\n`go test ./mtg/game ./mtg/game/cost ./mtg/rules/payment ./mtg/rules -count=1` and `git diff --check` passed. Existing regressions cover stack copies, storm, cascade, clone/replay, countering, and fizzling. Predicates are used only during casting and add no stack or destination state.\nVerified Oracle, rulings, and the 2026-11-06 Comprehensive Rules are recorded in `mtg/rules/conditional_alternative_cost_test.go`; raw sources and the baseline probe remain in `.cardwork/issue-3991/`."
   }
  ],
  "records": [
@@ -60891,8 +60910,10 @@
    "oracle_id": "0923ad85-2ea4-4463-8f71-b7d0a162b486",
    "revision": "2b93e65e-8a10-444f-8b0a-9327dd30cce2",
    "name": "Mogg Salvage",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-20a43e50-d0e0-43aa-95cf-1f3448c6e7b9-8",
+   "evidence": "mtg/rules/mogg_salvage_test.go: TestAuthoredMoggSalvageScenario"
   },
   {
    "oracle_id": "0925e112-c089-4aa4-9878-6d6fb0a263c8",
