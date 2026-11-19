@@ -278,6 +278,7 @@ type SpellPaymentResult struct {
 	// optional additional costs expand the presented payment option indices.
 	AlternativeIndex    int
 	BuybackPaid         bool
+	ConspirePaid        int
 	AdditionalCostsPaid []string
 	PaidCostSubjects    []game.PaidCostSubject
 	// SacrificedIDs are the object IDs of permanents sacrificed to pay the

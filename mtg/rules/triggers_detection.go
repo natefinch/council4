@@ -1622,10 +1622,10 @@ func castSpellSelfTriggers(g *game.Game, event game.Event) []pendingTriggeredAbi
 		def, ok = cardFaceDef(card, event.Face)
 		source.Owner = card.Owner
 	}
+	pending := conspireCastTriggers(g, source, event)
 	if !ok {
-		return nil
+		return pending
 	}
-	var pending []pendingTriggeredAbility
 	for i := range def.TriggeredAbilities {
 		triggered := &def.TriggeredAbilities[i]
 		pattern := &triggered.Trigger.Pattern

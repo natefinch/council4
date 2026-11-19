@@ -74,7 +74,7 @@ func (e *Engine) resolveStormTriggeredAbility(g *game.Game, obj *game.StackObjec
 	if !obj.HasTriggerEvent || !obj.TriggerEvent.SpellsCastBeforeThisTurn.Exists {
 		return "missing source"
 	}
-	original, ok := stormSpell(g, obj)
+	original, ok := triggeringSpellOrLKI(g, obj)
 	if !ok {
 		return "missing source"
 	}
@@ -98,9 +98,9 @@ func (e *Engine) resolveStormTriggeredAbility(g *game.Game, obj *game.StackObjec
 	return "resolved"
 }
 
-// stormSpell returns the spell a storm trigger copies: the spell itself while it
-// is still on the stack, otherwise its last known information.
-func stormSpell(g *game.Game, obj *game.StackObject) (*game.StackObject, bool) {
+// triggeringSpellOrLKI returns the spell that caused the cast trigger, or its
+// last known information if it has left the stack (CR 608.2h).
+func triggeringSpellOrLKI(g *game.Game, obj *game.StackObject) (*game.StackObject, bool) {
 	if spell, ok := stackObjectByID(g, obj.TriggerEvent.StackObjectID); ok && spell.Kind == game.StackSpell {
 		return spell, true
 	}

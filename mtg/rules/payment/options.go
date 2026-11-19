@@ -28,6 +28,7 @@ type spellCostOption struct {
 	castPermission   SpellCastPermission
 	bargained        bool
 	buybackPaid      bool
+	conspirePaid     int
 	locked           bool
 	// sneak marks the Sneak alternative cost (CR 702.190a).
 	sneak bool
@@ -192,12 +193,53 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 		addOffspringCost(options, req.Card)
 	}
 	spendSpell := s.SpellCharacteristics(req.PlayerID, req.CardID, req.Card, req.Bestowed)
+	if !req.FaceDown {
+		options = applyConspireCost(options, req.Card, spendSpell)
+	}
 	for i := range options {
 		options[i].spendAs = req.SpendAnyMana
 		options[i].spendSpell = spendSpell
 		options[i].faceDown = req.FaceDown
 	}
 	return options
+}
+
+// Conspire's printed instances all offer the same cost and trigger. Present
+// one option per payable count, with a separate two-creature payment per
+// instance; equivalent subsets of instances need no separate announcements.
+func applyConspireCost(options []spellCostOption, card, effective *game.CardDef) []spellCostOption {
+	if card == nil || effective == nil || len(effective.Colors) == 0 {
+		return options
+	}
+	instances := 0
+	for _, ability := range card.StaticAbilities {
+		for _, keyword := range ability.KeywordAbilities {
+			if game.KeywordAbilityKind(keyword) == game.Conspire {
+				instances++
+			}
+		}
+	}
+	if instances == 0 {
+		return options
+	}
+	tap := cost.Additional{Kind: cost.AdditionalTapPermanents, Amount: 2,
+		MatchPermanentType: true, PermanentType: types.Creature}
+	copy(tap.ColorsAny[:], effective.Colors)
+	expanded := make([]spellCostOption, 0, len(options)*(instances+1))
+	for _, option := range options {
+		expanded = append(expanded, option)
+		for range instances {
+			option = applyChoiceBranch(option, cost.AdditionalChoiceOption{
+				Label: "Conspire", Costs: []cost.Additional{tap},
+			})
+			option.conspirePaid++
+			expanded = append(expanded, option)
+		}
+	}
+	for i := range expanded {
+		expanded[i].index = i
+	}
+	return expanded
 }
 
 func applyBuybackCost(options []spellCostOption, card *game.CardDef) []spellCostOption {

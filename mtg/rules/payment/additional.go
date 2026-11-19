@@ -616,6 +616,11 @@ func SelectionForAdditionalCost(additional cost.Additional) (game.Selection, boo
 	if additional.MatchCardColor {
 		sel.ColorsAny = append(sel.ColorsAny, additional.CardColor)
 	}
+	for _, c := range additional.ColorsAny {
+		if c != "" {
+			sel.ColorsAny = append(sel.ColorsAny, c)
+		}
+	}
 	for _, subtype := range additional.SubtypesAny {
 		if subtype != "" {
 			sel.SubtypesAny = append(sel.SubtypesAny, subtype)

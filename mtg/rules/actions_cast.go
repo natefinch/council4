@@ -266,6 +266,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 			}
 			obj.Bestowed = cast.Bestowed
 			obj.BuybackPaid = paymentResult.BuybackPaid
+			obj.ConspirePaid = paymentResult.ConspirePaid
 			obj.Flashback = paymentResult.CastPermission == payment.SpellCastPermissionFlashback
 			obj.CastPermissionEntryCounters = castRoutes[route].castPermissionEntryCounters(paymentResult.CastPermission)
 			obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
@@ -443,6 +444,7 @@ func (e *Engine) attemptMutateCastWithChoices(g *game.Game, playerID game.Player
 			}
 			recordExilePlayPermissionUse(g, castRoutes[route].permission)
 			recordPermanentTypePlay(g, playerID, cast.Permission)
+			obj.ConspirePaid = paymentResult.ConspirePaid
 			obj.CastPermissionEntryCounters = castRoutes[route].castPermissionEntryCounters(paymentResult.CastPermission)
 			obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 			obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
@@ -797,6 +799,7 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 			// becomes cast (CR 601.2i).
 			permanent.Prepared = false
 			obj.BuybackPaid = paymentResult.BuybackPaid
+			obj.ConspirePaid = paymentResult.ConspirePaid
 			obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 			obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
 			obj.PaidCostSubjects = paymentResult.PaidCostSubjects
