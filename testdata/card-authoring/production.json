@@ -1505,6 +1505,13 @@
     "oracle_text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "revision": "72c130e2-1e17-4996-a5ae-231155d68261",
     "rulings_uri": "https://api.scryfall.com/cards/72c130e2-1e17-4996-a5ae-231155d68261/rulings"
+   },
+   {
+    "name": "Gleeful Sabotage",
+    "oracle_id": "25fe48be-95c4-4011-8c60-4628fb5ecfcb",
+    "oracle_text_sha256": "5b9e1b7b59e7b657b65eb7943baa87d84e7585f3dc8028d7752c841edfb86e22",
+    "revision": "7802c7f8-ca2a-4bac-a579-77a8204aa5d4",
+    "rulings_uri": "https://api.scryfall.com/cards/7802c7f8-ca2a-4bac-a579-77a8204aa5d4/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8422,6 +8429,18 @@
     "color-filtered spell-cast trigger and +1/+1 counter"
    ],
    "review": "Capability-fit only on origin/main 7051b030949eef2809116f62b6a8127231d04488. Checked docs/card-authoring.md Reviewed continuation commands, mtg/rules/adventure_test.go, mtg/cards/n/nightmare_s_thirst.go, mtg/cards/w/wiccan_young_avenger.go, and the color-filtered spell-cast trigger support. No Oracle rulings or Comprehensive Rules review claimed."
+  },
+  {
+   "id": "resume-20a43e50-d0e0-43aa-95cf-1f3448c6e7b9-1",
+   "family": "card-followup",
+   "oracle_ids": [
+    "25fe48be-95c4-4011-8c60-4628fb5ecfcb"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected: optionally tap two untapped green creatures while casting, then copy the cast spell with an optional new target. Actual: the optional cost branch is rejected, and there is no typed Conspire-paid state to gate the self-cast trigger."
+   ],
+   "review": "Card Gleeful Sabotage, checked Engine result for #192 on eaa10fbc7cc8b2cd4c4824b0c65896c2bfda1683: Implemented printed Conspire for Gleeful Sabotage. Declare game.ConspireStaticBody to offer the optional tap payment and trigger an independently retargetable copy. The card remains unregistered; changes are uncommitted in the isolated worktree.\nVerified the declaration boundary on current main (247409ec32d): go test ./mtg/game -run '^TestValidateCardDefRejectsEmptyAdditionalCostChoiceBranch$' -v -count=1 passed; the existing choice model rejects a no-payment branch.\ngo test ./mtg/rules -run '^TestConspire' -v -count=1 passed: payment and retargeting, decline and unavailable costs, stale selections, alternate and free casts, cast card copies, Storm copies, countered-source LKI, clone and replay.\ngo test ./mtg/game/... ./mtg/rules ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1 passed. Inspected the diff; git diff --check passed.\nPinned Oracle revision, empty live rulings, and the official 2026-11-06 rules passages are recorded in mtg/rules/conspire_test.go."
   }
  ],
  "records": [
@@ -85609,8 +85628,10 @@
    "oracle_id": "25fe48be-95c4-4011-8c60-4628fb5ecfcb",
    "revision": "7802c7f8-ca2a-4bac-a579-77a8204aa5d4",
    "name": "Gleeful Sabotage",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-20a43e50-d0e0-43aa-95cf-1f3448c6e7b9-1",
+   "evidence": "mtg/rules/gleeful_sabotage_test.go: TestGleefulSabotageConspireDestroysArtifactAndEnchantment; CR 2026-11-06 601.2b,c,f,h,i, 603.2-3, 608.2b, 701.8, 702.78a, 707.10c"
   },
   {
    "oracle_id": "26005003-afcb-4c32-a760-be950246ff0f",
