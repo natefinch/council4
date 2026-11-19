@@ -1736,6 +1736,41 @@
     "oracle_text_sha256": "8935e9964cfec36e872bb79e5a28713e2dc789f633bd1b226f453b1b5efb1f36",
     "revision": "476180df-8b88-4ead-b6c5-6ccb3e8a2cfd",
     "rulings_uri": "https://api.scryfall.com/cards/476180df-8b88-4ead-b6c5-6ccb3e8a2cfd/rulings"
+   },
+   {
+    "name": "Purelace",
+    "oracle_id": "3773001a-8868-49ec-a406-298cf72359c2",
+    "oracle_text_sha256": "be8086520606df8f908562cf58be87ba8e3173b56c8207b0f9eb9763eb95278e",
+    "revision": "5736fcc7-fa95-4ef4-b821-392ec00e03bf",
+    "rulings_uri": "https://api.scryfall.com/cards/5736fcc7-fa95-4ef4-b821-392ec00e03bf/rulings"
+   },
+   {
+    "name": "Moonlace",
+    "oracle_id": "52d4dc8a-2799-4b4e-9c20-f14bb75c2279",
+    "oracle_text_sha256": "758af2b2bf1c79771e9c9413066d9dccc112766c49cfe5404ce5f49201d7e394",
+    "revision": "c781cc80-5f57-4677-a9da-3523191cc7c6",
+    "rulings_uri": "https://api.scryfall.com/cards/c781cc80-5f57-4677-a9da-3523191cc7c6/rulings"
+   },
+   {
+    "name": "Thoughtlace",
+    "oracle_id": "6452b6a6-6235-46a3-a712-a26592450438",
+    "oracle_text_sha256": "1cd97e63f184881e300085674912d54fcfc2059df47f2b67195c81a57c408bd4",
+    "revision": "185674a4-db97-444d-b0e9-7dcfc245ce4b",
+    "rulings_uri": "https://api.scryfall.com/cards/185674a4-db97-444d-b0e9-7dcfc245ce4b/rulings"
+   },
+   {
+    "name": "Lifelace",
+    "oracle_id": "eec1de80-4b3d-481d-a235-c299e0381830",
+    "oracle_text_sha256": "d1c485259cb8e6bd9a2e048eed8c5bd63b69a4019ee0ab0670cead0e87ae2f5b",
+    "revision": "bf312acb-2fa6-440a-964b-424ad8abc331",
+    "rulings_uri": "https://api.scryfall.com/cards/bf312acb-2fa6-440a-964b-424ad8abc331/rulings"
+   },
+   {
+    "name": "Deathlace",
+    "oracle_id": "fb80aaba-352a-4b58-8db2-1e02d542819c",
+    "oracle_text_sha256": "fb8724684420742ea001bd8ed65f18a4e1afa38eb8fadee4ee710c35959da53e",
+    "revision": "237e37fb-383d-432c-8ac3-1332096567db",
+    "rulings_uri": "https://api.scryfall.com/cards/237e37fb-383d-432c-8ac3-1332096567db/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8936,6 +8971,26 @@
     "Chaoslace must make a target spell or permanent red. Its permanent-target scenario succeeds, but after casting it for {R} at a blue {U} stack spell, that spell remains blue instead of becoming red."
    ],
    "review": "Card Chaoslace, checked Engine result for #4015 on 52cc22a5d7c7074328261386061ab8280ecd261a: Fixed #4015’s review finding: target rechecks now use the resolving spell’s effective color, including for copies, spliced text, Auras, bestow, and mutate. Chaoslace remains unregistered.\nReproduced red Unsummon incorrectly resolving before the fix. Afterward, `go test -overlay=.cardwork/gap-4015/review-overlay.json ./mtg/rules -run '^(TestReviewChaoslace|TestChaoslaceTarget|TestResolvingSpellColor)' -count=1 -json` passed, including both named Chaoslace plays and the new protection regressions.\n`go test ./mtg/rules ./mtg/game ./mtg/cardprogram -count=1 -json` and `git diff --check` passed.\nCombined-cost cases do not carry the new state: recoloring occurs after payment."
+  },
+  {
+   "id": "color-laces-20261119-1720",
+   "family": "target-spell-or-permanent-becomes-color",
+   "oracle_ids": [
+    "3773001a-8868-49ec-a406-298cf72359c2",
+    "52d4dc8a-2799-4b4e-9c20-f14bb75c2279",
+    "6452b6a6-6235-46a3-a712-a26592450438",
+    "eec1de80-4b3d-481d-a235-c299e0381830",
+    "fb80aaba-352a-4b58-8db2-1e02d542819c"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.ApplyContinuous",
+    "game.TargetObjectReference",
+    "game.LayerColor",
+    "game.ContinuousEffect.SetColors",
+    "game.ContinuousEffect.SetColorless"
+   ],
+   "review": "Capability-fit packet at origin/main 48e5af21576cf25d2bbbca58a749a70b25ce4f29: docs/card-authoring.md capability lookup; mtg/cardprogram/README.md; mtg/cards/authored/chaoslace.go; mtg/rules/chaoslace_test.go; mtg/rules/spell_color_effects_test.go; mtg/rules/continuous.go applyColorLayer; mtg/rules/continuous_test.go SetColorless prior art. This is not a claim of source or rules review for the selected cards."
   }
  ],
  "records": [
@@ -100439,8 +100494,10 @@
    "oracle_id": "3773001a-8868-49ec-a406-298cf72359c2",
    "revision": "5736fcc7-fa95-4ef4-b821-392ec00e03bf",
    "name": "Purelace",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "target-spell-or-permanent-becomes-color",
+   "batch": "color-laces-20261119-1720",
+   "evidence": "mtg/rules/color_laces_test.go: TestPurelaceTargetPermanentBecomesWhite; CR 2026-11-06 105.3, 115.1a, 202.2, 400.7a, 601.2c/f/h, 608.2b, 611.2a/c, 613.1e"
   },
   {
    "oracle_id": "37731c49-1238-4e0e-8993-204e36c1f4ee",
@@ -123765,8 +123822,10 @@
    "oracle_id": "52d4dc8a-2799-4b4e-9c20-f14bb75c2279",
    "revision": "c781cc80-5f57-4677-a9da-3523191cc7c6",
    "name": "Moonlace",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "target-spell-or-permanent-becomes-color",
+   "batch": "color-laces-20261119-1720",
+   "evidence": "mtg/rules/color_laces_test.go: TestMoonlaceTargetPermanentBecomesColorless; CR 2026-11-06 105.3, 115.1a, 202.2, 400.7a, 601.2c/f/h, 608.2b, 611.2a/c, 613.1e"
   },
   {
    "oracle_id": "52d8e492-b7b7-4ad4-8f1f-5c50993e55e0",
@@ -138464,8 +138523,10 @@
    "oracle_id": "6452b6a6-6235-46a3-a712-a26592450438",
    "revision": "185674a4-db97-444d-b0e9-7dcfc245ce4b",
    "name": "Thoughtlace",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "target-spell-or-permanent-becomes-color",
+   "batch": "color-laces-20261119-1720",
+   "evidence": "mtg/rules/color_laces_test.go: TestThoughtlaceTargetPermanentBecomesBlue; CR 2026-11-06 105.3, 115.1a, 202.2, 400.7a, 601.2c/f/h, 608.2b, 611.2a/c, 613.1e"
   },
   {
    "oracle_id": "6454c457-a278-431a-9e8d-bfd1a966bdde",
@@ -256680,8 +256741,10 @@
    "oracle_id": "eec1de80-4b3d-481d-a235-c299e0381830",
    "revision": "bf312acb-2fa6-440a-964b-424ad8abc331",
    "name": "Lifelace",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "target-spell-or-permanent-becomes-color",
+   "batch": "color-laces-20261119-1720",
+   "evidence": "mtg/rules/color_laces_test.go: TestLifelaceTargetPermanentBecomesGreen; CR 2026-11-06 105.3, 115.1a, 202.2, 400.7a, 601.2c/f/h, 608.2b, 611.2a/c, 613.1e"
   },
   {
    "oracle_id": "eec72bcf-ccbc-43fc-8bdd-7bf4faa1fad7",
@@ -267442,8 +267505,10 @@
    "oracle_id": "fb80aaba-352a-4b58-8db2-1e02d542819c",
    "revision": "237e37fb-383d-432c-8ac3-1332096567db",
    "name": "Deathlace",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "target-spell-or-permanent-becomes-color",
+   "batch": "color-laces-20261119-1720",
+   "evidence": "mtg/rules/color_laces_test.go: TestDeathlaceTargetPermanentBecomesBlack; CR 2026-11-06 105.3, 115.1a, 202.2, 400.7a, 601.2c/f/h, 608.2b, 611.2a/c, 613.1e"
   },
   {
    "oracle_id": "fb818376-6e87-4aa3-a050-4b5f82942593",
