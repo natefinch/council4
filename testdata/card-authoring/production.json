@@ -1652,6 +1652,34 @@
     "oracle_text_sha256": "1f9ecc36e79a413ad2fa044727853300b70c6979e45539ca6c3b3d1c7a05e510",
     "revision": "f8eaaded-b18a-4614-b5b5-b4bb49a2e1b1",
     "rulings_uri": "https://api.scryfall.com/cards/f8eaaded-b18a-4614-b5b5-b4bb49a2e1b1/rulings"
+   },
+   {
+    "name": "Merfolk Raiders",
+    "oracle_id": "19edc98c-edc2-47bf-b2da-00f536d7c158",
+    "oracle_text_sha256": "0d56a13204c66a34fb55ebca1b4e0e07ddf4bc7800acab7d4a6d91ef53195047",
+    "revision": "d0f34166-8946-4bcc-84af-3540c42ac7f7",
+    "rulings_uri": "https://api.scryfall.com/cards/d0f34166-8946-4bcc-84af-3540c42ac7f7/rulings"
+   },
+   {
+    "name": "Teferi's Drake",
+    "oracle_id": "3605c5ac-3b35-41a5-9266-286fb1d11716",
+    "oracle_text_sha256": "8b9f4d2504c79b61e8da8c57b2cb748645fae561a2999b7f4c99716f7164457c",
+    "revision": "c24823df-5651-4578-a0c8-f9f52f66abe4",
+    "rulings_uri": "https://api.scryfall.com/cards/c24823df-5651-4578-a0c8-f9f52f66abe4/rulings"
+   },
+   {
+    "name": "Tolarian Drake",
+    "oracle_id": "d999f2a3-5cb4-4f12-a79a-c5db0a300620",
+    "oracle_text_sha256": "8b9f4d2504c79b61e8da8c57b2cb748645fae561a2999b7f4c99716f7164457c",
+    "revision": "e04bba8a-48ee-4981-adc2-4f82c0f2c1bd",
+    "rulings_uri": "https://api.scryfall.com/cards/e04bba8a-48ee-4981-adc2-4f82c0f2c1bd/rulings"
+   },
+   {
+    "name": "Sandbar Crocodile",
+    "oracle_id": "e11926bf-ca14-4e1e-aca5-9ffedb91868c",
+    "oracle_text_sha256": "2a40631bbb7e42b241fc3340ce4b36b4c9871281bf9de02cf2a56f856aa48dc6",
+    "revision": "450b79d9-5ab8-4699-8052-a278c316a5c3",
+    "rulings_uri": "https://api.scryfall.com/cards/450b79d9-5ab8-4699-8052-a278c316a5c3/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8737,6 +8765,23 @@
     "ApplyRule with RuleEffectMustBlock and RequiredBlockAttackerRef"
    ],
    "review": "Capability-only check against origin/main a7aaaa3b4557f0b9061b0b546a8374fc42b72b91: mtg/cardprogram/README.md; mtg/game/ability.go, selection.go, primitive.go, cost_modifier.go; mtg/rules/combat_must_block_test.go (TestMustBlockDirectedRequiresThatPair and TestMustBlockDirectedDoesNothingWhenUnobeyable). Card source and rules review remain for the author."
+  },
+  {
+   "id": "phasing-creatures-20261119",
+   "family": "phasing-creatures",
+   "oracle_ids": [
+    "19edc98c-edc2-47bf-b2da-00f536d7c158",
+    "3605c5ac-3b35-41a5-9266-286fb1d11716",
+    "d999f2a3-5cb4-4f12-a79a-c5db0a300620",
+    "e11926bf-ca14-4e1e-aca5-9ffedb91868c"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.PhasingStaticBody",
+    "game.FlyingStaticBody",
+    "game.IslandwalkStaticBody"
+   ],
+   "review": "Capability packet reviewed for selection only: mtg/game/ability.go (PhasingStaticBody, FlyingStaticBody), mtg/game/landwalk.go (IslandwalkStaticBody), mtg/rules/phase_out_targeted_test.go (TestAutomaticPhasingUsesPreEventBoard), and mtg/rules/breezekeeper_phasing_test.go (TestBreezekeeperPhasesOutBeforeItsControllerUntaps). Each assigned card still requires its own pinned Oracle, rulings, and applicable CR source review."
   }
  ],
  "records": [
@@ -75900,8 +75945,10 @@
    "oracle_id": "19edc98c-edc2-47bf-b2da-00f536d7c158",
    "revision": "d0f34166-8946-4bcc-84af-3540c42ac7f7",
    "name": "Merfolk Raiders",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "phasing-creatures",
+   "batch": "phasing-creatures-20261119",
+   "evidence": "mtg/rules/phasing_creatures_test.go: TestMerfolkRaidersIslandwalkPreventsBlockingAfterCast"
   },
   {
    "oracle_id": "19ef0329-08de-4835-8079-2e791e19f3a6",
@@ -99004,8 +99051,10 @@
    "oracle_id": "3605c5ac-3b35-41a5-9266-286fb1d11716",
    "revision": "c24823df-5651-4578-a0c8-f9f52f66abe4",
    "name": "Teferi's Drake",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "phasing-creatures",
+   "batch": "phasing-creatures-20261119",
+   "evidence": "mtg/rules/phasing_creatures_test.go: TestTeferisDrakeCastsWithFlyingAndPhasing"
   },
   {
    "oracle_id": "3607d700-5a05-4e68-8863-3514c68566ef",
@@ -238304,8 +238353,10 @@
    "oracle_id": "d999f2a3-5cb4-4f12-a79a-c5db0a300620",
    "revision": "e04bba8a-48ee-4981-adc2-4f82c0f2c1bd",
    "name": "Tolarian Drake",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "phasing-creatures",
+   "batch": "phasing-creatures-20261119",
+   "evidence": "mtg/rules/phasing_creatures_test.go: TestTolarianDrakeFlyingPreventsGroundBlockAfterCast"
   },
   {
    "oracle_id": "d99b44bc-375a-4cf1-9148-ef6fe615cb10",
@@ -244651,8 +244702,10 @@
    "oracle_id": "e11926bf-ca14-4e1e-aca5-9ffedb91868c",
    "revision": "450b79d9-5ab8-4699-8052-a278c316a5c3",
    "name": "Sandbar Crocodile",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "phasing-creatures",
+   "batch": "phasing-creatures-20261119",
+   "evidence": "mtg/rules/phasing_creatures_test.go: TestSandbarCrocodilePhasesOutBeforeItsControllerUntaps"
   },
   {
    "oracle_id": "e11966cd-2ee3-4df4-b099-abf42dcdf0db",
