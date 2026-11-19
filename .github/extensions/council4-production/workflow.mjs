@@ -967,8 +967,12 @@ Return approve with no findings only when no material unresolved defect remains,
                     taskId: task.id, phase: "ci_wait", head: facts.head, pr: facts.pr,
                     startedAt: new Date().toISOString(), agent: false };
                   state.stages.push(stage);
-                  try { await watch(); stage.outcome = "settled"; }
-                  catch (error) { stage.outcome = "error"; throw error; }
+                  try {
+                    const result = await watch();
+                    stage.outcome = result.status;
+                    if (result.reason) stage.reason = result.reason;
+                    return result;
+                  } catch (error) { stage.outcome = "error"; throw error; }
                   finally { stage.completedAt = new Date().toISOString(); await save(); }
                 },
                 fixCI: async feedback => {

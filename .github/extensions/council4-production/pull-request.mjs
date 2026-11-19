@@ -79,26 +79,27 @@ export function pullRequestAPI(command, signal, wait = ms => delay(ms, undefined
       return { head, runs: pages.flatMap(page => page.check_runs), statuses: [...byContext.values()] };
     },
     async watch(cwd, number, expectedHead, required) {
-      // GitHub can publish the PR before registering its Actions checks.
-      for (let attempt = 0; ; attempt++) {
+      let registrationWaits = 0;
+      let activeWaits = 0;
+      for (;;) {
         const pr = await this.view(cwd, number);
-        if (pr.state === "MERGED") return;
+        if (pr.state === "MERGED") return { status: "merged", pr };
         const checks = await this.checks(cwd, expectedHead);
-        if (assessChecks(pr, checks, required, expectedHead).status !== "pending") return;
-        const registered = required.checks.every(name =>
-          checks.runs.some(check => check.name === name) ||
-          (!["Tests", "Race Tests"].includes(name) &&
-            checks.statuses.some(check => check.context === name)));
-        if (registered) break;
-        if (attempt === 8) return;
-        await wait(15000);
-      }
-      try {
-        await gh(cwd, ["pr", "checks", String(number), "--repo", repository, "--watch", "--fail-fast", "--interval", "15"]);
-      } catch (error) {
-        // gh uses 1 for a failed check, 8 for pending. Re-read authoritative
-        // head-specific checks; authentication/network/other failures propagate.
-        if (![1, 8].includes(error.cause?.code)) throw error;
+        const assessed = assessChecks(pr, checks, required, expectedHead);
+        if (assessed.status !== "pending") return assessed;
+        const missing = required.checks.filter(name =>
+          !checks.runs.some(check => check.name === name) &&
+          (["Tests", "Race Tests"].includes(name) ||
+            !checks.statuses.some(check => check.context === name)));
+        if (missing.length) {
+          if (registrationWaits++ === 8) return { status: "pending",
+            reason: `Required CI checks did not register on ${expectedHead}: ${missing.join(", ")}` };
+          await wait(15000);
+        } else {
+          if (activeWaits++ === 240) return { status: "pending",
+            reason: `CI is still pending on ${expectedHead} after two hours of polling; inspect the PR checks before resuming` };
+          await wait(30000);
+        }
       }
     },
     // Per-job evidence works while sibling jobs still run and tolerates jobs
@@ -272,10 +273,8 @@ export async function landPullRequest({
       pr: { number: merged.number, url: merged.url }, ciFixes: state.ciFixes };
   }
 
-  // One pass either merges, fixes a real failure, integrates newer main, or
-  // returns a precise pending state. GitHub's watch handles active CI waits.
-  for (;;) {
-    const required = await protection(root, signal);
+  landing: for (;;) {
+    let required = await protection(root, signal);
     const main = await fetchMain();
     if (await git(work.path, ["merge-base", main, state.head], signal) !== main) {
       const before = await git(work.path, ["rev-parse", "HEAD^{tree}"], signal);
@@ -305,14 +304,21 @@ export async function landPullRequest({
     save();
     pr = await api.view(work.path, pr.number);
     if (pr.state === "MERGED") return confirmMerged(pr);
-    let checks = await api.checks(work.path, state.head);
-    let assessed = assessChecks(pr, checks, required, state.head);
-    if (assessed.status === "pending") {
-      await watchCI(() => api.watch(work.path, pr.number, state.head, required), { pr: state.pr, head: state.head });
+    let assessed = assessChecks(pr, await api.checks(work.path, state.head), required, state.head);
+    for (;;) {
+      if (assessed.status === "pending") {
+        assessed = await watchCI(() => api.watch(work.path, pr.number, state.head, required), { pr: state.pr, head: state.head });
+        if (assessed.status === "merged") return confirmMerged(assessed.pr);
+      }
+      if (assessed.status !== "ready") break;
+      if (await fetchMain() !== main) continue landing;
+      // Even at the final gate, newly registered checks must be awaited and
+      // failures go through normal CI repair. Only a fresh ready read can merge.
       pr = await api.view(work.path, pr.number);
       if (pr.state === "MERGED") return confirmMerged(pr);
-      checks = await api.checks(work.path, state.head);
-      assessed = assessChecks(pr, checks, required, state.head);
+      required = await protection(root, signal);
+      assessed = assessChecks(pr, await api.checks(work.path, state.head), required, state.head);
+      if (assessed.status === "ready") return confirmMerged(await api.merge(work.path, pr.number, state.head));
     }
     if (assessed.status === "failed") {
       const evidence = await api.failedLogs(work.path, assessed);
@@ -368,13 +374,6 @@ export async function landPullRequest({
       if (await fetchMain() !== main) continue;
       return { status: "pending", reason: "GitHub still reports the PR behind main", published: false, pr: state.pr };
     }
-    if (assessed.status !== "ready") return { ...assessed, published: false, pr: state.pr };
-    if (await fetchMain() !== main) continue;
-    // Re-read the PR head and check state immediately before a head-matched,
-    // ordinary merge. Never --admin, false statuses or protection mutations.
-    pr = await api.view(work.path, pr.number);
-    const last = assessChecks(pr, await api.checks(work.path, state.head), await protection(root, signal), state.head);
-    if (last.status !== "ready") return { ...last, published: false, pr: state.pr };
-    return confirmMerged(await api.merge(work.path, pr.number, state.head));
+    return { ...assessed, published: false, pr: state.pr };
   }
 }

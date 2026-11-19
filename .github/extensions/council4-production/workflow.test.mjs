@@ -968,7 +968,7 @@ function landingServices(f) {
           baseRefOid: await remoteHead(f) };
       },
       checks: async (_cwd, head) => successfulChecks(head),
-      watch: async () => {},
+      watch: async () => ({ status: "pending" }),
       failedLogs: async (_cwd, checks) => ({ checks, logs: ["Actual failing check log"],
         failures: checks.failed.map(check => ({ name: check.name, id: check.id, run: "9", infrastructure: null })),
         infrastructure: null }),
@@ -997,59 +997,61 @@ function landingServices(f) {
 
 test("CI watch waits for required check registration even when unrelated checks appear first", async () => {
   const waits = [];
-  const commands = [];
-  const api = pullRequestAPI(async (_cwd, executable, args) => {
-    commands.push([executable, ...args]);
-    return "";
-  }, undefined, async ms => { waits.push(ms); });
+  const api = pullRequestAPI(assert.fail, undefined, async ms => { waits.push(ms); });
   const head = "reviewed-head";
   api.view = async () => ({ headRefOid: head, state: "OPEN", baseRefName: "main", mergeStateStatus: "CLEAN" });
   const running = successfulChecks(head).runs.map(check => ({ ...check, status: "in_progress", conclusion: null }));
   const manual = { id: 3, name: "Manual", status: "completed", conclusion: "skipped" };
-  const observations = [[], [manual], [manual, running[0]], running];
+  const observations = [[], [manual], [manual, running[0]], running, successfulChecks(head).runs];
   let reads = 0;
   api.checks = async () => ({
     head, runs: observations[reads++],
     statuses: required.checks.map(context => ({ context, state: "success" })),
   });
-  await api.watch("/repo", 42, head, required);
-  assert.equal(reads, 4);
-  assert.deepEqual(waits, [15000, 15000, 15000]);
-  assert.deepEqual(commands, [["gh", "pr", "checks", "42", "--repo", "natefinch/council4",
-    "--watch", "--fail-fast", "--interval", "15"]]);
+  assert.equal((await api.watch("/repo", 42, head, required)).status, "ready");
+  assert.equal(reads, 5);
+  assert.deepEqual(waits, [15000, 15000, 15000, 30000]);
 });
 
-test("CI registration wait is bounded and preserves missing checks as pending", async () => {
-  let waits = 0;
-  let reads = 0;
-  const api = pullRequestAPI(async () => { assert.fail("Must not watch nonexistent checks"); },
-    undefined, async () => { waits++; });
+test("Missing registrations and stuck CI return distinct bounded pending reasons", async () => {
   const head = "reviewed-head";
   const pr = { headRefOid: head, state: "OPEN", baseRefName: "main", mergeStateStatus: "CLEAN" };
-  const checks = { head, statuses: [], runs: [] };
-  api.view = async () => pr;
-  api.checks = async () => { reads++; return checks; };
-  await api.watch("/repo", 42, head, required);
-  assert.equal(reads, 9);
-  assert.equal(waits, 8);
-  assert.equal(assessChecks(pr, checks, required, head).status, "pending");
+  const stuck = successfulChecks(head);
+  stuck.statuses.push({ context: "extra CI", state: "pending" });
+  for (const [checks, limit, reason] of [
+    [{ head, runs: [], statuses: [] }, 8, /did not register.*Tests, Race Tests/],
+    [stuck, 240, /still pending.*inspect the PR checks/],
+  ]) {
+    let waits = 0;
+    const api = pullRequestAPI(assert.fail, undefined, async () => { assert.ok(++waits <= limit); });
+    api.view = async () => pr;
+    api.checks = async () => checks;
+    const result = await api.watch("/repo", 42, head, required);
+    assert.equal(waits, limit);
+    assert.equal(result.status, "pending");
+    assert.match(result.reason, reason);
+    assert.ok(result.reason.includes(head));
+  }
 });
 
-test("CI registration wait propagates stale heads, read errors and cancellation", async () => {
+test("CI polling detects a changed head and propagates read errors and cancellation", async () => {
   for (const mode of ["head", "read", "cancel"]) {
     const head = "reviewed-head";
     const failure = new Error(mode);
     const controller = new AbortController();
-    const api = pullRequestAPI(async () => { assert.fail("Must not start gh watch"); },
-      controller.signal);
+    let waited = false;
+    const api = pullRequestAPI(assert.fail, controller.signal,
+      mode === "cancel" ? undefined : async () => { assert.equal(waited, false); waited = true; });
     api.view = async () => ({
-      headRefOid: mode === "head" ? "changed-head" : head,
+      headRefOid: mode === "head" && waited ? "changed-head" : head,
       state: "OPEN", baseRefName: "main", mergeStateStatus: "CLEAN",
     });
     api.checks = async () => {
-      if (mode === "read") throw failure;
+      if (mode === "read" && waited) throw failure;
       if (mode === "cancel") controller.abort();
-      return { head, statuses: [], runs: [] };
+      const checks = successfulChecks(head);
+      checks.runs[1].status = "in_progress";
+      return checks;
     };
     await assert.rejects(api.watch("/repo", 42, head, required),
       mode === "head" ? /expected open main-bound reviewed head/ :
@@ -1057,24 +1059,42 @@ test("CI registration wait propagates stale heads, read errors and cancellation"
   }
 });
 
-test("Landing watches initially absent CI and only merges after exact-head checks register", async t => {
-  const f = await repositoryFixture(t);
-  const services = landingServices(f);
-  let registered = false;
-  let watched = 0;
-  services.api.checks = async (_cwd, head) =>
-    registered ? successfulChecks(head) : { head, runs: [], statuses: [] };
-  services.api.watch = async (_cwd, _number, head, checksRequired) => {
-    assert.equal(head, await git(f.work.path, ["rev-parse", "HEAD"]));
-    assert.deepEqual(checksRequired, required);
-    watched++;
-    registered = true;
-  };
-  const result = await land(f.repo, f.work, { title: "card" }, f.expected, "session", undefined, services);
-  assert.equal(watched, 1);
-  assert.equal(result.published, true);
-  assert.equal(services.calls.merged, 1);
-});
+for (const [scenario, initial, conclusion] of [
+  ["CI registers late and then passes", "missing", "success"],
+  ["CI starts at the final merge gate and then fails", "success", "failure"],
+]) {
+  test(`Landing waits through queued and running checks when ${scenario}`, async t => {
+    const f = await repositoryFixture(t);
+    const services = landingServices(f);
+    let reviewedHead;
+    services.validate = async ({ head }) => { reviewedHead = head; };
+    const observations = [initial, "queued", "in_progress", "in_progress"];
+    services.api.checks = async (_cwd, head) => {
+      assert.equal(head, reviewedHead);
+      const state = observations.shift() ?? conclusion;
+      if (state === "missing") return { head, runs: [], statuses: [] };
+      const checks = successfulChecks(head);
+      if (state === "queued" || state === "in_progress") {
+        Object.assign(checks.runs[1], { status: state, conclusion: null });
+      } else {
+        checks.runs[1].conclusion = state;
+      }
+      return checks;
+    };
+    let waits = 0;
+    services.api.watch = pullRequestAPI(assert.fail, undefined, async () => { waits++; }).watch;
+    const result = await land(f.repo, f.work, { title: "card" }, f.expected, "session", undefined, services);
+    assert.ok(waits >= 2);
+    if (conclusion === "success") {
+      assert.equal(result.published, true);
+      assert.equal(services.calls.merged, 1);
+    } else {
+      assert.equal(result.status, "ci_failed");
+      assert.equal(result.checks.failed[0].name, "Race Tests");
+      assert.equal(services.calls.merged, 0);
+    }
+  });
+}
 
 test("Landing publishes only a PR branch and verifies CI before squash merge; replay is idempotent", async t => {
   const f = await repositoryFixture(t);
