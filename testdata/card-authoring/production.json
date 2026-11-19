@@ -1715,6 +1715,13 @@
     "oracle_text_sha256": "24e1c25c00b5ecd889a3cd5ea998d436f645a367e75815a34c20a0ef039bcff9",
     "revision": "741ed811-cbcd-4178-a874-dc79d2a5d6f1",
     "rulings_uri": "https://api.scryfall.com/cards/741ed811-cbcd-4178-a874-dc79d2a5d6f1/rulings"
+   },
+   {
+    "name": "Caldaia Strongarm",
+    "oracle_id": "e0e6938b-7abf-4f69-a3d6-82a58912bff4",
+    "oracle_text_sha256": "d9d1d45ff914b8b9c1e2acdeca3c4ca9f0545b948e202d771885e9897fa68df2",
+    "revision": "58b431d2-33c1-49d8-b45d-690c174bb456",
+    "rulings_uri": "https://api.scryfall.com/cards/58b431d2-33c1-49d8-b45d-690c174bb456/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8879,6 +8886,18 @@
     "Expected Plasma Jockey's attack trigger to target an opponent-controlled creature that cannot block that turn, alongside Blitz consequences; the Engine does not retain whether Blitz was paid, preventing correct conditional behavior."
    ],
    "review": "Card Plasma Jockey, checked Engine result for #4005 on 7209aba35e16cdc2dbd9bb514deaa7e47db5a59d: Implemented shared Blitz support: typed payment provenance, immediate haste, a draw on death, and a next-end-step sacrifice tied to the original permanent. No cards were registered; changes remain uncommitted in the isolated worktree.\nOn main c1089ccbb, `go test -overlay=.cardwork/gap-4005/overlay.json ./mtg/rules -run '^TestRiveteersDecoyBlitzPaymentProvenanceProbe$' -count=1` reproduced the missing payment marker.\n`go test ./mtg/rules -run '^TestBlitz(Paid|Early|Stack|Countered|Combines|Ability|Permanent)' -count=1 -v` passed all eight scenarios, including combined costs, copies, replay, and replaced entry.\n`go test ./mtg/game/... ./mtg/cardprogram/... ./mtg/rules/... -count=1` and `git diff --check` passed.\nSource review is in mtg/rules/blitz_test.go; verified rules and six rulings responses are retained under .cardwork/gap-4005/. Prepared copies are restricted to instants and sorceries and cannot become Blitz permanents."
+  },
+  {
+   "id": "resume-20a43e50-d0e0-43aa-95cf-1f3448c6e7b9-27",
+   "family": "card-followup",
+   "oracle_ids": [
+    "e0e6938b-7abf-4f69-a3d6-82a58912bff4"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected Caldaia Strongarm's entry trigger to put two +1/+1 counters on a target creature, alongside Blitz consequences; the Engine does not retain whether Blitz was paid, preventing correct conditional behavior."
+   ],
+   "review": "Card Caldaia Strongarm, checked Engine result for #4005 on 7209aba35e16cdc2dbd9bb514deaa7e47db5a59d: Implemented shared Blitz support: typed payment provenance, immediate haste, a draw on death, and a next-end-step sacrifice tied to the original permanent. No cards were registered; changes remain uncommitted in the isolated worktree.\nOn main c1089ccbb, `go test -overlay=.cardwork/gap-4005/overlay.json ./mtg/rules -run '^TestRiveteersDecoyBlitzPaymentProvenanceProbe$' -count=1` reproduced the missing payment marker.\n`go test ./mtg/rules -run '^TestBlitz(Paid|Early|Stack|Countered|Combines|Ability|Permanent)' -count=1 -v` passed all eight scenarios, including combined costs, copies, replay, and replaced entry.\n`go test ./mtg/game/... ./mtg/cardprogram/... ./mtg/rules/... -count=1` and `git diff --check` passed.\nSource review is in mtg/rules/blitz_test.go; verified rules and six rulings responses are retained under .cardwork/gap-4005/. Prepared copies are restricted to instants and sorceries and cannot become Blitz permanents."
   }
  ],
  "records": [
@@ -244593,8 +244612,10 @@
    "oracle_id": "e0e6938b-7abf-4f69-a3d6-82a58912bff4",
    "revision": "58b431d2-33c1-49d8-b45d-690c174bb456",
    "name": "Caldaia Strongarm",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-20a43e50-d0e0-43aa-95cf-1f3448c6e7b9-27",
+   "evidence": "mtg/rules/caldaia_strongarm_test.go: TestCaldaiaStrongarmBlitzCountersTargetCreature"
   },
   {
    "oracle_id": "e0eaa43f-1c46-4299-9ecd-5f4a32d292cd",
