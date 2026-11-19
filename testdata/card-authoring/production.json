@@ -1533,6 +1533,13 @@
     "oracle_text_sha256": "06a9fd9d491051f419b81168449cd328282548f26fa0957319c63c2570aac097",
     "revision": "9dbd510a-d71f-4b0c-bc6c-e403f632cbdb",
     "rulings_uri": "https://api.scryfall.com/cards/9dbd510a-d71f-4b0c-bc6c-e403f632cbdb/rulings"
+   },
+   {
+    "name": "Barkshell Blessing",
+    "oracle_id": "baf3d4d9-0590-4d94-8f4e-1e726194b920",
+    "oracle_text_sha256": "f53085086f5c70eaf18dc6b406cf0de978a64ce87190f01365073144a17aa4a4",
+    "revision": "cd273ef2-4aed-4c7e-8c97-fe8b1af9ce69",
+    "rulings_uri": "https://api.scryfall.com/cards/cd273ef2-4aed-4c7e-8c97-fe8b1af9ce69/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8502,6 +8509,19 @@
     "game.Discard"
    ],
    "review": "Capability packet at origin/main@9e2eb23: docs/card-authoring.md; mtg/cardprogram/README.md; Conspire declaration and behavior in mtg/game/ability.go and mtg/rules/conspire_test.go; Draw/Discard in mtg/game/primitive.go. Required primary-source and official-rules review remains for the author."
+  },
+  {
+   "id": "barkshell-blessing-conspire-2026-11-19",
+   "family": "conspire-single-target-pump",
+   "oracle_ids": [
+    "baf3d4d9-0590-4d94-8f4e-1e726194b920"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.ConspireStaticBody",
+    "game.ModifyPT"
+   ],
+   "review": "Capability-fit review only: mtg/cardprogram/README.md (Conspire) and existing counter-pump card/scenario prior art. Primary-source and rules review are deferred to the author."
   }
  ],
  "records": [
@@ -211912,8 +211932,10 @@
    "oracle_id": "baf3d4d9-0590-4d94-8f4e-1e726194b920",
    "revision": "cd273ef2-4aed-4c7e-8c97-fe8b1af9ce69",
    "name": "Barkshell Blessing",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "conspire-single-target-pump",
+   "batch": "barkshell-blessing-conspire-2026-11-19",
+   "evidence": "mtg/rules/barkshell_blessing_test.go: TestBarkshellBlessingPumpsTargetWithConspire; CR 2026-11-06 202.2d, 115.1a, 601.2a-i, 603.2-3, 608.2b, 611.2a, 613.4c, 702.78a-b, 707.10/10c"
   },
   {
    "oracle_id": "baf80db7-2ca8-4bfc-b5b6-25ed51878dd7",

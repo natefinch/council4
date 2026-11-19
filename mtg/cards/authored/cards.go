@@ -12,7 +12,7 @@ func verifiedEntries() []cardset.Entry {
 	entries := []cardset.Entry{Terastodon, HiveMind, GiftsUngiven, GildedDrake, WorldgorgerDragon, NimDeathmantle, Abundance, BloodMoon, Muldrotha, Skullbriar, Mindslaver, GenerousGift, Pongify, RapidHybridization, Resculpt, Twincast, Reverberate, DualcasterMage, CacklingCounterpart, FatedInfatuation, Intuition, RealmsUncharted, ChainsOfMephistopheles, Humility, Opalescence, ForcedMarch, IncineratingBlast}
 	entries = append(entries, RosethornAcolyte, CrystalDragon, PollenShieldHare,
 		MurderousRider, GumdropPoisoner, QuestingDruid, QuirionDryad)
-	entries = append(entries, Bedevil, Terminate, Vindicate, Disenchant, Naturalize, GleefulSabotage, BurnTrail, GhastlyDiscovery)
+	entries = append(entries, Bedevil, Terminate, Vindicate, Disenchant, Naturalize, GleefulSabotage, BurnTrail, GhastlyDiscovery, BarkshellBlessing)
 	entries = append(entries, AnOfferYouCantRefuse, Counterspell, Negate, EssenceScatter, Disallow)
 	entries = append(entries, EladamrisCall, SteelshapersGift, Fabricate, IdyllicTutor, SylvanScrying, DemonicTutor, DiabolicTutor)
 	entries = append(entries, DeathDenied, WildestDreams, RatsFeast, ShatteredCrypt, ReturnToTheRanks, ChampionOfStraySouls)
