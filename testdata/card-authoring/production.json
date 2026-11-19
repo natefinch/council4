@@ -1701,6 +1701,13 @@
     "oracle_text_sha256": "9edc370ab49bbce2134c40c6b2703a36f204af7ef74f8af69f843ed25399d818",
     "revision": "8ab5152d-767a-47d5-acfc-f439810aaeea",
     "rulings_uri": "https://api.scryfall.com/cards/8ab5152d-767a-47d5-acfc-f439810aaeea/rulings"
+   },
+   {
+    "name": "Night Clubber",
+    "oracle_id": "4d2abfe1-f5f8-4ed5-915d-bfe98c6321ee",
+    "oracle_text_sha256": "f81f21bc183a9e03eaa9305d23c3000de31e7e51d6fa50b6204e528aa111f24d",
+    "revision": "59fd3f8a-a13b-4a0a-bb27-b9246949ea7b",
+    "rulings_uri": "https://api.scryfall.com/cards/59fd3f8a-a13b-4a0a-bb27-b9246949ea7b/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8841,6 +8848,18 @@
     "Expected Riveteers Requisitioner's death trigger to create a Treasure, alongside Blitz consequences; the Engine does not retain whether Blitz was paid, preventing correct conditional behavior."
    ],
    "review": "Card Riveteers Requisitioner, checked Engine result for #4005 on 7209aba35e16cdc2dbd9bb514deaa7e47db5a59d: Implemented shared Blitz support: typed payment provenance, immediate haste, a draw on death, and a next-end-step sacrifice tied to the original permanent. No cards were registered; changes remain uncommitted in the isolated worktree.\nOn main c1089ccbb, `go test -overlay=.cardwork/gap-4005/overlay.json ./mtg/rules -run '^TestRiveteersDecoyBlitzPaymentProvenanceProbe$' -count=1` reproduced the missing payment marker.\n`go test ./mtg/rules -run '^TestBlitz(Paid|Early|Stack|Countered|Combines|Ability|Permanent)' -count=1 -v` passed all eight scenarios, including combined costs, copies, replay, and replaced entry.\n`go test ./mtg/game/... ./mtg/cardprogram/... ./mtg/rules/... -count=1` and `git diff --check` passed.\nSource review is in mtg/rules/blitz_test.go; verified rules and six rulings responses are retained under .cardwork/gap-4005/. Prepared copies are restricted to instants and sorceries and cannot become Blitz permanents."
+  },
+  {
+   "id": "resume-20a43e50-d0e0-43aa-95cf-1f3448c6e7b9-25",
+   "family": "card-followup",
+   "oracle_ids": [
+    "4d2abfe1-f5f8-4ed5-915d-bfe98c6321ee"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected Night Clubber's entry effect to give opposing creatures -1/-1 until end of turn, alongside Blitz consequences; the Engine does not retain whether Blitz was paid, preventing correct conditional behavior."
+   ],
+   "review": "Card Night Clubber, checked Engine result for #4005 on 7209aba35e16cdc2dbd9bb514deaa7e47db5a59d: Implemented shared Blitz support: typed payment provenance, immediate haste, a draw on death, and a next-end-step sacrifice tied to the original permanent. No cards were registered; changes remain uncommitted in the isolated worktree.\nOn main c1089ccbb, `go test -overlay=.cardwork/gap-4005/overlay.json ./mtg/rules -run '^TestRiveteersDecoyBlitzPaymentProvenanceProbe$' -count=1` reproduced the missing payment marker.\n`go test ./mtg/rules -run '^TestBlitz(Paid|Early|Stack|Countered|Combines|Ability|Permanent)' -count=1 -v` passed all eight scenarios, including combined costs, copies, replay, and replaced entry.\n`go test ./mtg/game/... ./mtg/cardprogram/... ./mtg/rules/... -count=1` and `git diff --check` passed.\nSource review is in mtg/rules/blitz_test.go; verified rules and six rulings responses are retained under .cardwork/gap-4005/. Prepared copies are restricted to instants and sorceries and cannot become Blitz permanents."
   }
  ],
  "records": [
@@ -119068,8 +119087,10 @@
    "oracle_id": "4d2abfe1-f5f8-4ed5-915d-bfe98c6321ee",
    "revision": "59fd3f8a-a13b-4a0a-bb27-b9246949ea7b",
    "name": "Night Clubber",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-20a43e50-d0e0-43aa-95cf-1f3448c6e7b9-25",
+   "evidence": "mtg/rules/night_clubber_test.go: TestNightClubberBlitzEntryGivesOpponentsMinusOneUntilEndOfTurnAndDraws"
   },
   {
    "oracle_id": "4d2cc2a8-e08a-420a-8922-c63e39129e23",
