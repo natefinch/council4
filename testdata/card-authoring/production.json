@@ -1596,6 +1596,13 @@
     "oracle_text_sha256": "7ff82562fea7187dd5c30550aa0878aad3a637fbd202998bd8489c6aff63c549",
     "revision": "c0b34ecd-6dd4-49b0-ab49-3c11f70e0c4a",
     "rulings_uri": "https://api.scryfall.com/cards/c0b34ecd-6dd4-49b0-ab49-3c11f70e0c4a/rulings"
+   },
+   {
+    "name": "Minamo Sightbender",
+    "oracle_id": "c4f1d8c8-29e5-43fe-8281-7d42d0173dc5",
+    "oracle_text_sha256": "403d2e718510cd19094fd2e1bd492ecf565bd6f3130a540b161965157b9e6739",
+    "revision": "a598d08d-c9d4-4de5-bef5-998dd115b8b6",
+    "rulings_uri": "https://api.scryfall.com/cards/a598d08d-c9d4-4de5-bef5-998dd115b8b6/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8637,6 +8644,18 @@
     "game.CopyStackObject"
    ],
    "review": "Capability-only review at origin/main 0e00beed3850da20b87d811747484bd25b332ef7: existing Conspire declaration/runtime and tests, attacking-or-blocking target filter, MovePermanent to zone.Library (top by default), and stack-copy support. Official source and CR review remain assigned to the card author; not claimed here."
+  },
+  {
+   "id": "resume-20a43e50-d0e0-43aa-95cf-1f3448c6e7b9-14",
+   "family": "card-followup",
+   "oracle_ids": [
+    "c4f1d8c8-29e5-43fe-8281-7d42d0173dc5"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected a power-2 creature to be illegal as the target when X=1; actual Engine.legalActions offered that activation, despite confirming the otherwise identical power-1 target was legal."
+   ],
+   "review": "Card Minamo Sightbender, checked Engine result for #3763 on 1dd25da2b20f7bbedcf137b86a8ab22b36c81731: Implemented Engine gap #3763. `TargetSpec.PowerAtMostX` checks current power against announced X when choosing, changing, and resolving targets. Killing Glare and Minamo Sightbender passed as unregistered Engine fixtures. Changes remain local and uncommitted.\nOn main at c59104b4ae4de2d5ccd450aeb7b42aaf85c2dcf9, `go test -count=1 -tags card_support_gap_probe ./mtg/rules -run '^TestKillingGlareXBoundPowerGapProbe$' -v` reproduced acceptance of a power-3 target at X=2.\n`go test -count=1 -tags card_support_gap_probe -v ./mtg/rules -run '^(TestKillingGlarePowerAtMostX|TestMinamoSightbenderPowerAtMostX|TestPowerAtMostX.*)$'` passed. The named plays reject over-X targets, apply their effects at the bound, and fail to resolve after a power increase. Route tests cover retargeting, ordinary and storm copies, cast events, alternative and combined costs, flashback destinations, and clone/replay.\n`go test -count=1 ./mtg/game ./mtg/cardprogram ./mtg/rules` and `git diff --check` passed.\nOracle, ruling, and verified CR source records are retained in `mtg/rules/target_mana_value_x_test.go`; raw responses are under `.cardwork/`."
   }
  ],
  "records": [
@@ -220296,8 +220315,10 @@
    "oracle_id": "c4f1d8c8-29e5-43fe-8281-7d42d0173dc5",
    "revision": "a598d08d-c9d4-4de5-bef5-998dd115b8b6",
    "name": "Minamo Sightbender",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-20a43e50-d0e0-43aa-95cf-1f3448c6e7b9-14",
+   "evidence": "mtg/rules/target_mana_value_x_test.go: TestMinamoSightbenderPowerAtMostX; printing a598d08d-c9d4-4de5-bef5-998dd115b8b6; CR 2026-09-25 107.3a, 208.1, 509.1a-b, 514.2, 602.2b, 602.5a, 608.2b, 611.2a, 613.4a-d"
   },
   {
    "oracle_id": "c4f3a6c6-a123-43ad-9513-d65fbff10d02",
