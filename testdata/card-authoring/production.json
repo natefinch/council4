@@ -1680,6 +1680,13 @@
     "oracle_text_sha256": "2a40631bbb7e42b241fc3340ce4b36b4c9871281bf9de02cf2a56f856aa48dc6",
     "revision": "450b79d9-5ab8-4699-8052-a278c316a5c3",
     "rulings_uri": "https://api.scryfall.com/cards/450b79d9-5ab8-4699-8052-a278c316a5c3/rulings"
+   },
+   {
+    "name": "Submerge",
+    "oracle_id": "99427ebe-c00d-4206-84ca-9764f6e952c6",
+    "oracle_text_sha256": "fb65c27c773befe300dbd7054b0d3c2491fe864b8c4f4edddccab10c6ea30880",
+    "revision": "d2741fe4-37fe-427f-ae85-5107991d4eee",
+    "rulings_uri": "https://api.scryfall.com/cards/d2741fe4-37fe-427f-ae85-5107991d4eee/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8782,6 +8789,20 @@
     "game.IslandwalkStaticBody"
    ],
    "review": "Capability packet reviewed for selection only: mtg/game/ability.go (PhasingStaticBody, FlyingStaticBody), mtg/game/landwalk.go (IslandwalkStaticBody), mtg/rules/phase_out_targeted_test.go (TestAutomaticPhasingUsesPreEventBoard), and mtg/rules/breezekeeper_phasing_test.go (TestBreezekeeperPhasesOutBeforeItsControllerUntaps). Each assigned card still requires its own pinned Oracle, rulings, and applicable CR source review."
+  },
+  {
+   "id": "submerge-6da9ced0",
+   "family": "single-card-submerge",
+   "oracle_ids": [
+    "99427ebe-c00d-4206-84ca-9764f6e952c6"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "cost.Alternative.Conditions",
+    "TargetSpec creature selection",
+    "game.MovePermanent to zone.Library top"
+   ],
+   "review": "Capability review: mtg/cardprogram/README.md (conditional alternative costs and target/zone operations); mtg/game/cost/additional.go; mtg/game/primitive_move_permanent.go; behavioral prior art in mtg/rules/conditional_alternative_cost_test.go and mtg/cards/authored/aethertow.go. Card-specific source and rules review remains required from the worker."
   }
  ],
  "records": [
@@ -183992,8 +184013,10 @@
    "oracle_id": "99427ebe-c00d-4206-84ca-9764f6e952c6",
    "revision": "d2741fe4-37fe-427f-ae85-5107991d4eee",
    "name": "Submerge",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "single-card-submerge",
+   "batch": "submerge-6da9ced0",
+   "evidence": "mtg/rules/submerge_test.go: TestAuthoredSubmergeConditionalAlternativeCostPutsTargetOnOwnerLibrary"
   },
   {
    "oracle_id": "9945c7eb-97a9-42df-a051-1ea514973280",
