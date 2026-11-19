@@ -1554,6 +1554,41 @@
     "oracle_text_sha256": "983ec0767a10003b7c9ed0328fbdb37ddb876ca830170e6f2f38b3283ce71d72",
     "revision": "c5e24850-bd9b-40ab-878f-b8a554da1956",
     "rulings_uri": "https://api.scryfall.com/cards/c5e24850-bd9b-40ab-878f-b8a554da1956/rulings"
+   },
+   {
+    "name": "Deepwood Legate",
+    "oracle_id": "414eb407-dd39-41d2-bf25-a7a77ff35cb4",
+    "oracle_text_sha256": "d837ada7091180c3ce4a13f22bfc47eeb767203c03bf454f0cfbc1803475b777",
+    "revision": "54f01925-7fd0-472d-91a4-3309e615f22f",
+    "rulings_uri": "https://api.scryfall.com/cards/54f01925-7fd0-472d-91a4-3309e615f22f/rulings"
+   },
+   {
+    "name": "Kyren Legate",
+    "oracle_id": "41b46aa5-6091-4bc4-8d17-d2c6b5fe1c5e",
+    "oracle_text_sha256": "a0ea6bf00d71990185c70c1ea8e1936b6a0643e1bc4e79d049fa683db1f0c32b",
+    "revision": "6f0e9806-be8c-4b88-a4be-0111d1be81d9",
+    "rulings_uri": "https://api.scryfall.com/cards/6f0e9806-be8c-4b88-a4be-0111d1be81d9/rulings"
+   },
+   {
+    "name": "Cho-Arrim Legate",
+    "oracle_id": "780c9cb2-9d98-4789-87e0-cb81db477204",
+    "oracle_text_sha256": "87fad973aa691fa54ee110286d7c29001e8359528a92380c0db98004f62480e7",
+    "revision": "1427a3a1-24e1-4697-b5eb-1c0a24f89e75",
+    "rulings_uri": "https://api.scryfall.com/cards/1427a3a1-24e1-4697-b5eb-1c0a24f89e75/rulings"
+   },
+   {
+    "name": "Saprazzan Legate",
+    "oracle_id": "d20b62fc-e248-4c84-87ac-7319b92531d4",
+    "oracle_text_sha256": "22d7258f7bf442e8ce64c190e1c377a67dd90cee16b7b0fca89a103638c06678",
+    "revision": "db9adf84-ee7e-472b-bd96-9abf853afa83",
+    "rulings_uri": "https://api.scryfall.com/cards/db9adf84-ee7e-472b-bd96-9abf853afa83/rulings"
+   },
+   {
+    "name": "Rushwood Legate",
+    "oracle_id": "f3623759-bf3a-4846-9ef7-1b732ad4355f",
+    "oracle_text_sha256": "e4830e354397a5e7b020b87eefb499e80e83e977c0747e5c8e117625000ed3eb",
+    "revision": "827b9c99-87d7-493c-9dc3-0c6aa4a61b49",
+    "rulings_uri": "https://api.scryfall.com/cards/827b9c99-87d7-493c-9dc3-0c6aa4a61b49/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8562,6 +8597,24 @@
     "game.GainLife"
    ],
    "review": "Capability-fit references: mtg/cardprogram/README.md:21; mtg/cards/authored/learn_spells.go:135-141. Primary-source and official-rules review remain assigned to the author."
+  },
+  {
+   "id": "legate-cycle-2026-11-19-01",
+   "family": "Prophecy Legates",
+   "oracle_ids": [
+    "414eb407-dd39-41d2-bf25-a7a77ff35cb4",
+    "41b46aa5-6091-4bc4-8d17-d2c6b5fe1c5e",
+    "780c9cb2-9d98-4789-87e0-cb81db477204",
+    "d20b62fc-e248-4c84-87ac-7319b92531d4",
+    "f3623759-bf3a-4846-9ef7-1b732ad4355f"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "cost.Alternative.Conditions",
+    "game.ActivatedAbility",
+    "game.ModifyPT"
+   ],
+   "review": "Capability-fit only: mtg/cardprogram/README.md and mtg/rules/conditional_alternative_cost_test.go show conjunctive land-control predicates; mtg/cards/k/kabuto_moth.go demonstrates an activated +1/+1-style effect using game.ModifyPT and end-of-turn duration. No card source or rules review claimed."
   }
  ],
  "records": [
@@ -108701,8 +108754,10 @@
    "oracle_id": "414eb407-dd39-41d2-bf25-a7a77ff35cb4",
    "revision": "54f01925-7fd0-472d-91a4-3309e615f22f",
    "name": "Deepwood Legate",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "Prophecy Legates",
+   "batch": "legate-cycle-2026-11-19-01",
+   "evidence": "mtg/rules/legate_cycle_test.go: TestDeepwoodLegateConditionalFreeCastAndPump"
   },
   {
    "oracle_id": "414f1c42-6b0e-49ce-8b44-17a75b996b68",
@@ -109043,8 +109098,10 @@
    "oracle_id": "41b46aa5-6091-4bc4-8d17-d2c6b5fe1c5e",
    "revision": "6f0e9806-be8c-4b88-a4be-0111d1be81d9",
    "name": "Kyren Legate",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "Prophecy Legates",
+   "batch": "legate-cycle-2026-11-19-01",
+   "evidence": "mtg/rules/legate_cycle_test.go: TestKyrenLegateConditionalFreeCastAndHaste"
   },
   {
    "oracle_id": "41b49a8e-09c5-4fd1-95f9-e5a51ce24f69",
@@ -155395,8 +155452,10 @@
    "oracle_id": "780c9cb2-9d98-4789-87e0-cb81db477204",
    "revision": "1427a3a1-24e1-4697-b5eb-1c0a24f89e75",
    "name": "Cho-Arrim Legate",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "Prophecy Legates",
+   "batch": "legate-cycle-2026-11-19-01",
+   "evidence": "mtg/rules/legate_cycle_test.go: TestChoArrimLegateConditionalFreeCastAndProtectionFromBlack"
   },
   {
    "oracle_id": "780da643-8d14-4f1a-a298-5b7454e9c4df",
@@ -231629,8 +231688,10 @@
    "oracle_id": "d20b62fc-e248-4c84-87ac-7319b92531d4",
    "revision": "db9adf84-ee7e-472b-bd96-9abf853afa83",
    "name": "Saprazzan Legate",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "Prophecy Legates",
+   "batch": "legate-cycle-2026-11-19-01",
+   "evidence": "mtg/rules/legate_cycle_test.go: TestSaprazzanLegateConditionalFreeCastAndFlying"
   },
   {
    "oracle_id": "d2110083-b30f-43f1-9352-7536f5e19d3c",
@@ -260153,8 +260214,10 @@
    "oracle_id": "f3623759-bf3a-4846-9ef7-1b732ad4355f",
    "revision": "827b9c99-87d7-493c-9dc3-0c6aa4a61b49",
    "name": "Rushwood Legate",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "Prophecy Legates",
+   "batch": "legate-cycle-2026-11-19-01",
+   "evidence": "mtg/rules/legate_cycle_test.go: TestRushwoodLegateConditionalFreeCast"
   },
   {
    "oracle_id": "f3654fbd-16a5-4953-84ac-534e8421032f",
