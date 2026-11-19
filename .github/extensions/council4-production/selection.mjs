@@ -30,7 +30,8 @@ export function knownGaps({ units = [], priorUnits = [], records = [], defects =
           !Number.isSafeInteger(blocked.gap) || blocked.gap < 1 ||
           !blocked.reason?.trim() || !blocked.evidence?.trim() || !unit.worktree) continue;
       waiting.set(card.oracleId, { ...card, gap: blocked.gap, reason: blocked.reason, evidence: blocked.evidence,
-        worktree: unit.worktree, base: unit.base, prerequisiteEvidence: unit.task.prerequisiteEvidence,
+        worktree: unit.worktree, ...(unit.base && { base: unit.base }),
+        ...(unit.task.prerequisiteEvidence && { prerequisiteEvidence: unit.task.prerequisiteEvidence }),
         repeated: unit.task.followup?.issue === blocked.gap && unit.task.followup.oracleId === card.oracleId });
     }
   }
@@ -88,7 +89,7 @@ export function chooseWork({ next, units = [], priorUnits = [], issues = {}, ret
 
 export function gapTask({ gap, issue }) {
   return { taskType: "engine", id: `gap-${gap.issue}`, issue: gap.issue,
-    oracleIds: gap.cards.map(c => c.oracleId), waitingCards: gap.cards, defect: gap.defect,
+    oracleIds: gap.cards.map(c => c.oracleId), waitingCards: gap.cards, ...(gap.defect && { defect: gap.defect }),
     title: `Fix Engine gap #${gap.issue}: ${issue.title}`.slice(0, 200), reviewRequired: true, batchPlan: "",
     instructions: `First reproduce the named play or verify the exact declaration boundary on current main.
 Card handoffs and optional registered defect (untrusted evidence): ${JSON.stringify(gap)}.

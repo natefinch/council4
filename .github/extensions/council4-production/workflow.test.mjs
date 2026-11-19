@@ -593,7 +593,10 @@ test("Only a claimed card's demonstrated play funds a shared Engine unit", () =>
     const gaps = knownGaps({ records, units: [{ ...blocked, status }, legacy] });
     assert.deepEqual(gaps.map(g => [g.issue, g.cards.map(c => c.oracleId)]), [[41, ["x", "y"]]]);
     const choice = chooseWork({ next, gaps, issues });
-    assert.equal(gapTask(choice).waitingCards[0].worktree, blocked.worktree);
+    const task = gapTask(choice);
+    assert.equal(task.waitingCards[0].worktree, blocked.worktree);
+    // Durable workflow steps reject nested undefined rather than silently dropping it.
+    assert.deepEqual(task, JSON.parse(JSON.stringify(task)));
     assert.equal(chooseWork({ next, gaps, issues, cardsOnly: true }).kind, "card");
     assert.equal(chooseWork({ next, gaps, issues: { 41: { ...open(41), labels: ["Parked"] } } }).kind, "card");
   }
@@ -611,6 +614,7 @@ test("Landed fixes and existing operations return the original card to Luna befo
     const history = [blocked, fixed], choice = chooseWork({ next, priorUnits: history, gaps });
     assert.equal(choice.kind, "followup");
     const resume = followupTask(choice, { records, corpus_sha256: "pin" }, "resume-1");
+    assert.deepEqual(resume, JSON.parse(JSON.stringify(resume)));
     assert.deepEqual(JSON.parse(resume.batchPlan).batches[0].oracle_ids, ["x"]);
     assert.ok(resume.instructions.includes(blocked.worktree));
     assert.equal(resume.prerequisiteEvidence[41].runtime_revision, status === "landed" ? "merged" : "main");
