@@ -1707,7 +1707,6 @@ type phaseOutRoot struct {
 type phaseOutCandidate struct {
 	permanent  *game.Permanent
 	phaseInFor game.PlayerID
-	controller game.PlayerID
 	snapshot   game.ObjectSnapshot
 	event      game.Event
 }
@@ -1717,32 +1716,38 @@ func phaseOutPermanentTrees(g *game.Game, roots []phaseOutRoot) bool {
 }
 
 func phaseOutPermanentTreesWithSeen(g *game.Game, roots []phaseOutRoot, phased map[game.ObjectID]bool) bool {
+	candidates := collectPhaseOutCandidates(g, roots, phased)
+	if len(candidates) == 0 {
+		return false
+	}
+	applyPhasing(g, candidates, nil, g.Turn.ActivePlayer)
+	return true
+}
+
+func collectPhaseOutCandidates(g *game.Game, roots []phaseOutRoot, phased map[game.ObjectID]bool) []phaseOutCandidate {
 	var candidates []phaseOutCandidate
 	for _, root := range roots {
 		collectPhaseOutPermanentTree(g, root.permanent, root.phaseInFor, phased, &candidates)
 	}
-	if len(candidates) == 0 {
-		return false
-	}
 	normalizePhaseOutAttachmentSchedules(candidates)
+	return candidates
+}
 
-	g.BeginStaticSourceFrame()
-	for i := range candidates {
-		candidate := &candidates[i]
-		candidate.controller = effectiveController(g, candidate.permanent)
-		candidate.snapshot = snapshotPermanent(g, candidate.permanent, zone.Battlefield)
-	}
-	g.EndStaticSourceFrame()
-
+// applyPhasing changes all statuses together (CR 502.1). Phase-out triggers
+// look back to the old board; phase-in triggers use the resulting board
+// (CR 603.10, 603.10b).
+func applyPhasing(g *game.Game, phaseOut []phaseOutCandidate, phaseIn []*game.Permanent, activePlayer game.PlayerID) {
 	var simultaneousID id.ID
-	if len(candidates) > 1 {
+	if len(phaseOut)+len(phaseIn) > 1 {
 		simultaneousID = g.IDGen.Next()
 	}
-	for i := range candidates {
-		candidate := &candidates[i]
+	g.BeginStaticSourceFrame()
+	for i := range phaseOut {
+		candidate := &phaseOut[i]
+		candidate.snapshot = snapshotPermanent(g, candidate.permanent, zone.Battlefield)
 		event := game.Event{
 			Kind:           game.EventPermanentPhasedOut,
-			Controller:     candidate.controller,
+			Controller:     effectiveController(g, candidate.permanent),
 			Player:         candidate.phaseInFor,
 			PermanentID:    candidate.permanent.ObjectID,
 			CardID:         candidate.permanent.CardInstanceID,
@@ -1752,19 +1757,35 @@ func phaseOutPermanentTreesWithSeen(g *game.Game, roots []phaseOutRoot, phased m
 		event.TriggeredAbilitiesCaptured = true
 		candidate.event = event
 	}
+	g.EndStaticSourceFrame()
 
-	for i := range candidates {
-		candidate := &candidates[i]
+	for i := range phaseOut {
+		candidate := &phaseOut[i]
 		rememberLastKnown(g, &candidate.snapshot)
 		candidate.permanent.PhasedOut = true
 		candidate.permanent.PhasedOutFor = candidate.phaseInFor
 		candidate.permanent.PhaseInScheduled = true
 		removePermanentFromCombat(g, candidate.permanent.ObjectID)
 	}
-	for i := range candidates {
-		emitEvent(g, candidates[i].event)
+	for _, permanent := range phaseIn {
+		permanent.PhasedOut = false
+		permanent.PhasedOutFor = 0
+		permanent.PhaseInScheduled = false
+		delete(g.LastKnownInformation, permanent.ObjectID)
 	}
-	return true
+	for i := range phaseOut {
+		emitEvent(g, phaseOut[i].event)
+	}
+	for _, permanent := range phaseIn {
+		emitEvent(g, game.Event{
+			Kind:           game.EventPermanentPhasedIn,
+			Controller:     effectiveController(g, permanent),
+			Player:         activePlayer,
+			PermanentID:    permanent.ObjectID,
+			CardID:         permanent.CardInstanceID,
+			SimultaneousID: simultaneousID,
+		})
+	}
 }
 
 func normalizePhaseOutAttachmentSchedules(candidates []phaseOutCandidate) {

@@ -181,6 +181,40 @@ func (e *Engine) runAdditionalBeginningPhase(g *game.Game, agents [game.NumPlaye
 	e.beginningPhase(g, agents, log, false)
 }
 
+// phaseDuringUntap selects both directions from the same pre-phasing board
+// (CR 502.1, 702.26a). A newly phased-in permanent cannot phase out in this
+// step, nor can its continuous effects change which other permanents phase out.
+func phaseDuringUntap(g *game.Game) {
+	active := g.Turn.ActivePlayer
+	var roots []phaseOutRoot
+	var phaseIn []*game.Permanent
+	g.BeginStaticSourceFrame()
+	for _, permanent := range g.Battlefield {
+		if permanent.PhasedOut {
+			phaseInFor := permanent.PhasedOutFor
+			if !permanent.PhaseInScheduled {
+				phaseInFor = effectiveController(g, permanent)
+			}
+			if phaseInFor == active {
+				phaseIn = append(phaseIn, permanent)
+			}
+			continue
+		}
+		if effectiveController(g, permanent) == active && hasKeyword(g, permanent, game.Phasing) {
+			roots = append(roots, phaseOutRoot{permanent: permanent, phaseInFor: active})
+		}
+	}
+	g.EndStaticSourceFrame()
+	if len(roots) == 0 && len(phaseIn) == 0 {
+		return
+	}
+	var phaseOut []phaseOutCandidate
+	if len(roots) != 0 {
+		phaseOut = collectPhaseOutCandidates(g, roots, make(map[game.ObjectID]bool))
+	}
+	applyPhasing(g, phaseOut, phaseIn, active)
+}
+
 func (e *Engine) beginningPhase(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog, turnStart bool) {
 	g.Turn.Phase = game.PhaseBeginning
 	log.addPhase(game.PhaseBeginning)
@@ -191,29 +225,7 @@ func (e *Engine) beginningPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 		expireTurnStartDurations(g)
 		expireGoadForActivePlayer(g)
 	}
-	for _, permanent := range g.Battlefield {
-		if !permanent.PhasedOut {
-			continue
-		}
-		phaseInFor := effectiveController(g, permanent)
-		if permanent.PhaseInScheduled {
-			phaseInFor = permanent.PhasedOutFor
-		}
-		if phaseInFor != g.Turn.ActivePlayer {
-			continue
-		}
-		permanent.PhasedOut = false
-		permanent.PhasedOutFor = 0
-		permanent.PhaseInScheduled = false
-		delete(g.LastKnownInformation, permanent.ObjectID)
-		emitEvent(g, game.Event{
-			Kind:        game.EventPermanentPhasedIn,
-			Controller:  effectiveController(g, permanent),
-			Player:      g.Turn.ActivePlayer,
-			PermanentID: permanent.ObjectID,
-			CardID:      permanent.CardInstanceID,
-		})
-	}
+	phaseDuringUntap(g)
 	// Control changes since the last observation, including effects that ended
 	// as this turn began, are recorded before the active player's permanents
 	// count as continuously controlled since its start (CR 302.6, 611.2b).

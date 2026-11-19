@@ -4,8 +4,89 @@ import (
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/opt"
 )
+
+// CR 502.1, 702.26a, 613.1f: collect both phasing cohorts from the
+// pre-action board with effective control and abilities, then untap.
+func TestAutomaticPhasingUsesPreEventBoard(t *testing.T) {
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	addGrant := func(name string, subtype types.Sub) *game.Permanent {
+		return addCombatPermanent(g, game.Player1, &game.CardDef{CardFace: game.CardFace{
+			Name:  name,
+			Types: []types.Card{types.Enchantment},
+			StaticAbilities: []game.StaticAbility{game.PhasingStaticBody, {
+				ContinuousEffects: []game.ContinuousEffect{{
+					Layer: game.LayerAbility,
+					Group: game.BattlefieldGroup(game.Selection{
+						RequiredTypes: []types.Card{types.Creature},
+						SubtypesAny:   []types.Sub{subtype},
+					}),
+					AddKeywords: []game.Keyword{game.Phasing},
+				}},
+			}},
+		}})
+	}
+	addCreature := func(owner game.PlayerID, name string, subtype types.Sub) *game.Permanent {
+		return addCombatPermanent(g, owner, &game.CardDef{CardFace: game.CardFace{
+			Name:      name,
+			Types:     []types.Card{types.Creature},
+			Subtypes:  []types.Sub{subtype},
+			Power:     opt.Val(game.PT{Value: 1}),
+			Toughness: opt.Val(game.PT{Value: 1}),
+		}})
+	}
+
+	incoming := addGrant("Incoming phasing grant", types.Bird)
+	phaseOutForTest(t, g, incoming)
+	outgoing := addGrant("Outgoing phasing grant", types.Elemental)
+	elemental := addCreature(game.Player2, "Borrowed Elemental", types.Elemental)
+	bird := addCreature(game.Player1, "Bird", types.Bird)
+	g.ContinuousEffects = append(g.ContinuousEffects, game.ContinuousEffect{
+		Layer:            game.LayerControl,
+		AffectedObjectID: elemental.ObjectID,
+		NewController:    opt.Val(game.Player1),
+	})
+	setPermanentTapped(g, elemental, true)
+	setPermanentTapped(g, incoming, true)
+	setPermanentTapped(g, bird, true)
+	addCardToLibrary(g, game.Player1, &game.CardDef{CardFace: game.CardFace{Name: "Draw"}})
+
+	startEvents := len(g.Events)
+	NewEngine(nil).runBeginningPhase(g, [game.NumPlayers]PlayerAgent{}, &TurnLog{})
+
+	assertPhasedOutFor(t, []*game.Permanent{outgoing, elemental}, game.Player1)
+	if !elemental.Tapped || incoming.PhasedOut || incoming.Tapped || bird.PhasedOut || bird.Tapped ||
+		!hasKeyword(g, bird, game.Phasing) {
+		t.Fatal("only the pre-event controller's permanents with phasing should phase out; the incoming grant and Bird should untap")
+	}
+	want := map[game.ObjectID]game.EventKind{
+		outgoing.ObjectID:  game.EventPermanentPhasedOut,
+		elemental.ObjectID: game.EventPermanentPhasedOut,
+		incoming.ObjectID:  game.EventPermanentPhasedIn,
+	}
+	var batch id.ID
+	for _, event := range g.Events[startEvents:] {
+		if event.Kind != game.EventPermanentPhasedIn && event.Kind != game.EventPermanentPhasedOut {
+			continue
+		}
+		if want[event.PermanentID] != event.Kind || event.Controller != game.Player1 {
+			t.Fatalf("unexpected phasing event: %+v", event)
+		}
+		if batch == 0 {
+			batch = event.SimultaneousID
+		}
+		if batch == 0 || event.SimultaneousID != batch {
+			t.Fatal("phase-outs and phase-ins did not share one simultaneous event batch")
+		}
+		delete(want, event.PermanentID)
+	}
+	if len(want) != 0 {
+		t.Fatalf("missing phasing events: %v", want)
+	}
+}
 
 // targetedPhaseOut bundles the game, engine, resolving stack object, and chosen
 // target permanents for a targeted phase-out resolution.
