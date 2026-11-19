@@ -1078,6 +1078,7 @@ func cloneAlternativeCosts(costs []cost.Alternative) []cost.Alternative {
 			cloned[i].ManaCost.Val = append(cost.Mana(nil), costs[i].ManaCost.Val...)
 		}
 		cloned[i].AdditionalCosts = append([]cost.Additional(nil), costs[i].AdditionalCosts...)
+		cloned[i].Conditions = slices.Clone(costs[i].Conditions)
 	}
 	return cloned
 }

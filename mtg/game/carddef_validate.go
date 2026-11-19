@@ -208,70 +208,52 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("StaticAbilities[%d]", i)), &face.StaticAbilities[i], nil)
 	}
 	for i, alternative := range face.AlternativeCosts {
-		if alternative.Condition != cost.AlternativeConditionNone &&
-			alternative.Condition != cost.AlternativeConditionControlsCommander &&
-			alternative.Condition != cost.AlternativeConditionNotYourTurn &&
-			alternative.Condition != cost.AlternativeConditionYourTurn &&
-			alternative.Condition != cost.AlternativeConditionControlsPermanentSubtype &&
-			alternative.Condition != cost.AlternativeConditionOpponentLostLifeThisTurn &&
-			alternative.Condition != cost.AlternativeConditionOpponentGainedLifeThisTurn &&
-			alternative.Condition != cost.AlternativeConditionCreaturesAttacking &&
-			alternative.Condition != cost.AlternativeConditionPermanentsOnBattlefield &&
-			alternative.Condition != cost.AlternativeConditionOpponentCastSpellsThisTurn {
-			v.add(
-				faceName,
-				appendPath(path, fmt.Sprintf("AlternativeCosts[%d].Condition", i)),
-				CardDefIssueInvalidAlternativeCost,
-				"alternative cost has an unknown condition",
-			)
-		}
-		if alternative.Condition == cost.AlternativeConditionCreaturesAttacking &&
-			alternative.ConditionCount < 1 {
-			v.add(
-				faceName,
-				appendPath(path, fmt.Sprintf("AlternativeCosts[%d].ConditionCount", i)),
-				CardDefIssueInvalidAlternativeCost,
-				"creatures-attacking alternative cost has a non-positive count",
-			)
-		}
-		if alternative.Condition == cost.AlternativeConditionOpponentCastSpellsThisTurn &&
-			alternative.ConditionCount < 1 {
-			v.add(
-				faceName,
-				appendPath(path, fmt.Sprintf("AlternativeCosts[%d].ConditionCount", i)),
-				CardDefIssueInvalidAlternativeCost,
-				"opponent-cast-spells alternative cost has a non-positive count",
-			)
-		}
-		if alternative.Condition == cost.AlternativeConditionPermanentsOnBattlefield {
-			if alternative.ConditionCount < 1 {
-				v.add(
-					faceName,
-					appendPath(path, fmt.Sprintf("AlternativeCosts[%d].ConditionCount", i)),
-					CardDefIssueInvalidAlternativeCost,
-					"permanents-on-battlefield alternative cost has a non-positive count",
-				)
-			}
-			if alternative.ConditionPermanentType == "" {
-				v.add(
-					faceName,
-					appendPath(path, fmt.Sprintf("AlternativeCosts[%d].ConditionPermanentType", i)),
-					CardDefIssueInvalidAlternativeCost,
-					"permanents-on-battlefield alternative cost has no permanent type",
-				)
-			}
-		}
-		if alternative.Condition == cost.AlternativeConditionControlsPermanentSubtype &&
-			alternative.ConditionSubtype == "" {
-			v.add(
-				faceName,
-				appendPath(path, fmt.Sprintf("AlternativeCosts[%d].ConditionSubtype", i)),
-				CardDefIssueInvalidAlternativeCost,
-				"controls-subtype alternative cost has no subtype",
-			)
+		alternativePath := appendPath(path, fmt.Sprintf("AlternativeCosts[%d]", i))
+		v.validateAlternativePredicate(faceName, alternativePath, alternative.PrimaryCondition(), true)
+		for j, predicate := range alternative.Conditions {
+			conditionPath := appendPath(alternativePath, fmt.Sprintf("Conditions[%d]", j))
+			v.validateAlternativePredicate(faceName, conditionPath, predicate, false)
 		}
 	}
 	v.validateAdditionalCostChoices(faceName, path, face)
+}
+
+func (v *cardDefValidator) validateAlternativePredicate(faceName, path string, predicate cost.AlternativePredicate, primary bool) {
+	report := func(field, message string) {
+		if primary {
+			if field == "Kind" {
+				field = ""
+			}
+			field = "Condition" + field
+		}
+		v.add(faceName, appendPath(path, field), CardDefIssueInvalidAlternativeCost, message)
+	}
+	switch predicate.Kind {
+	case cost.AlternativeConditionNone, cost.AlternativeConditionControlsCommander,
+		cost.AlternativeConditionNotYourTurn, cost.AlternativeConditionYourTurn,
+		cost.AlternativeConditionOpponentLostLifeThisTurn, cost.AlternativeConditionOpponentGainedLifeThisTurn:
+	case cost.AlternativeConditionControlsPermanentSubtype, cost.AlternativeConditionOpponentControlsPermanentSubtype:
+		if predicate.Subtype == "" {
+			report("Subtype", "controls-subtype alternative cost has no subtype")
+		}
+	case cost.AlternativeConditionCreaturesAttacking:
+		if predicate.Count < 1 {
+			report("Count", "creatures-attacking alternative cost has a non-positive count")
+		}
+	case cost.AlternativeConditionOpponentCastSpellsThisTurn:
+		if predicate.Count < 1 {
+			report("Count", "opponent-cast-spells alternative cost has a non-positive count")
+		}
+	case cost.AlternativeConditionPermanentsOnBattlefield:
+		if predicate.Count < 1 {
+			report("Count", "permanents-on-battlefield alternative cost has a non-positive count")
+		}
+		if predicate.PermanentType == "" {
+			report("PermanentType", "permanents-on-battlefield alternative cost has no permanent type")
+		}
+	default:
+		report("Kind", "alternative cost has an unknown condition")
+	}
 }
 
 // validateAdditionalCostChoices checks each printed "pay A or pay B" additional-

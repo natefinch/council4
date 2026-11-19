@@ -465,6 +465,26 @@ func TestValidateCardDefRejectsUnknownAlternativeCostCondition(t *testing.T) {
 	}
 }
 
+func TestValidateCardDefChecksEachConjunct(t *testing.T) {
+	t.Parallel()
+	card := &CardDef{CardFace: CardFace{
+		Name: "Conjunctive Alternate",
+		AlternativeCosts: []cost.Alternative{{
+			Conditions: []cost.AlternativePredicate{
+				{Kind: cost.AlternativeConditionControlsPermanentSubtype, Subtype: types.Mountain},
+				{Kind: cost.AlternativeConditionOpponentControlsPermanentSubtype, Subtype: types.Island},
+			},
+		}},
+	}}
+	if issues := ValidateCardDef(card); hasCardDefIssue(issues, CardDefIssueInvalidAlternativeCost) {
+		t.Fatalf("valid conjunction rejected: %+v", issues)
+	}
+	card.AlternativeCosts[0].Conditions[1].Subtype = ""
+	if issues := ValidateCardDef(card); !hasCardDefIssue(issues, CardDefIssueInvalidAlternativeCost) {
+		t.Fatalf("conjunction with missing opponent subtype accepted: %+v", issues)
+	}
+}
+
 func TestValidateCardDefRejectsTargetedOverloadAbility(t *testing.T) {
 	t.Parallel()
 	normal := Mode{Sequence: []Instruction{{Primitive: Draw{

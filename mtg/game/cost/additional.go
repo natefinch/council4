@@ -287,10 +287,9 @@ type Alternative struct {
 	ManaCost        opt.V[Mana]
 	AdditionalCosts []Additional
 	Condition       AlternativeCondition
-	// ConditionSubtype is the permanent subtype required by an
-	// AlternativeConditionControlsPermanentSubtype condition, e.g. types.Swamp
-	// for Snuff Out's "If you control a Swamp,". It is unused for every other
-	// condition.
+	// ConditionSubtype is the permanent subtype required by a
+	// subtype-control condition, e.g. types.Swamp for Snuff Out's
+	// "If you control a Swamp,". It is unused for every other condition.
 	ConditionSubtype types.Sub
 	// ConditionCount is the threshold required by a count-based condition: the
 	// attacking-creature threshold for AlternativeConditionCreaturesAttacking, the
@@ -308,12 +307,39 @@ type Alternative struct {
 	// e.g. types.Creature for Blasphemous Edict's "if there are thirteen or more
 	// creatures on the battlefield." It is unused for every other condition.
 	ConditionPermanentType types.Card
+	// Conditions are conjunctive: every predicate must hold in addition to
+	// Condition, if set. New declarations can leave Condition unset and put
+	// all their predicates here.
+	Conditions []AlternativePredicate `json:",omitempty"`
 	// Mechanic identifies the rules mechanic this alternative grants, so the
 	// rules layer decides Flashback/Escape/Evoke behavior from typed data
 	// rather than the display Label. AlternativeMechanicNone leaves the
 	// alternative's behavior fully described by its mana cost, additional
 	// costs, and condition.
 	Mechanic AlternativeMechanic
+}
+
+// AlternativePredicate is one state requirement on an alternative cost.
+// Its parameters have the same meanings as the corresponding single
+// Condition fields on Alternative.
+type AlternativePredicate struct {
+	Kind          AlternativeCondition
+	Subtype       types.Sub
+	Count         int
+	Exactly       bool
+	PermanentType types.Card
+}
+
+// PrimaryCondition presents the single-condition declaration as a predicate
+// so that it uses the same validation and evaluation as Conditions.
+func (a Alternative) PrimaryCondition() AlternativePredicate {
+	return AlternativePredicate{
+		Kind:          a.Condition,
+		Subtype:       a.ConditionSubtype,
+		Count:         a.ConditionCount,
+		Exactly:       a.ConditionExactly,
+		PermanentType: a.ConditionPermanentType,
+	}
 }
 
 // AlternativeMechanic identifies the named rules mechanic an alternative cost
@@ -424,4 +450,7 @@ const (
 	// was later countered still counts because it was cast. It is unused for every
 	// other condition; ConditionCount carries the threshold.
 	AlternativeConditionOpponentCastSpellsThisTurn
+	// AlternativeConditionOpponentControlsPermanentSubtype requires that some
+	// opponent of the caster controls a permanent of the specified subtype.
+	AlternativeConditionOpponentControlsPermanentSubtype
 )

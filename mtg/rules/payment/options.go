@@ -527,7 +527,19 @@ func firstNormalPermission(permissions []SpellCastPermission) (SpellCastPermissi
 }
 
 func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, alternative cost.Alternative) bool {
-	switch alternative.Condition {
+	if !alternativePredicateSatisfied(s, playerID, alternative.PrimaryCondition()) {
+		return false
+	}
+	for _, predicate := range alternative.Conditions {
+		if !alternativePredicateSatisfied(s, playerID, predicate) {
+			return false
+		}
+	}
+	return true
+}
+
+func alternativePredicateSatisfied(s State, playerID game.PlayerID, predicate cost.AlternativePredicate) bool {
+	switch predicate.Kind {
 	case cost.AlternativeConditionNone:
 		return true
 	case cost.AlternativeConditionControlsCommander:
@@ -539,11 +551,12 @@ func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, alternat
 			}
 		}
 		return false
-	case cost.AlternativeConditionControlsPermanentSubtype:
+	case cost.AlternativeConditionControlsPermanentSubtype, cost.AlternativeConditionOpponentControlsPermanentSubtype:
+		requireOwn := predicate.Kind == cost.AlternativeConditionControlsPermanentSubtype
 		for _, permanent := range s.Battlefield() {
 			if permanent != nil && !permanent.PhasedOut &&
-				s.EffectiveController(permanent) == playerID &&
-				s.PermanentHasSubtype(permanent, alternative.ConditionSubtype) {
+				(s.EffectiveController(permanent) == playerID) == requireOwn &&
+				s.PermanentHasSubtype(permanent, predicate.Subtype) {
 				return true
 			}
 		}
@@ -558,12 +571,12 @@ func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, alternat
 		return s.OpponentGainedLifeThisTurn(playerID)
 	case cost.AlternativeConditionCreaturesAttacking:
 		count := s.AttackingCreatureCount()
-		if alternative.ConditionExactly {
-			return count == alternative.ConditionCount
+		if predicate.Exactly {
+			return count == predicate.Count
 		}
-		return count >= alternative.ConditionCount
+		return count >= predicate.Count
 	case cost.AlternativeConditionPermanentsOnBattlefield:
-		selection := game.Selection{RequiredTypesAny: []types.Card{alternative.ConditionPermanentType}}
+		selection := game.Selection{RequiredTypesAny: []types.Card{predicate.PermanentType}}
 		count := 0
 		for _, permanent := range s.Battlefield() {
 			if permanent != nil && !permanent.PhasedOut &&
@@ -571,12 +584,12 @@ func alternativeCostConditionSatisfied(s State, playerID game.PlayerID, alternat
 				count++
 			}
 		}
-		if alternative.ConditionExactly {
-			return count == alternative.ConditionCount
+		if predicate.Exactly {
+			return count == predicate.Count
 		}
-		return count >= alternative.ConditionCount
+		return count >= predicate.Count
 	case cost.AlternativeConditionOpponentCastSpellsThisTurn:
-		return s.OpponentCastSpellsThisTurn(playerID, alternative.ConditionCount)
+		return s.OpponentCastSpellsThisTurn(playerID, predicate.Count)
 	default:
 		return false
 	}

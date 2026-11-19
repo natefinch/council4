@@ -110,6 +110,7 @@ func copyManaCost(manaCost *cost.Mana) *cost.Mana {
 func copyAlternative(alternative cost.Alternative) cost.Alternative {
 	alternative.ManaCost.Val = slices.Clone(alternative.ManaCost.Val)
 	alternative.AdditionalCosts = slices.Clone(alternative.AdditionalCosts)
+	alternative.Conditions = slices.Clone(alternative.Conditions)
 	return alternative
 }
 
