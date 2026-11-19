@@ -8,8 +8,9 @@ import { git, changes, unresolvedConflicts, land, checkProtection, checkCoordina
 import { assessChecks, classifyInfrastructure, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch, normalizeBatchPlan } from "./queue.mjs";
 import { rankTriage, chunk } from "./triage.mjs";
-import { chooseWork, knownGaps, gapTask, batchTask, selectedGapTask, issueNumber, engineIssue } from "./selection.mjs";
-import { gapEvidence, earlierUnits, issueStates } from "./workflow.mjs";
+import { chooseWork, knownGaps, gapTask, batchTask, followupTask, issueNumber, engineIssue } from "./selection.mjs";
+import { earlierUnits, issueStates, reproducedDefects } from "./workflow.mjs";
+import { engineYield } from "./telemetry.mjs";
 import { observeUsage, readReceipts, summarize, writeReport, reviewHistory } from "./telemetry.mjs";
 
 const policy = JSON.parse(await readFile(new URL("./policy.json", import.meta.url)));
@@ -260,7 +261,7 @@ test("The corpus defaults to the shared pinned cache location", () => {
 
 test("Every agent's model settings must be explicit", () => {
   assert.doesNotThrow(() => checkPolicy(policy));
-  assert.equal(policy.models.engine.implementation.model, "claude-opus-5.5");
+  assert.equal(policy.models.engine.implementation.model, "gpt-6.2-sol");
   const broken = mutate => { const copy = structuredClone(policy); mutate(copy.models); return copy; };
   for (const copy of [
     broken(models => { models.selection = null; }),
@@ -356,10 +357,10 @@ test("A rejected batch plan fails its unit, and a second rejection in a row stop
 
 test("An invalid selector answer is a unit problem, not a thrown run error", () => {
   assert.equal(selectionProblem({ taskType: "engine", id: "", title: "Correct controller-aware matching", instructions: "x" }),
-    "Incomplete/unsafe work identity");
-  assert.equal(selectionProblem(null), "No valid selection returned");
+    "No valid card selection returned");
+  assert.equal(selectionProblem(null), "No valid card selection returned");
   assert.equal(selectionProblem({ taskType: "none" }), null);
-  assert.equal(selectionProblem({ taskType: "engine", id: "gap-3742", title: "t", instructions: "i" }), null);
+  assert.equal(selectionProblem({ taskType: "engine", id: "gap-3742", title: "t", instructions: "i" }), "No valid card selection returned");
   assert.throws(() => checkSelection({ taskType: "card", id: "../x", title: "t", instructions: "i" }), /unsafe work identity/);
 });
 
@@ -559,10 +560,11 @@ test("Coordinator refuses foreign claims, invented batches, rewrites and partial
 
 const open = number => ({ number, state: "OPEN", title: `Gap ${number}`, url: `https://github.com/natefinch/council4/issues/${number}` });
 const readyBatch = { id: "11-ready", family: "draw", operations: ["draw"], prerequisites: [12] };
-const blockedCard = (issue, ids = ["x", "y", "z"]) => ({
-  status: "blocked", task: { taskType: "card", id: "new-family" },
-  claim: { cards: ids.map(oracleId => ({ oracleId })) },
-  result: { status: "blocked", gaps: [{ id: `#${issue}`, description: "missing operation" }] },
+const waitingRecords = () => ["x", "y", "z"].map(id => ({ oracle_id: id, name: id, revision: "rev", status: "unclaimed" }));
+const blockedCard = (issue, ids = ["x"]) => ({
+  status: "blocked", task: { taskType: "card", id: "family" }, worktree: "/retained/card", base: "base",
+  claim: { cards: waitingRecords().map(r => ({ oracleId: r.oracle_id, revision: r.revision, name: r.name })) },
+  result: { status: "blocked", blockedCards: ids.map(oracleId => ({ oracleId, gap: issue, reason: "wrong target", evidence: "probe: TestTarget" })) },
 });
 const landedGap = (issue, id = `gap-${issue}`) => ({
   status: "landed", task: { taskType: "engine", id },
@@ -580,24 +582,65 @@ test("Gap references parse canonical issue forms only", () => {
   assert.deepEqual(knownGaps({ units: [{ ...blockedCard(1), result: { gaps: [{ id: "08-scry-interaction-claim" }] } }] }), []);
 });
 
-test("A landed Engine slice with a remainder keeps its gap scheduled; a complete one fills it", () => {
-  const next = { batch: readyBatch, pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
-  const issues = { 3285: open(3285), 3400: open(3400) };
-  const slice = { ...landedGap(3285), task: { taskType: "engine", id: "gap-3285", issue: 3285, oracleIds: ["q"] },
-    result: { status: "complete", gaps: [{ id: "#3285", description: "linked Aura transition" }] } };
-  // A card unit runs between Engine units.
-  const cardUnit = { status: "landed", task: { taskType: "card", id: "c" } };
-  let choice = chooseWork({ next, units: [slice, cardUnit], issues });
-  assert.equal(choice.kind, "engine");
-  assert.equal(choice.gap.issue, 3285);
-  assert.ok(choice.gap.sources.includes("this run remainder of gap-3285"));
-  const subIssue = { ...slice, result: { status: "complete", gaps: [{ id: "#3400", description: "sub-issue" }] } };
-  choice = chooseWork({ next, units: [subIssue, cardUnit], issues });
-  assert.equal(choice.gap.issue, 3400);
-  assert.deepEqual(choice.gap.oracleIds, ["q"]);
-  assert.equal(chooseWork({ next, units: [landedGap(3285)], issues }).kind, "card");
-  assert.match(gapTask({ gap: { issue: 3285, oracleIds: [], sources: [] }, issue: open(3285) }, {}).instructions,
-    /first shared piece[\s\S]*status complete/);
+test("Only a claimed card's demonstrated play funds a shared Engine unit", () => {
+  const records = waitingRecords(), blocked = blockedCard(41, ["x", "y"]);
+  const phantom = { oracleId: "not-in-claim", gap: 42, evidence: "probe", reason: "wrong" };
+  blocked.result.blockedCards.push(phantom, { ...phantom, oracleId: "z", evidence: " " });
+  const legacy = { ...blocked, result: { gaps: [{ id: "#43", description: "maybe needed" }] } };
+  const next = { batch: readyBatch, cards: [], pending_prerequisites: [{ issues: [99], blocked_oracle_ids: ["z"] }] };
+  const issues = { 41: open(41), 99: open(99) };
+  for (const status of ["blocked", "landed"]) {
+    const gaps = knownGaps({ records, units: [{ ...blocked, status }, legacy] });
+    assert.deepEqual(gaps.map(g => [g.issue, g.cards.map(c => c.oracleId)]), [[41, ["x", "y"]]]);
+    const choice = chooseWork({ next, gaps, issues });
+    assert.equal(gapTask(choice).waitingCards[0].worktree, blocked.worktree);
+    assert.equal(chooseWork({ next, gaps, issues, cardsOnly: true }).kind, "card");
+    assert.equal(chooseWork({ next, gaps, issues: { 41: { ...open(41), labels: ["Parked"] } } }).kind, "card");
+  }
+  assert.equal(chooseWork({ next, issues }).kind, "card");
+  assert.equal(chooseWork({ next: {}, issues }).kind, "prepare");
+});
+
+test("Landed fixes and existing operations return the original card to Luna before unrelated work", () => {
+  const records = waitingRecords(), blocked = blockedCard(41);
+  const gaps = knownGaps({ records, priorUnits: [blocked] }), task = gapTask({ gap: gaps[0], issue: open(41) });
+  const next = { batch: readyBatch, cards: [] };
+  for (const status of ["landed", "already_supported"]) {
+    const fixed = { task, status, base: "main", worktree: "/fix", result: { summary: "operation X", evidence: ["PASS TestX"] },
+      ...(status === "landed" && { landing: { commit: "merged" } }) };
+    const history = [blocked, fixed], choice = chooseWork({ next, priorUnits: history, gaps });
+    assert.equal(choice.kind, "followup");
+    const resume = followupTask(choice, { records, corpus_sha256: "pin" }, "resume-1");
+    assert.deepEqual(JSON.parse(resume.batchPlan).batches[0].oracle_ids, ["x"]);
+    assert.ok(resume.instructions.includes(blocked.worktree));
+    assert.equal(resume.prerequisiteEvidence[41].runtime_revision, status === "landed" ? "merged" : "main");
+    // Drop a shipped identity and park a failed follow-up instead of spending again.
+    assert.equal(knownGaps({ records: records.map(r => ({ ...r, status: "implemented-verified" })), priorUnits: history }).length, 0);
+    assert.equal(chooseWork({ next, priorUnits: [...history, { task: resume, status: "validation_failed" }], gaps, issues: { 41: open(41) } }).kind, "card");
+    assert.equal(chooseWork({ next: { ...next, cards: [{ status: "claimed" }] }, priorUnits: history, gaps }).kind, "card");
+  }
+});
+
+test("Existing capability evidence returns without validation or an empty publication", async () => {
+  const f = fixture({ stage: async () => ({ status: "already_supported", summary: "Use the existing target declaration",
+    evidence: ["TestLegalTarget passed against main"] }), validate: () => assert.fail("not a code change") });
+  assert.equal((await executeUnit({ ...f, task: { taskType: "engine" } })).status, "already_supported");
+  assert.equal((await executeUnit({ ...f, task: { taskType: "card" } })).status, "blocked");
+});
+
+test("A promoted defect needs an installed card and reproduction; charge only linked deliveries", () => {
+  const manifest = { baseline_production: [{ name: "Old card", oracle_id: "old" }], records: waitingRecords() };
+  const issue = { number: 31, body: "Reproduced card: Old card\nReproduction: TestOldCard got zero targets" };
+  const defects = reproducedDefects([issue, { ...issue, body: "Old card might be affected" },
+    { ...issue, body: issue.body.replace("Old card", "x") }], manifest);
+  assert.equal(defects.length, 1);
+  const [gap] = knownGaps({ records: manifest.records, defects });
+  const fix = { status: "landed", task: gapTask({ issue: open(31), gap }), worktree: "/fix" };
+  const followup = { status: "landed", task: { followup: { oracleId: "x", engineWorktree: "/fix" } },
+    prepared: { delivered: { newlySupported: [{ oracleId: "x" }, { oracleId: "unrelated" }] } } };
+  const costs = [{ taskType: "engine", observedAic: 70 }, { taskType: "card", observedAic: 10 }];
+  assert.deepEqual(engineYield([fix, followup], costs, "matched"), { observedEngineAic: 70, cards: 2, aicPerCard: 35 });
+  assert.equal(engineYield([fix, { ...followup, status: "blocked" }], costs, "incomplete").aicPerCard, null);
 });
 
 test("Pre-existing defects are filed, carried forward and never block approval", async () => {
@@ -616,54 +659,6 @@ test("Pre-existing defects are filed, carried forward and never block approval",
   const onlyPreexisting = fixture({ review: async () => ({ verdict: "approve", findings: [], preexisting: filed }) });
   assert.equal((await executeUnit(onlyPreexisting)).status, "accepted");
   assert.match(preexistingRule("abc123"), /base commit abc123[\s\S]*never block approval/);
-});
-
-test("A split gap is worked through its first open sub-issue, in order", () => {
-  const next = { batch: readyBatch, pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
-  const subs = states => states.map(([number, state]) => ({ number, state, title: `Part ${number}`, url: `u/${number}` }));
-  const issues = { 3285: { ...open(3285), subIssues: subs([[4001, "CLOSED"], [4002, "OPEN"], [4003, "OPEN"]]) } };
-  const failedParent = { status: "review_rejected", task: { taskType: "engine", id: "gap-3285", issue: 3285 } };
-  let choice = chooseWork({ next, priorUnits: [failedParent], issues });
-  assert.equal(choice.kind, "engine");
-  assert.equal(choice.gap.issue, 4002);
-  assert.equal(choice.gap.parent, 3285);
-  assert.deepEqual(choice.gap.oracleIds, ["q"]);
-  const task = gapTask(choice, { q: "Necromancy" });
-  assert.equal(task.id, "gap-4002");
-  assert.match(task.title, /#4002: Part 4002/);
-  assert.match(task.instructions, /sub-issue of #3285/);
-  // A landed sub-issue moves on to the next; a failed one parks the parent.
-  choice = chooseWork({ next, priorUnits: [failedParent, landedGap(4002)], issues });
-  assert.equal(choice.gap.issue, 4003);
-  const failedSub = { status: "review_rejected", task: { taskType: "engine", id: "gap-4002", issue: 4002 } };
-  assert.equal(chooseWork({ next, priorUnits: [failedParent, failedSub], issues }).kind, "card");
-  // A failed Engine unit whose gap came from neither a card nor the queue is
-  // still worked through its sub-issues once split.
-  const selectorGap = { status: "review_rejected", task: { taskType: "engine", id: "gap-170" } };
-  const adventure = { 170: { ...open(170), subIssues: subs([[3353, "OPEN"], [3354, "OPEN"]]) } };
-  choice = chooseWork({ next: { batch: readyBatch }, priorUnits: [selectorGap], issues: adventure });
-  assert.equal(choice.gap.issue, 3353);
-  assert.equal(chooseWork({ next: { batch: readyBatch }, priorUnits: [selectorGap], issues: { 170: open(170) } }).kind, "card");
-  // Without sub-issues a failed parent stays parked.
-  assert.equal(chooseWork({ next, priorUnits: [failedParent], issues: { 3285: open(3285) } }).kind, "card");
-});
-
-test("Parked gaps are never selected but still keep their cards out of new batches", () => {
-  const parked = number => ({ ...open(number), labels: ["Parked"] });
-  const next = { pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }, { blocked_oracle_ids: ["r"], issues: [3286] }] };
-  let choice = chooseWork({ next, issues: { 3285: parked(3285), 3286: open(3286) } });
-  assert.equal(choice.kind, "engine");
-  assert.equal(choice.gap.issue, 3286);
-  choice = chooseWork({ next, issues: { 3285: parked(3285), 3286: parked(3286) } });
-  assert.equal(choice.kind, "prepare");
-  assert.deepEqual(choice.avoid.map(gap => gap.issue), [3285, 3286]);
-  assert.deepEqual(choice.parked.map(gap => gap.issue), [3285, 3286]);
-  // A parked first sub-issue parks its parent; a parked parent parks its sub-issues.
-  const sub = (number, labels = []) => ({ number, state: "OPEN", title: `Part ${number}`, url: `u/${number}`, labels });
-  const one = { pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
-  assert.equal(chooseWork({ next: one, issues: { 3285: { ...open(3285), subIssues: [sub(4001, ["Parked"]), sub(4002)] } } }).kind, "prepare");
-  assert.equal(chooseWork({ next: one, issues: { 3285: { ...parked(3285), subIssues: [sub(4001)] } } }).kind, "prepare");
-  assert.equal(chooseWork({ next: one, issues: { 3285: { ...open(3285), subIssues: [sub(4001)] } } }).gap.issue, 4001);
 });
 
 test("Triage ranks defects first, assigns each queued card to one issue and drops unknown cards", () => {
@@ -697,47 +692,6 @@ test("Triage ranks defects first, assigns each queued card to one issue and drop
   assert.deepEqual([unverified.stale.length, unverified.valid.filter(row => row.existingCardDefect).length], [0, 0]);
   assert.deepEqual(ranked.blockers.map(b => [b.oracle_id, b.blocker, b.revision]), [["d", 3, "r-d"], ["b", 2, "r-b"], ["c", 2, "r-c"], ["a", 1, "r-a"]]);
   assert.match(ranked.blockers[0].reason, /#3/);
-});
-
-test("A gap labeled Needs Split becomes a split unit until it has open sub-issues", () => {
-  const big = { ...open(1580), labels: ["Needs Split"] };
-  const choice = { gap: { issue: 1580, oracleIds: ["r"], sources: [] }, issue: big };
-  const task = gapTask(choice, { r: "Moldering Gym" });
-  assert.equal(task.split, true);
-  assert.equal(task.id, "split-1580");
-  assert.equal(task.issue, 1580);
-  assert.match(splitPrompt(task, "/repo"), /#1580[\s\S]*Acceptance scenarios define what blocks review/);
-  assert.equal(gapTask({ ...choice, issue: { ...big, subIssues: [{ number: 2, state: "OPEN" }] } }, {}).split, undefined);
-  assert.equal(gapTask({ ...choice, issue: open(1580) }, {}).split, undefined);
-  // A split unit parks the parent and the next selection works its first sub-issue.
-  const splitUnit = { status: "split", task: { taskType: "engine", id: "split-1580", issue: 1580, split: true } };
-  const issues = { 1580: { ...big, labels: [], subIssues: [{ number: 4001, state: "OPEN", title: "Unlock", url: "u" }] } };
-  const next = { batch: null, pending_prerequisites: [{ blocked_oracle_ids: ["r"], issues: [1580] }] };
-  assert.equal(chooseWork({ next, units: [splitUnit], issues }).gap.issue, 4001);
-});
-
-test("A split gap whose sub-issues are all closed is done, not re-implemented", () => {
-  const next = { batch: readyBatch, pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3355] }] };
-  const issues = { 3355: { ...open(3355), subIssues: [{ number: 3404, state: "CLOSED" }, { number: 3405, state: "OPEN" }] } };
-  assert.equal(chooseWork({ next, issues, priorUnits: [landedGap(3404), landedGap(3405)] }).kind, "card");
-  issues[3355].subIssues[1].state = "CLOSED";
-  assert.equal(chooseWork({ next, issues }).kind, "card");
-});
-
-test("A remainder a landed sub-issue reported on its closed-out split parent is worked next", () => {
-  const next = { batch: readyBatch };
-  const issues = { 3347: { ...open(3347), subIssues: [{ number: 3476, state: "CLOSED" }] } };
-  const landed = { ...landedGap(3476), result: { gaps: [{ id: "3347", description: "capture source permanents" }] } };
-  let choice = chooseWork({ next, issues, priorUnits: [landed] });
-  assert.equal(choice.kind, "engine");
-  assert.equal(choice.gap.issue, 3347);
-  assert.equal(choice.gap.parent, undefined);
-  // An earlier failed attempt on the parent parks it unless explicitly retried.
-  const failed = { status: "review_rejected", task: { taskType: "engine", id: "gap-3347", issue: 3347 } };
-  assert.equal(chooseWork({ next, issues, priorUnits: [failed, landed] }).kind, "card");
-  choice = chooseWork({ next, issues, priorUnits: [failed, landed], retry: [3347] });
-  assert.equal(choice.gap.issue, 3347);
-  assert.equal(gapTask(choice, {}).id, "gap-3347");
 });
 
 test("Landed Engine issues and fully finished split parents are closed", async () => {
@@ -780,132 +734,6 @@ test("Reviews block only on regressions, acceptance and common-play harm", () =>
   assert.doesNotMatch(reviewBar("abc123", undefined), /sub-issue of #/);
 });
 
-test("A cardsOnly run never schedules gaps but still avoids their cards", () => {
-  const next = { batch: readyBatch, pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
-  const issues = { 3285: open(3285) };
-  assert.equal(chooseWork({ next, issues, defects: [3285], cardsOnly: true }).kind, "card");
-  const prepare = chooseWork({ next: { ...next, batch: null }, issues, cardsOnly: true });
-  assert.equal(prepare.kind, "prepare");
-  assert.deepEqual(prepare.avoid.map(gap => gap.issue), [3285]);
-  assert.doesNotThrow(() => checkArgs({ mode: "produce", maxTasks: 20, cardsOnly: true }));
-  assert.throws(() => checkArgs({ mode: "produce", maxTasks: 2, cardsOnly: true, retryGaps: [1] }), /cardsOnly/);
-  assert.throws(() => checkArgs({ mode: "produce", maxTasks: 2, cardsOnly: "yes" }), /boolean/);
-});
-
-test("Engine and card units alternate within a run", () => {
-  const next = { batch: readyBatch, pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
-  const issues = { 3285: open(3285), 3286: open(3286) };
-  const engineUnit = { status: "blocked", task: { taskType: "engine", id: "gap-3286", issue: 3286 } };
-  assert.equal(chooseWork({ next, issues }).kind, "engine");
-  assert.equal(chooseWork({ next, units: [engineUnit], issues }).kind, "card");
-  // With no ready batch, the card turn prepares one rather than taking another gap.
-  const prepare = chooseWork({ next: { ...next, batch: null }, units: [engineUnit], issues });
-  assert.equal(prepare.kind, "prepare");
-  assert.deepEqual(prepare.avoid.map(gap => gap.issue), [3285, 3286]);
-  // If no batch can be prepared, that turn works the deferred gap instead of stopping.
-  assert.equal(prepare.fallback.issue, 3285);
-  assert.equal(chooseWork({ next: { ...next, batch: null }, units: [engineUnit], issues, cardsOnly: true }).fallback, null);
-  const cardUnit = { status: "landed", task: { taskType: "card", id: "c" } };
-  assert.equal(chooseWork({ next, units: [engineUnit, cardUnit], issues }).gap.issue, 3285);
-});
-
-test("A selector's Engine answer becomes an ordinary gap unit", () => {
-  const selected = { taskType: "engine", id: "new-gap", title: "Warp", instructions: "Warp cards need an exile-and-recast window." };
-  const { task } = selectedGapTask(selected, open(77), [], {});
-  assert.equal(task.id, "gap-77");
-  assert.equal(task.issue, 77);
-  assert.equal(task.reviewRequired, true);
-  assert.match(task.instructions, /exile-and-recast/);
-  const sub = { number: 78, state: "OPEN", title: "Part", url: "u/78", labels: [] };
-  assert.equal(selectedGapTask(selected, { ...open(77), subIssues: [sub] }, [], {}).task.issue, 78);
-  assert.match(selectedGapTask(selected, { ...open(77), state: "CLOSED" }, [], {}).problem, /no open issue/);
-  assert.match(selectedGapTask(selected, open(77), [{ issue: 77 }], {}).problem, /parked/);
-  assert.match(selectedGapTask(selected, { ...open(77), labels: ["Parked"] }, [], {}).problem, /parked/);
-});
-
-test("Gaps awaiting gameplay evidence wait until a card hits them", () => {
-  const unproven = number => ({ ...open(number), labels: ["Needs Gameplay Evidence"] });
-  const issues = { 40: unproven(40), 50: unproven(50) };
-  // A reviewer-filed defect without card evidence is not worked, and batches may include cards that need it.
-  assert.equal(chooseWork({ next: { batch: readyBatch }, issues, defects: [40] }).kind, "card");
-  const prepare = chooseWork({ next: {}, issues, defects: [40] });
-  assert.equal(prepare.kind, "prepare");
-  assert.deepEqual(prepare.avoid, []);
-  // A card that hits it is the evidence.
-  assert.equal(chooseWork({ next: { batch: readyBatch }, units: [blockedCard(50)], issues, defects: [40] }).gap.issue, 50);
-  // Follow-up sub-issues awaiting evidence are not worked through their parent's blocked cards.
-  const sub = (number, labels = []) => ({ number, state: "OPEN", title: `Part ${number}`, url: `u/${number}`, labels });
-  const one = { batch: readyBatch, pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
-  const followUp = sub(4001, ["Needs Gameplay Evidence"]);
-  assert.equal(chooseWork({ next: one, issues: { 3285: { ...open(3285), subIssues: [followUp, sub(4002)] } } }).gap.issue, 4002);
-  assert.equal(chooseWork({ next: one, issues: { 3285: { ...open(3285), subIssues: [followUp] } } }).kind, "card");
-});
-
-test("Existing-card defects come first, then gaps blocking the most queued cards", () => {
-  const next = { batch: readyBatch, pending_prerequisites: [
-    { blocked_oracle_ids: ["a"], issues: [10] },
-    { blocked_oracle_ids: ["b", "c", "d"], issues: [20] },
-    { blocked_oracle_ids: ["e", "f"], issues: [30] },
-  ] };
-  const issues = Object.fromEntries([10, 20, 30, 40].map(n => [n, open(n)]));
-  assert.deepEqual(knownGaps({ next }).map(gap => gap.issue), [20, 30, 10]);
-  assert.deepEqual(knownGaps({ next, defects: [40, 10] }).map(gap => gap.issue), [10, 40, 20, 30]);
-  assert.equal(chooseWork({ next, issues, defects: [40] }).gap.issue, 40);
-  assert.equal(chooseWork({ next, issues }).gap.issue, 20);
-  // A closed defect issue is not worked.
-  assert.equal(chooseWork({ next, issues: { ...issues, 40: { state: "CLOSED" } }, defects: [40] }).gap.issue, 20);
-});
-
-test("Known open Engine gaps are selected before ready card batches, demonstrated gaps first", () => {
-  const next = { batch: readyBatch, cards: [{ name: "A" }], pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }] };
-  const issues = { 3285: open(3285), 2161: open(2161) };
-  let choice = chooseWork({ next, units: [blockedCard(2161)], issues });
-  assert.equal(choice.kind, "engine");
-  assert.equal(choice.gap.issue, 2161);
-  assert.deepEqual(choice.gap.oracleIds, ["x", "y", "z"]);
-  choice = chooseWork({ next, issues });
-  assert.equal(choice.kind, "engine");
-  assert.equal(choice.gap.issue, 3285);
-  const task = gapTask(choice, { q: "Necromancy" });
-  assert.equal(task.id, "gap-3285");
-  assert.equal(task.taskType, "engine");
-  assert.equal(task.issue, 3285);
-  assert.match(task.instructions, /Necromancy \(q\)/);
-  assert.doesNotThrow(() => checkSelection(task));
-});
-
-test("Ready saved batches are selected deterministically when no open gap remains", () => {
-  const next = { batch: readyBatch, cards: [{ name: "A", oracle_id: "a", revision: "r" }],
-    pending_prerequisites: [{ issues: [3285] }, { issues: [999] }] };
-  // A filled gap, a closed issue and an unreadable reference never outrank ready work.
-  const choice = chooseWork({ next, units: [landedGap(3285)], issues: { 3285: open(3285), 999: { state: "CLOSED" } } });
-  assert.equal(choice.kind, "card");
-  const task = batchTask(choice);
-  assert.equal(task.id, "11-ready");
-  assert.equal(task.batchPlan, "");
-  assert.doesNotThrow(() => checkSelection(task));
-});
-
-test("A failed gap attempt is parked for this run and batch preparation avoids open gaps", () => {
-  const failed = { status: "blocked", task: { taskType: "engine", id: "gap-3285", issue: 3285 } };
-  const next = { batch: null, pending_prerequisites: [{ blocked_oracle_ids: ["q"], issues: [3285] }, { blocked_oracle_ids: ["n"], issues: [500] }] };
-  const choice = chooseWork({ next, units: [failed], priorUnits: [landedGap(500)], issues: { 3285: open(3285), 500: open(500) } });
-  assert.equal(choice.kind, "prepare");
-  assert.deepEqual(choice.parked.map(gap => gap.issue), [3285]);
-  assert.deepEqual(choice.avoid.map(gap => gap.issue), [3285]);
-  assert.deepEqual(choice.unblocked.map(gap => gap.issue), [500]);
-  // Earlier-run failures stay parked unless explicitly retried.
-  const earlier = { next: { batch: readyBatch, pending_prerequisites: [{ issues: [3285] }] }, priorUnits: [failed], issues: { 3285: open(3285) } };
-  assert.equal(chooseWork(earlier).kind, "card");
-  assert.equal(chooseWork({ ...earlier, retry: [3285] }).gap.issue, 3285);
-  assert.deepEqual(gapEvidence(choice.unblocked, [landedGap(500)], {}, "base"), {
-    500: { runtime_revision: "commit-500", evidence: "Engine unit gap-500 landed in https://github.com/natefinch/council4/pull/5000" },
-  });
-  assert.deepEqual(gapEvidence([{ issue: 7, oracleIds: ["c"] }], [], { 7: { state: "CLOSED" } }, "base"), {
-    7: { runtime_revision: "base", evidence: "Issue #7 closed; reassessed on runtime base" },
-  });
-});
-
 test("Earlier local runs carry blocked-card gaps and landed gap fixes forward", async t => {
   const root = await mkdtemp(path.join(os.tmpdir(), "council4-history-"));
   t.after(() => rm(root, { recursive: true }));
@@ -916,10 +744,10 @@ test("Earlier local runs carry blocked-card gaps and landed gap fixes forward", 
   await mkdir(path.join(root, ".cardwork/workflows/empty"));
   const priorUnits = await earlierUnits(root, "current");
   assert.equal(priorUnits.length, 2);
-  const gaps = knownGaps({ next: { pending_prerequisites: [{ issues: [42], blocked_oracle_ids: ["w"] }] }, priorUnits });
-  assert.deepEqual(gaps.map(gap => gap.issue), [41, 42]);
-  const choice = chooseWork({ next: { batch: readyBatch, pending_prerequisites: [{ issues: [42], blocked_oracle_ids: ["w"] }] },
-    priorUnits, issues: { 41: open(41), 42: open(42) } });
+  const records = waitingRecords();
+  const gaps = knownGaps({ records, priorUnits });
+  assert.deepEqual(gaps.map(gap => gap.issue), [41]);
+  const choice = chooseWork({ next: { batch: readyBatch }, gaps, priorUnits, issues: { 41: open(41) } });
   assert.equal(choice.gap.issue, 41);
   assert.deepEqual(await earlierUnits(path.join(root, "missing"), "x"), []);
 });

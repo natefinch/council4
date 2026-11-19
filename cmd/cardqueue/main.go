@@ -65,7 +65,7 @@ type manifest struct {
 }
 
 func main() {
-	operation := flag.String("operation", "check", "init, check, next, families, settle, add-reviewed-batch, record-prerequisites, retire-batch, reassess, record-blockers, claim, verify, release, block, format, reconcile-compiled")
+	operation := flag.String("operation", "check", "init, check, next, families, settle, add-reviewed-batch, record-prerequisites, retire-batch, reassess, record-blockers, claim, claim-followup, verify, release, block, format, reconcile-compiled")
 	path := flag.String("manifest", "testdata/card-authoring/production.json", "saved queue")
 	plan := flag.String("plan", ".cardwork/production-plan.json", "init seed or explicit reviewed continuation/evidence input")
 	corpus := flag.String("corpus", ".cardwork/corpus/oracle-cards.json", "pinned Oracle corpus")
@@ -197,7 +197,7 @@ func run(operation, path, planPath, corpusPath, compilerPath, batchID, owner str
 		if err := verifyBatch(&queue, batchID, owner, inventory, corpusData, blocked); err != nil {
 			return err
 		}
-	case "claim", "release", "block":
+	case "claim", "claim-followup", "release", "block":
 		if err := transition(&queue, operation, batchID, owner, blocker, reason, inventory); err != nil {
 			return err
 		}
@@ -330,6 +330,18 @@ func settle(queue *manifest, operation, batchID, owner string, blocker int, reas
 	if batchID == "" || strings.TrimSpace(owner) == "" {
 		return errors.New("mutations require explicit -batch and -owner")
 	}
+	claimable := *queue
+	if operation == "claim-followup" {
+		for _, r := range queue.Records {
+			if r.Status == "claimed" && r.Batch != batchID {
+				return errors.New("cannot interrupt another active batch for a card follow-up")
+			}
+		}
+		// Prefer this batch only. nextBatch still checks ownership, all
+		// prerequisites and the whole membership; the saved order is unchanged.
+		claimable.Batches = slices.DeleteFunc(slices.Clone(queue.Batches), func(b batch) bool { return b.ID != batchID })
+		operation = "claim"
+	}
 	if operation != "claim" && operation != "verify" && operation != "release" && operation != "block" {
 		return errors.New("invalid transition")
 	}
@@ -337,7 +349,7 @@ func settle(queue *manifest, operation, batchID, owner string, blocker int, reas
 		return errors.New("blocking needs one precise open issue and observed missing behavior")
 	}
 	if operation == "claim" {
-		next, err := nextBatch(*queue, owner)
+		next, err := nextBatch(claimable, owner)
 		if err != nil {
 			return err
 		}
@@ -392,8 +404,9 @@ func settle(queue *manifest, operation, batchID, owner string, blocker int, reas
 			r.Status, r.Owner, r.Blocker, r.Reason = "blocked", "", blocker, reason
 		}
 	}
-	if count < minBatchCards || count > maxBatchCards {
-		return fmt.Errorf("batch must contain %d–%d records", minBatchCards, maxBatchCards)
+	index := slices.IndexFunc(queue.Batches, func(b batch) bool { return b.ID == batchID })
+	if index < 0 || count < minBatchCards || count > maxBatchCards || count != len(queue.Batches[index].OracleIDs) {
+		return fmt.Errorf("batch must contain its %d–%d saved member records", minBatchCards, maxBatchCards)
 	}
 	if len(blocked) != 0 {
 		return errors.New("blocked identities are not members of the batch")

@@ -130,40 +130,16 @@ exercise real usage attribution. It spends the response's actual AIC.
 
 ## Separate work types and stages
 
-Each unit picks its own work; nobody chooses batches by hand. Since policy
-1.4.0 the coordinator selects deterministically, in this order:
+Since policy 1.31.0, selection is card-driven. Card and Engine units keep separate models, costs, worktrees, validation and PRs.
 
-1. **Known open Engine gaps.** Gaps demonstrated by blocked card units (this
-   run, then earlier local runs under `.cardwork/workflows/` in any of the
-   repository's top-level worktrees, since policy 1.13.0) and saved queue
-   prerequisites from `cardqueue next`. A gap counts while its GitHub issue is
-   open and no landed Engine unit has targeted it. The unit is an Engine task
-   `gap-<issue>`. Since policy 1.26.0 Engine and card units alternate within
-   a run: after an Engine unit (not a split), the next unit is card work (step
-   2 or 3) even while gaps remain, so open gaps cannot starve card admissions.
-   A run started with `"cardsOnly": true` (policy 1.28.0) skips this step
-   entirely; its selector never returns Engine work, and an Engine answer
-   fails only that unit. Cards that hit a missing capability are still
-   blocked on their gap for later runs.
-2. **A ready saved batch** from `cardqueue next`.
-3. **Batch preparation.** Only then does a measured selection agent return a
-   new reviewed batch plan. Since policy 1.27.0 it is given candidate families
-   from `cardqueue -operation families` instead of raw queue order, the
-   largest groups of cards whose landed gap now unblocks them, and open gaps
-   as issue numbers with blocked-card counts. It checks capability fit only;
-   source review (Comprehensive Rules, rulings) belongs to the card author.
-   Since policy 1.30.0 a run does not stop because no family fits main. If an
-   open gap was deferred only for the card turn, the unit works that gap.
-   Otherwise the selector names the missing capability that unblocks the
-   largest family, reusing its open issue or having the coordinator file one,
-   and the unit is an ordinary Engine task `gap-<issue>`. Only a selector that
-   finds no candidates or a genuine external blocker stops the run.
+1. A card worker attempts one to twenty cards. If blocked, it leaves its draft, source record and probe in its retained worktree and reports `blockedCards`: the claimed Oracle ID, canonical issue, expected versus actual play, and probe/command or declaration/runtime boundary (`evidence`). Ready siblings can land. The coordinator keeps the claim identities and handoffs for fully blocked and partially successful units across runs.
+2. Only a demonstrated need schedules automatic Engine work. Multiple waiting cards for one issue share a fix. A promoted `Existing Card Defect` issue can also qualify: remove `Needs Gameplay Evidence` after reproducing it, and include separate `Reproduced card: <exact registered name>` and `Reproduction: <probe and observed result>` lines in its body. Queue triage, a label alone, an Engine remainder, a suggested issue or lack of a ready family cannot fund an Engine unit. Parked issues remain parked; `cardsOnly` never runs an Engine agent.
+3. The Engine worker confirms the issue on main. If an operation already works it returns `already_supported` with the exact path and executed evidence, not an empty PR. Otherwise it delivers the shared rule through the usual review and CI gates. Its unit records which card attempts it addressed.
+4. The next available card unit resumes one of those exact cards without spending a selection call, even when it is the only one. It gets the original retained worktree and the checked Engine evidence. It takes a fresh claim, checks the complete card on current main, and must meet normal admission requirements. Active ownership still wins. A second demonstrated blocker is a new handoff, not permission to work neighboring issues. Do not remove retained drafts until resolved.
 
-Steps 1 and 2 need no model and cost no AIC. An Engine gap whose unit fails is
-parked (in that run and later ones) rather than paid for again; its stage outcome
-and retained work show why. To retry deliberately, pass its issue number in the
-`retryGaps` argument, e.g. `"retryGaps": [3287]`. A retry starts again from
-current main.
+When nothing is waiting, use the next executable saved batch or prepare a card attempt from the queue's families. Failed Engine work is retained rather than retried automatically; `retryGaps` explicitly retries a failed demonstrated need in a later run.
+
+The run report shows observed Engine AIC per distinct linked card admitted or repaired **in the same run**. It reports `n/a` when there is no such card or accounting is incomplete. Cross-run follow-ups retain the originating Engine worktree and revision, but do not claim its spend in the later run.
 
 To continue a review-rejected or validation-failed Engine unit instead of
 starting over, start a new production run with `resumeUnits`:
@@ -197,22 +173,6 @@ re-established. `maxTasks` must cover every resumed unit; any remaining units
 select work normally. This explicit recovery does not resume or modify the
 old run, or bypass its workflow-revision guard.
 
-Known gaps are ordered: open issues labeled `Existing Card Defect` (defects in
-rules already-supported cards use, so they play wrong today) first, then gaps
-by how many queued cards they block, most first. A gap labeled
-`Parked` (on its issue, its parent or the sub-issue being worked) is never
-selected, since policy 1.25.0. It is reserved for directed work such as an
-epic, and still keeps its blocked cards out of new batches.
-
-Since policy 1.26.0 a gap labeled `Needs Gameplay Evidence` is selected only
-once a real card hits it: a card unit reports it as its blocker, or a queued
-card records it. Reviewer follow-ups and pre-existing defects get this label, so
-reasoning about a rare interaction no longer schedules work ahead of cards.
-Batch preparation does not avoid cards that need such a gap; authoring them
-supplies the evidence. A split gap is not worked through its labeled
-sub-issues. To promote a gap found in a game, comment with the card and game
-and remove the label.
-
 ### Backlog triage
 
 The separate `council4-engine-triage` workflow ranks the open
@@ -236,17 +196,7 @@ ordinary gaps. Apply refuses unverified output. Issues labeled `Parked` or
    comment (reopen any that are wrong). No new agents.
 4. Record queue blockers in a PR:
    `go run ./cmd/cardqueue -operation record-blockers -owner <you> -plan .cardwork/triage/<run>/blockers-plan.json`.
-   Each queued card is blocked by at most one issue (the highest ranked), so
-   selection schedules those gaps by card count and batch preparation avoids
-   the blocked cards until a landed fix reassesses them.
-
-A gap that proves too large is split into ordered GitHub sub-issues of its
-issue. Selection then works the first open sub-issue (it inherits the parent's
-blocked cards); a landed sub-issue moves on to the next, and a failed one parks
-the parent. Once every sub-issue is closed, the parent is worked as a whole
-only if a landed unit reported a remainder on it (since policy 1.23.1); an
-earlier failed parent attempt still parks it unless `retryGaps` lists it.
-Split a parked gap this way instead of resuming it again.
+   These associations inform backlog planning; they are not demonstrated Engine work orders.
 
 Reviews land changes that are strictly better than their base. A finding blocks
 only if it is a regression (works on the base, breaks now), an acceptance
@@ -386,7 +336,7 @@ earlier findings and checks the repairs for regressions, labelling each finding
 an earlier reviewer required must cite the primary source. Gaps reported earlier
 in a unit carry forward unless a repair lists them in `resolvedGaps`.
 
-Since policy 1.23.0, the last allowed re-review of an Engine unit with an issue
+For legacy Engine units without a named card handoff, the last allowed re-review of an Engine unit with an issue
 is told it is final. Only `[unresolved]` earlier findings and `[regression]`s
 (base behavior that breaks, or a crash, panic or hidden-information leak the
 change introduces) reject it. If every remaining finding is `[new]`, the unit
@@ -404,9 +354,7 @@ Each run also mirrors `state.json` and `report.json` to
 the dashboard survive when the session worktree that ran it is removed. When an
 Engine unit lands, the workflow closes its issue (unless it reported a remainder
 on the same issue, which it comments on the issue instead) and closes a split parent once all its sub-issues are closed
-and the landing reported no remainder on the parent;
-a split gap with no open sub-issues is implemented as a whole only for such a
-reported remainder.
+and the landing reported no remainder on the parent.
 
 | File under `.cardwork/workflows/<run-id>/` | Purpose |
 | --- | --- |
@@ -493,7 +441,7 @@ Edit [`policy.json`](../.github/extensions/council4-production/policy.json):
   settings; nothing inherits the starting session's choices, and the policy is
   rejected if any is missing.
 - Card implementation and fixes: `gpt-6-luna`. Engine implementation and fixes:
-  `claude-opus-5.5`. All reviews: `gpt-6.1-terra`, a different model from each
+  `gpt-6.2-sol`. All reviews: `gpt-6.1-terra`, a different model from each
   author (policy 1.9.0 trial; earlier runs reviewed with `gpt-6.1-sol`).
   Selection: `gpt-6-luna` (policy 1.12.0 cost trial; earlier runs used
   `gpt-6.1-sol`). All at `high` effort and the `default` context tier.
