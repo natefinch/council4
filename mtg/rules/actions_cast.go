@@ -536,7 +536,7 @@ func (e *Engine) canCastMutateSpellWithX(g *game.Game, playerID game.PlayerID, c
 		!spellDef.HasType(types.Creature) ||
 		!isSupportedSpell(spellDef) ||
 		!canCastAtCurrentTiming(g, playerID, castFace) ||
-		!mutateTargetLegal(g, playerID, card.Owner, castFace, targetID) {
+		!mutateTargetLegal(g, playerID, card.Owner, castFace, 0, targetID) {
 		return false
 	}
 	routes := spellCastRoutes(g, playerID, cardID, sourceZone, game.FaceFront, mutateCastCostMode)
@@ -580,7 +580,7 @@ func mutateCastRouteRequests(base payment.SpellRequest, routes []castRoute) []pa
 func legalMutateTargets(g *game.Game, playerID, owner game.PlayerID, spellChars *game.CardDef) []*game.Permanent {
 	var targets []*game.Permanent
 	for _, permanent := range g.Battlefield {
-		if mutateTargetLegal(g, playerID, owner, spellChars, permanent.ObjectID) {
+		if mutateTargetLegal(g, playerID, owner, spellChars, 0, permanent.ObjectID) {
 			targets = append(targets, permanent)
 		}
 	}
@@ -639,14 +639,14 @@ func mutateRetargetGroup(g *game.Game, obj *game.StackObject, prompt string, rul
 // check (CR 702.16a-b): castSelectionFace while casting it (CR 601.2a, 601.2c)
 // and stackSpellCharacteristicsDef on the stack, so type-changing effects that
 // apply to spells (Biotransference making it an artifact) are seen.
-func mutateTargetLegal(g *game.Game, playerID, owner game.PlayerID, spellChars *game.CardDef, targetID id.ID) bool {
+func mutateTargetLegal(g *game.Game, playerID, owner game.PlayerID, spellDef *game.CardDef, spellID, targetID id.ID) bool {
 	target, ok := permanentByObjectID(g, targetID)
 	return ok &&
 		!target.PhasedOut &&
 		target.Owner == owner &&
 		permanentHasType(g, target, types.Creature) &&
 		!permanentHasSubtype(g, target, types.Human) &&
-		!targetProtectedFromSource(g, playerID, spellChars, 0, game.PermanentTarget(targetID))
+		!targetProtectedFromSource(g, playerID, spellDef, spellID, game.PermanentTarget(targetID))
 }
 
 func mutateAlternativeCost(manaCost cost.Mana) cost.Alternative {

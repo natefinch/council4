@@ -117,6 +117,9 @@ type permanentCreationOptions struct {
 	// attached to it when that is legal (CR 608.3c); otherwise it enters
 	// unattached for the resolving spell's CR 303.4i or 702.103f outcome.
 	auraSpellTarget opt.V[game.Target]
+	// spellID identifies the resolving spell whose LayerColor effects apply
+	// to this permanent even during the entry replacement check.
+	spellID id.ID
 }
 
 // applySneakPaid records on an entering permanent that its spell's sneak cost
@@ -190,6 +193,7 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	permanent.Blitzed = options.Blitzed
 	options.applySneakPaid(g, permanent)
 	applyInitialContinuousEffects(g, permanent, continuous)
+	carrySpellColorEffects(g, options.spellID, permanent.ObjectID)
 	registerPermanentReplacementEffects(g, permanent)
 	initializeReadAhead(e, g, permanent, agents, log)
 	if options.ForceTapped {
@@ -198,6 +202,9 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	destination := applyEnterBattlefieldReplacementEffects(options.entryContext(e, agents, log), g, permanent, fromZone)
 	if destination != zone.Battlefield {
 		redirectPendingCardEntry(g, card, permanent, fromZone, destination, options)
+		if options.spellID != 0 {
+			discardPendingEntryContinuousEffects(g, permanent)
+		}
 		return nil, false
 	}
 	registerPermanentCopyReplacementEffects(g, permanent)
@@ -207,6 +214,9 @@ func createCardPermanentFaceWithOptions(e *Engine, g *game.Game, card *game.Card
 	}
 	attachEnteringAuraSpell(e, g, permanent, options.auraSpellTarget, agents, log)
 	if !commitAuraEffectAttachment(g, permanent, options) {
+		if options.spellID != 0 {
+			discardPendingEntryContinuousEffects(g, permanent)
+		}
 		return nil, false
 	}
 	retained := retainedEntryCounters(g, card, fromZone, face, options.SourceFaceDown)
@@ -436,8 +446,9 @@ func createCardPermanentFaceDown(g *game.Game, card *game.CardInstance, controll
 // faceDownCastFacts records who cast a face-down spell and the zone it was
 // cast from (CR 708.4). The caster stays fixed if control of the spell changed.
 type faceDownCastFacts struct {
-	caster game.PlayerID
-	from   zone.Type
+	caster  game.PlayerID
+	from    zone.Type
+	spellID id.ID
 }
 
 // createCardPermanentFaceDownWithChoices puts card onto the battlefield face
@@ -460,6 +471,7 @@ func createCardPermanentFaceDownWithChoices(e *Engine, g *game.Game, card *game.
 		FaceDownKind:   kind,
 		SummoningSick:  true,
 	}
+	carrySpellColorEffects(g, cast.Val.spellID, permanent.ObjectID)
 	destination := applyEnterBattlefieldReplacementEffects(enterBattlefieldContext{
 		engine:            e,
 		agents:            agents,
@@ -471,6 +483,9 @@ func createCardPermanentFaceDownWithChoices(e *Engine, g *game.Game, card *game.
 	}, g, permanent, fromZone)
 	if destination != zone.Battlefield {
 		redirectPendingCardEntry(g, card, permanent, fromZone, destination, permanentCreationOptions{SourceFaceDown: true})
+		if cast.Val.spellID != 0 {
+			discardPendingEntryContinuousEffects(g, permanent)
+		}
 		return nil, false
 	}
 	addRetainedCounters(permanent, retainedEntryCounters(g, card, fromZone, face, fromZone == zone.Stack))

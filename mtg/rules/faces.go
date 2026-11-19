@@ -188,13 +188,7 @@ func characteristicDefinedFace(card *game.CardDef) *game.CardDef {
 					subtypes = appendUniqueSubtypes(subtypes, types.SubtypesForType(types.Creature)...)
 				}
 			case game.LayerColor:
-				if effect.SetColorless {
-					colors = nil
-				} else if effect.SetColors != nil {
-					colors = slices.Clone(effect.SetColors)
-				}
-				colors = removeColors(colors, effect.RemoveColors)
-				colors = appendUniqueColors(colors, effect.AddColors...)
+				colors = applyColorLayer(colors, effect)
 			}
 		}
 	}
@@ -214,7 +208,7 @@ func characteristicDefinedFace(card *game.CardDef) *game.CardDef {
 func stackObjectColors(g *game.Game, obj *game.StackObject) ([]color.Color, bool) {
 	if obj != nil && obj.Kind == game.StackSpell {
 		if def, ok := stackSpellCharacteristicsDef(g, obj); ok {
-			return spellColors(def), true
+			return def.Colors, true
 		}
 	}
 	if def, ok := stackObjectSourceDef(g, obj); ok {

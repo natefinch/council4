@@ -624,21 +624,14 @@ func (o PlayerObservation) stackObjectView(obj *game.StackObject) StackObjectVie
 	if obj.Kind != game.StackSpell {
 		return view
 	}
-	if obj.FaceDown {
-		// A face-down spell's public characteristics are its face-down values
-		// (CR 708.2a, 708.4) with type-changing effects that apply to spells, never
-		// the hidden card's.
-		if def, ok := stackSpellCharacteristicsDef(o.g, obj); ok {
+	if def, ok := stackSpellCharacteristicsDef(o.g, obj); ok {
+		if obj.FaceDown {
 			view.ManaValue = stackManaValue(def, 0)
-			view.Types = def.Types
-			view.Colors = spellColors(def)
+		} else {
+			view.ManaValue, _ = stackObjectManaValue(o.g, obj)
 		}
-		return view
-	}
-	if def, ok := stackObjectSpellDef(o.g, obj); ok {
-		view.ManaValue, _ = stackObjectManaValue(o.g, obj)
-		view.Types = stackSpellTypeLine(o.g, obj, def).types
-		view.Colors = spellColors(def)
+		view.Types = def.Types
+		view.Colors = def.Colors
 	}
 	return view
 }
