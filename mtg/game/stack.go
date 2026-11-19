@@ -260,6 +260,10 @@ type StackObject struct {
 	// owner's hand at the beginning of the next end step.
 	Dashed bool
 
+	// Blitzed records the paid Blitz alternative cost (CR 702.152a). Copies
+	// of the spell keep the payment decision (CR 707.10).
+	Blitzed bool
+
 	// Sneaked is true if this spell was cast for its Sneak alternative cost
 	// (CR 702.190a), so "if this spell's sneak cost was paid" is true. A copy
 	// of the spell keeps it (CR 707.10).

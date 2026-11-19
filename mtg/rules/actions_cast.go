@@ -260,6 +260,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 			obj.Evoked = !cast.Overloaded && evokeAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
 			obj.Converted = !cast.Overloaded && convertedAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
 			obj.Dashed = !cast.Overloaded && dashAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
+			obj.Blitzed = !cast.Overloaded && blitzAlternativeChosen(spellDef, paymentResult.AlternativeIndex)
 			obj.Sneaked = mode.sneak != payment.SneakUnavailable && paymentResult.Sneaked
 			if obj.Sneaked {
 				obj.SneakAttackTarget = sneakAttackTarget(attacksBeforePayment, paymentResult.ReturnedAttackerIDs)

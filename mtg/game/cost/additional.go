@@ -379,7 +379,19 @@ const (
 	// attacker they control to its owner's hand. The alternative must carry an
 	// AdditionalReturnUnblockedAttacker cost.
 	AlternativeMechanicSneak
+	// AlternativeMechanicBlitz marks the Blitz alternative cost (CR 702.152).
+	AlternativeMechanicBlitz
 )
+
+// BlitzAlternative is the alternative cost for a card with Blitz. Pair it
+// with game.BlitzStaticAbility on the same face.
+func BlitzAlternative(manaCost Mana) Alternative {
+	return Alternative{
+		Label:    "Blitz",
+		ManaCost: opt.Val(append(Mana(nil), manaCost...)),
+		Mechanic: AlternativeMechanicBlitz,
+	}
+}
 
 // SneakAlternative builds the Sneak alternative cost (CR 702.190a): pay
 // manaCost and return an unblocked attacker you control to its owner's hand

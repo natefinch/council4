@@ -360,6 +360,10 @@ type Event struct {
 	// trigger's intervening "if its dash cost was paid" condition.
 	EnterDashed bool
 
+	// EnterBlitzed records the resolving spell's Blitz payment decision,
+	// including when the permanent resulted from an uncast spell copy.
+	EnterBlitzed bool
+
 	// EnterSneaked records whether an entering permanent resulted from a spell
 	// whose sneak cost was paid (CR 702.190b). It feeds "when ~ enters, if its
 	// sneak cost was paid" intervening-if conditions.

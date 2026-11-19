@@ -990,6 +990,35 @@ func DashTriggeredAbility() TriggeredAbility {
 	}
 }
 
+// BlitzDeathTriggeredBody is the immutable ability granted by Blitz.
+var BlitzDeathTriggeredBody = &TriggeredAbility{
+	Text: "When this permanent dies, draw a card.",
+	Trigger: TriggerCondition{
+		Type:    TriggerWhen,
+		Pattern: TriggerPattern{Event: EventPermanentDied, Source: TriggerSourceSelf},
+	},
+	Content: Mode{Sequence: []Instruction{{
+		Primitive: Draw{Amount: Fixed(1), Player: ControllerReference()},
+	}}}.Ability(),
+}
+
+// BlitzStaticAbility grants haste and a dies trigger while this permanent has
+// Blitz and its Blitz cost was paid (CR 702.152a). Declare it alongside
+// cost.BlitzAlternative; the resolving spell schedules the sacrifice separately.
+func BlitzStaticAbility() StaticAbility {
+	return StaticAbility{
+		Text:           "As long as this permanent's blitz cost was paid, it has haste and \"When this permanent dies, draw a card.\"",
+		ZoneOfFunction: zone.Battlefield,
+		Condition:      opt.Val(Condition{SourceBlitzed: true}),
+		ContinuousEffects: []ContinuousEffect{{
+			Layer:          LayerAbility,
+			AffectedSource: true,
+			AddKeywords:    []Keyword{Haste},
+			AddAbilities:   []Ability{BlitzDeathTriggeredBody},
+		}},
+	}
+}
+
 // RampageTriggeredAbility builds the canonical Rampage N triggered ability
 // (CR 702.23): "Whenever this creature becomes blocked, it gets +N/+N until end
 // of turn for each creature blocking it beyond the first." The +N/+N delta is a

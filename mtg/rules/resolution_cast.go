@@ -136,6 +136,7 @@ func (e *Engine) resolutionSpell(g *game.Game, source *game.Player, card *game.C
 		commit: func(g *game.Game, paid payment.ApplyResult, _ [game.NumPlayers]PlayerAgent, _ *TurnLog, _ int) {
 			result := paid.Spell
 			object.Casting = false
+			object.Blitzed = blitzAlternativeChosen(def, result.AlternativeIndex)
 			object.BuybackPaid = result.BuybackPaid
 			object.ConspirePaid = result.ConspirePaid
 			object.AdditionalCostsPaid = result.AdditionalCostsPaid

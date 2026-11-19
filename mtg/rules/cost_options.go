@@ -43,6 +43,12 @@ func dashAlternativeChosen(card *game.CardDef, alternativeIndex int) bool {
 	return card.AlternativeCosts[index].Mechanic == cost.AlternativeMechanicDash
 }
 
+func blitzAlternativeChosen(card *game.CardDef, alternativeIndex int) bool {
+	index := alternativeIndex - 1
+	return index >= 0 && index < len(card.AlternativeCosts) &&
+		card.AlternativeCosts[index].Mechanic == cost.AlternativeMechanicBlitz
+}
+
 func manaCostPtr(manaCost opt.V[cost.Mana]) *cost.Mana {
 	if !manaCost.Exists {
 		return nil

@@ -766,6 +766,9 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		permanent.SuspendHasteController = opt.Val(obj.Controller)
 	}
 	applySpellKeywordRiders(g, obj, permanent)
+	if obj.Blitzed {
+		scheduleBlitzSacrifice(g, obj, permanent)
+	}
 	if obj.SneakAttackTarget.Exists {
 		putSneakedPermanentAttacking(g, permanent, obj.SneakAttackTarget.Val)
 	}
@@ -790,6 +793,21 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		}
 	}
 	return "battlefield"
+}
+
+// The spell creates this delayed trigger during resolution, not via an entry
+// trigger. It keeps the spell's controller and binds to the resulting object.
+func scheduleBlitzSacrifice(g *game.Game, obj *game.StackObject, permanent *game.Permanent) {
+	context := *obj
+	context.CapturedObjectID = permanent.ObjectID
+	scheduleDelayedTrigger(g, &context, &game.DelayedTriggerDef{
+		Text:           "Sacrifice that permanent at the beginning of the next end step.",
+		Timing:         game.DelayedAtBeginningOfNextEndStep,
+		CapturedObject: opt.Val(game.CapturedObjectReference()),
+		Content: game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.Sacrifice{Object: game.CapturedObjectReference()},
+		}}}.Ability(),
+	})
 }
 
 // applySpellKeywordRiders gives the creature a resolved spell became the
@@ -839,6 +857,7 @@ func permanentSpellEntryOptions(obj *game.StackObject) permanentCreationOptions 
 		HasSpellAnnouncement: true, XValue: obj.XValue,
 		KickerPaid: obj.KickerPaid, KickCount: obj.KickerCount, Bargained: obj.Bargained,
 		OffspringPaid: obj.OffspringPaid, Evoked: obj.Evoked, Dashed: obj.Dashed,
+		Blitzed:  obj.Blitzed,
 		Bestowed: obj.Bestowed, EntersTransformed: obj.Converted,
 		// CR 702.190b: a permanent spell whose sneak cost was paid enters
 		// tapped; resolution then puts it into combat attacking.

@@ -113,6 +113,8 @@ type Condition struct {
 	// than any computed characteristic, so it cannot depend on the very type
 	// change it gates.
 	SourceBestowed bool
+	// SourceBlitzed requires the permanent's Blitz cost to have been paid.
+	SourceBlitzed bool
 	// SourceSaddled requires the condition source Mount to be saddled
 	// (CR 702.166), as in "if this creature is saddled". Negate models the
 	// "isn't saddled" wording.
@@ -453,6 +455,7 @@ func (c *Condition) Empty() bool {
 		c.SourceAttachedCombatCounterpartSubtypes == [2]types.Sub{} &&
 		!c.SourceNotMonstrous &&
 		!c.SourceBestowed &&
+		!c.SourceBlitzed &&
 		!c.SourceSaddled &&
 		!c.SourceTributeNotPaid &&
 		!c.SourceCameUnderControlSinceLastUpkeep &&
