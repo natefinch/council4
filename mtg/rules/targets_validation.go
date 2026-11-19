@@ -437,7 +437,7 @@ func spellHasAnyLegalTargets(g *game.Game, card *game.CardDef, obj *game.StackOb
 	if obj.Overloaded && card.Overload.Exists {
 		card = overloadSpellDef(card)
 	}
-	return stackObjectHasAnyLegalTargetsForSpecs(g, card, 0, spellTargetSpecs(card, obj.ChosenModes, castBranchForObject(obj)), obj)
+	return stackObjectHasAnyLegalTargetsForSpecs(g, card, obj.ID, spellTargetSpecs(card, obj.ChosenModes, castBranchForObject(obj)), obj)
 }
 
 // spellHasAnyLegalTargetsWithSplices rechecks the resolving Arcane spell's own
@@ -456,7 +456,7 @@ func spellHasAnyLegalTargetsWithSplices(g *game.Game, card *game.CardDef, obj *g
 		hostCard = overloadSpellDef(card)
 	}
 	event := stackObjectTriggerEvent(obj)
-	host := rescreenTargetsAtResolution(g, obj.Controller, hostCard, 0, event, obj.XValue,
+	host := rescreenTargetsAtResolution(g, obj.Controller, hostCard, obj.ID, event, obj.XValue,
 		spellTargetSpecs(hostCard, obj.ChosenModes, castBranchForObject(obj)), obj.Targets, obj.TargetCounts)
 	if !host.valid {
 		return false
@@ -473,7 +473,8 @@ func spellHasAnyLegalTargetsWithSplices(g *game.Game, card *game.CardDef, obj *g
 		if i < len(obj.SplicedTargetCounts) {
 			splicedCounts = obj.SplicedTargetCounts[i]
 		}
-		spliced := rescreenTargetsAtResolution(g, obj.Controller, hostCard, 0, event, obj.XValue,
+		// Spliced text targets as the host spell, not the card it came from.
+		spliced := rescreenTargetsAtResolution(g, obj.Controller, hostCard, obj.ID, event, obj.XValue,
 			splicedContentTargetSpecs(obj.SplicedContent[i]), splicedTargets, splicedCounts)
 		if !spliced.valid {
 			// Invalid recorded counts indicate a card-definition bug; fail closed

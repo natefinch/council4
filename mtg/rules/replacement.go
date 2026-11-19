@@ -2852,7 +2852,7 @@ func stackObjectSourceChars(g *game.Game, obj *game.StackObject) (sourceChars, b
 	// bestowed cast becomes (CR 702.103b), so type/subtype-based spell
 	// qualifiers and protection see the transformed characteristics.
 	return sourceChars{
-		colors:   spellColors(def),
+		colors:   def.Colors,
 		types:    def.Types,
 		subtypes: def.Subtypes,
 	}, true

@@ -17,12 +17,10 @@ func (e *Engine) resolveTopOfStack(g *game.Game, log *TurnLog) {
 
 // resolveTopOfStackWithChoices resolves the object on top of the stack.
 // CR 608.1: each time all players pass in succession, the spell or ability on
-// top of the stack resolves. The resolving object's last known information is
-// snapshotted first so source-based checks (e.g. protection) still find the
-// correct characteristics after it leaves the stack. The final destination is
-// handled in the per-kind resolve paths: a permanent spell enters the
-// battlefield (CR 608.3), while an instant or sorcery spell (and any ability) is
-// put into the graveyard or removed from the stack (CR 608.2n).
+// top of the stack resolves. The per-kind resolve paths handle the destination:
+// a permanent spell enters the battlefield (CR 608.3), while an instant or
+// sorcery spell or an ability goes to the graveyard or leaves the stack
+// (CR 608.2n).
 func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlayers]PlayerAgent, log *TurnLog) {
 	obj, ok := g.Stack.Pop()
 	if !ok {
@@ -31,12 +29,9 @@ func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlay
 	previous, _ := g.ChoiceContext()
 	e.setReplacementChoiceContext(g, agents, log)
 	defer g.SetChoiceContext(previous)
-	// Snapshot the resolving spell's face characteristics into LKI before
-	// effects run so that protection checks against the source can find the
-	// correct face even after the object has been removed from the stack.
-	if obj.Kind == game.StackSpell && obj.ID != 0 {
-		snapshot := snapshotStackSpell(g, obj)
-		rememberLastKnown(g, &snapshot)
+	var resolvedEvent game.Event
+	if obj.Kind == game.StackSpell {
+		resolvedEvent = spellResolvedEvent(g, obj)
 	}
 	startEntry := log.entryCount()
 	eventsBefore := len(g.Events)
@@ -47,7 +42,7 @@ func (e *Engine) resolveTopOfStackWithChoices(g *game.Game, agents [game.NumPlay
 	// triggers order correctly.
 	completeDungeonForStackObject(g, obj)
 	if obj.Kind == game.StackSpell && spellResolved(result) {
-		emitEvent(g, spellResolvedEvent(obj))
+		emitEvent(g, resolvedEvent)
 	}
 	recordEnteredBattlefield(g, log, eventsBefore)
 	log.addResolve(ResolveLog{
@@ -150,10 +145,9 @@ func (e *Engine) resolveStackObjectWithChoices(g *game.Game, obj *game.StackObje
 	}
 }
 
-// spellResolvedEvent describes a spell that resolved. A face-down spell's event
-// carries its face-down characteristics so card-selection matching doesn't
-// backfill the hidden card's printed ones (CR 702.37c, 708.2).
-func spellResolvedEvent(obj *game.StackObject) game.Event {
+// Capture the spell's public characteristics before resolution can transfer
+// its color effects or move the backing card out of the stack.
+func spellResolvedEvent(g *game.Game, obj *game.StackObject) game.Event {
 	event := game.Event{
 		Kind:          game.EventSpellResolved,
 		SourceID:      obj.SourceID,
@@ -161,10 +155,14 @@ func spellResolvedEvent(obj *game.StackObject) game.Event {
 		Controller:    obj.Controller,
 		CardID:        obj.SourceID,
 	}
-	if obj.FaceDown {
-		def := faceDownStackSpellDef(obj)
-		event.CardTypes = cardTypes(def)
-		event.CardCharacteristicsKnown = true
+	if obj.FaceDown || len(spellColorEffects(g, obj.ID)) != 0 {
+		if def, ok := stackSpellCharacteristicsDef(g, obj); ok {
+			event.FaceDown = obj.FaceDown
+			event.CardTypes, event.CardSupertypes, event.CardSubtypes = def.Types, def.Supertypes, def.Subtypes
+			event.Colors = def.Colors
+			event.ManaValue = stackObjectKnownManaValue(g, obj)
+			event.CardCharacteristicsKnown = true
+		}
 	}
 	return event
 }
@@ -616,6 +614,12 @@ func (e *Engine) resolveSpellWithChoices(g *game.Game, obj *game.StackObject, ag
 	if !ok {
 		return "missing source"
 	}
+	// Target rechecks and resolving effects look up the spell by stack object
+	// ID. Keep its effective characteristics available after it was popped.
+	if obj.ID != 0 {
+		snapshot := snapshotStackSpell(g, obj)
+		rememberLastKnown(g, &snapshot)
+	}
 	if spellDef.IsPermanent() {
 		return e.resolvePermanentSpellWithChoices(g, obj, card, spellDef, agents, log)
 	}
@@ -724,7 +728,8 @@ func (e *Engine) resolvePermanentSpellWithChoices(g *game.Game, obj *game.StackO
 		return counteredSpellResolution(g, obj, card)
 	}
 	if obj.FaceDown && !obj.Copy {
-		permanent, ok := createCardPermanentFaceDownWithChoices(e, g, card, obj.Controller, zone.Stack, obj.FaceDownFace, obj.FaceDownKind, opt.Val(faceDownCastFacts{caster: stackSpellCaster(obj), from: obj.SourceZone}), agents, log)
+		cast := faceDownCastFacts{caster: stackSpellCaster(obj), from: obj.SourceZone, spellID: obj.ID}
+		permanent, ok := createCardPermanentFaceDownWithChoices(e, g, card, obj.Controller, zone.Stack, obj.FaceDownFace, obj.FaceDownKind, opt.Val(cast), agents, log)
 		if !ok {
 			return failedPermanentSpellEntry(g, card, "invalid face-down")
 		}
@@ -854,6 +859,7 @@ func stackSpellCaster(obj *game.StackObject) game.PlayerID {
 
 func permanentSpellEntryOptions(obj *game.StackObject) permanentCreationOptions {
 	options := permanentCreationOptions{
+		spellID:              obj.ID,
 		HasSpellAnnouncement: true, XValue: obj.XValue,
 		KickerPaid: obj.KickerPaid, KickCount: obj.KickerCount, Bargained: obj.Bargained,
 		OffspringPaid: obj.OffspringPaid, Evoked: obj.Evoked, Dashed: obj.Dashed,
@@ -881,11 +887,7 @@ func (e *Engine) resolveMutateSpell(g *game.Game, obj *game.StackObject, card *g
 		return "missing source"
 	}
 	owner := mutateSpellOwner(obj, card)
-	spellChars, ok := stackSpellCharacteristicsDef(g, obj)
-	if !ok {
-		spellChars = spellDef
-	}
-	if !mutateTargetLegal(g, obj.Controller, owner, spellChars, obj.MutateTargetID) {
+	if !mutateTargetLegal(g, obj.Controller, owner, spellDef, obj.ID, obj.MutateTargetID) {
 		if obj.Copy {
 			_, result := e.enterPermanentSpellCopy(g, obj, spellDef, agents, log)
 			return result
@@ -963,6 +965,7 @@ func (e *Engine) resolveMutateSpell(g *game.Game, obj *game.StackObject, card *g
 		}
 		target.MergedCards = append(target.MergedCards, lower)
 	}
+	carrySpellColorEffects(g, obj.ID, target.ObjectID)
 	zoneEvent := game.Event{
 		Controller:  effectiveController(g, target),
 		Player:      owner,

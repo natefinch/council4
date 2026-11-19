@@ -6,6 +6,7 @@ import (
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
+	"github.com/natefinch/council4/mtg/game/zone"
 )
 
 // spellTypeLine is a spell's effective supertypes, card types and subtypes.
@@ -123,6 +124,38 @@ func stackSpellTypeLine(g *game.Game, obj *game.StackObject, def *game.CardDef) 
 		return spellTypeLineFor(nil, spellTypeScope{}, def, false)
 	}
 	return spellTypeLineFor(g, stackSpellTypeScope(obj), def, obj.Bestowed)
+}
+
+// Layer 5 changes are bound to a stack object's ID, not its backing card or
+// layer-1 copy values (CR 611.2c, 707.2).
+func spellColorEffects(g *game.Game, spellID id.ID) []game.ContinuousEffect {
+	if g == nil || spellID == 0 {
+		return nil
+	}
+	var effects []game.ContinuousEffect
+	for i := range g.ContinuousEffects {
+		if effect := &g.ContinuousEffects[i]; isSpellColorEffect(effect, spellID) {
+			effects = append(effects, *effect)
+		}
+	}
+	return effects
+}
+
+// Keep the original timestamps and durations as the effects follow the
+// resolving spell to its resulting permanent (CR 400.7a, 614.12).
+func carrySpellColorEffects(g *game.Game, spellID, permanentID id.ID) {
+	if spellID == 0 {
+		return
+	}
+	for i := range g.ContinuousEffects {
+		if effect := &g.ContinuousEffects[i]; isSpellColorEffect(effect, spellID) {
+			effect.AffectedObjectID = permanentID
+		}
+	}
+}
+
+func isSpellColorEffect(effect *game.ContinuousEffect, spellID id.ID) bool {
+	return effect.Layer == game.LayerColor && effect.AffectedObjectID == spellID && effect.CardZone == zone.None
 }
 
 // withSpellTypeLine returns a shallow copy of def carrying line as its

@@ -690,7 +690,11 @@ func prepareTokenEntryWithOptions(e *Engine, g *game.Game, controller game.Playe
 	options.applySneakPaid(g, permanent)
 	initializeReadAhead(e, g, permanent, agents, log)
 	permanent.Tapped = tapped
+	carrySpellColorEffects(g, options.spellID, permanent.ObjectID)
 	destination := applyEnterBattlefieldReplacementEffects(options.entryContext(e, agents, log), g, permanent, fromZone)
+	if destination != zone.Battlefield && options.spellID != 0 {
+		discardPendingEntryContinuousEffects(g, permanent)
+	}
 	return preparedTokenEntry{
 		permanent: permanent, controller: controller, visible: visible, token: token, attachedTo: attachedTo, destination: destination, options: options,
 	}, true

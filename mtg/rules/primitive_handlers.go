@@ -894,7 +894,14 @@ func handleApplyContinuous(r *effectResolver, prim game.ApplyContinuous) effectR
 	}
 	var permanent *game.Permanent
 	if prim.Object.Exists {
-		permanent, _ = r.resolveObject(prim.Object.Val)
+		resolved, _ := resolveObjectReference(r.game, r.obj, prim.Object.Val)
+		if resolved.stack != nil {
+			if resolved.stack.Kind == game.StackSpell {
+				res.succeeded = applyTypedContinuousEffectsToObject(r.game, r.obj, resolved.stack.ID, true, prim.ContinuousEffects, prim.Duration)
+			}
+			return res
+		}
+		permanent = resolved.permanent
 	}
 	effects := r.resolveChosenColorProtection(prim.ContinuousEffects)
 	res.succeeded = applyTypedContinuousEffects(r.game, r.obj, permanent, effects, prim.Duration)
@@ -2178,6 +2185,14 @@ func triggeringSpellCardID(r *effectResolver, ref game.ObjectReference) (id.ID, 
 }
 
 func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent *game.Permanent, templates []game.ContinuousEffect, duration game.EffectDuration) bool {
+	var objectID id.ID
+	if permanent != nil {
+		objectID = permanent.ObjectID
+	}
+	return applyTypedContinuousEffectsToObject(g, obj, objectID, false, templates, duration)
+}
+
+func applyTypedContinuousEffectsToObject(g *game.Game, obj *game.StackObject, objectID id.ID, onStack bool, templates []game.ContinuousEffect, duration game.EffectDuration) bool {
 	if len(templates) == 0 {
 		return false
 	}
@@ -2199,6 +2214,10 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 	applied := false
 	for i := range templates {
 		runtimeEffect := templates[i]
+		if onStack && (runtimeEffect.Layer != game.LayerColor || runtimeEffect.Group.Valid() ||
+			runtimeEffect.AffectedObjectID != 0 || runtimeEffect.CardZone != zone.None) {
+			continue
+		}
 		runtimeEffect.SourceCardID = sourceID
 		runtimeEffect.SourceObjectID = sourceObjectID
 		runtimeEffect.Controller = obj.Controller
@@ -2249,10 +2268,10 @@ func applyTypedContinuousEffects(g *game.Game, obj *game.StackObject, permanent 
 			continue
 		}
 		if runtimeEffect.AffectedObjectID == 0 {
-			if permanent == nil {
+			if objectID == 0 {
 				continue
 			}
-			runtimeEffect.AffectedObjectID = permanent.ObjectID
+			runtimeEffect.AffectedObjectID = objectID
 		}
 		runtimeEffect.ID = g.IDGen.Next()
 		g.ContinuousEffects = append(g.ContinuousEffects, runtimeEffect)

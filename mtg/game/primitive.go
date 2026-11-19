@@ -761,6 +761,7 @@ type MoveCounters struct {
 }
 
 // ApplyContinuous applies continuous effects to a target (or globally).
+// A single Object may also refer to a spell for LayerColor effects.
 // PublishLinked remembers the affected permanent for a later linked effect, such
 // as a delayed "sacrifice it" trigger that must resolve the earlier target.
 //

@@ -1708,13 +1708,7 @@ func applyContinuousEffect(g *game.Game, permanent *game.Permanent, values *perm
 	case game.LayerType:
 		applyTypeLayer(g, values, effect)
 	case game.LayerColor:
-		if effect.SetColorless {
-			values.colors = nil
-		} else if effect.SetColors != nil {
-			values.colors = append([]color.Color(nil), effect.SetColors...)
-		}
-		values.colors = removeColors(values.colors, effect.RemoveColors)
-		values.colors = appendUniqueColors(values.colors, effect.AddColors...)
+		values.colors = applyColorLayer(values.colors, effect)
 	case game.LayerAbility:
 		if effect.RemoveAllAbilities {
 			values.intrinsicAbilitiesRemoved = true
@@ -2134,6 +2128,15 @@ func keywordCounterEffects(permanent *game.Permanent) []game.ContinuousEffect {
 		})
 	}
 	return effects
+}
+
+func applyColorLayer(colors []color.Color, effect *game.ContinuousEffect) []color.Color {
+	if effect.SetColorless {
+		colors = nil
+	} else if effect.SetColors != nil {
+		colors = slices.Clone(effect.SetColors)
+	}
+	return appendUniqueColors(removeColors(colors, effect.RemoveColors), effect.AddColors...)
 }
 
 func removeColors(colors, remove []color.Color) []color.Color {

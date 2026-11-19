@@ -154,7 +154,7 @@ func snapshotStackSpell(g *game.Game, obj *game.StackObject) game.ObjectSnapshot
 		keywords.each(func(keyword game.Keyword) {
 			snapshot.Keywords = append(snapshot.Keywords, keyword)
 		})
-		snapshot.Colors = spellColors(def)
+		snapshot.Colors = def.Colors
 		snapshot.Types = append([]types.Card(nil), def.Types...)
 		snapshot.Subtypes = append([]types.Sub(nil), def.Subtypes...)
 		power, powerOK := cardFacePT(&game.CardInstance{Def: def}, func(face game.CardFace) opt.V[game.PT] { return face.Power })
