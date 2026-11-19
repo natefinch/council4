@@ -11,7 +11,7 @@ var Cards = verifiedEntries()
 func verifiedEntries() []cardset.Entry {
 	entries := []cardset.Entry{Terastodon, HiveMind, GiftsUngiven, GildedDrake, WorldgorgerDragon, NimDeathmantle, Abundance, BloodMoon, Muldrotha, Skullbriar, Mindslaver, GenerousGift, Pongify, RapidHybridization, Resculpt, Twincast, Reverberate, DualcasterMage, CacklingCounterpart, FatedInfatuation, Intuition, RealmsUncharted, ChainsOfMephistopheles, Humility, Opalescence, ForcedMarch, IncineratingBlast}
 	entries = append(entries, RosethornAcolyte, CrystalDragon, PollenShieldHare,
-		MurderousRider, GumdropPoisoner, QuestingDruid)
+		MurderousRider, GumdropPoisoner, QuestingDruid, QuirionDryad)
 	entries = append(entries, Bedevil, Terminate, Vindicate, Disenchant, Naturalize, GleefulSabotage, BurnTrail)
 	entries = append(entries, AnOfferYouCantRefuse, Counterspell, Negate, EssenceScatter, Disallow)
 	entries = append(entries, EladamrisCall, SteelshapersGift, Fabricate, IdyllicTutor, SylvanScrying, DemonicTutor, DiabolicTutor)

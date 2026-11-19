@@ -1519,6 +1519,13 @@
     "oracle_text_sha256": "4289d2e5f5de1d0407f6fc7094a7f8133c6848d7f271324c3c350f63a9497c82",
     "revision": "7f01f9a0-f1d0-4241-a270-df4ed673d1fd",
     "rulings_uri": "https://api.scryfall.com/cards/7f01f9a0-f1d0-4241-a270-df4ed673d1fd/rulings"
+   },
+   {
+    "name": "Quirion Dryad",
+    "oracle_id": "f42b6510-7322-4733-85ea-7ae6bd6ca8fc",
+    "oracle_text_sha256": "9ed8123d1b88d31f60387905ac33a195340c2a8f6ed7324ec8a85b9261564768",
+    "revision": "a20d20f7-bc4d-42fa-9f5b-5bb330eb7f38",
+    "rulings_uri": "https://api.scryfall.com/cards/a20d20f7-bc4d-42fa-9f5b-5bb330eb7f38/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8461,6 +8468,19 @@
     "game.Damage"
    ],
    "review": "Capability-fit references: mtg/cardprogram/README.md (Conspire); mtg/rules/conspire_test.go; mtg/cards/authored/gleeful_sabotage.go; mtg/cards/authored/stat_damage_spells.go."
+  },
+  {
+   "id": "quirion-dryad-cast-trigger",
+   "family": "quirion-dryad-cast-color-counter-trigger",
+   "oracle_ids": [
+    "f42b6510-7322-4733-85ea-7ae6bd6ca8fc"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.EventSpellCast",
+    "game.AddCounter"
+   ],
+   "review": "Pinned corpus identity and mtg/cardprogram/README.md#capability-lookup; primary-source review remains pending."
   }
  ],
  "records": [
@@ -260602,8 +260622,10 @@
    "oracle_id": "f42b6510-7322-4733-85ea-7ae6bd6ca8fc",
    "revision": "a20d20f7-bc4d-42fa-9f5b-5bb330eb7f38",
    "name": "Quirion Dryad",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "quirion-dryad-cast-color-counter-trigger",
+   "batch": "quirion-dryad-cast-trigger",
+   "evidence": "mtg/rules/quirion_dryad_test.go: TestQuirionDryadCastColorTrigger"
   },
   {
    "oracle_id": "f42c0b5b-7a86-4f79-a5d3-859ec25ed870",
