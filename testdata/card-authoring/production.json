@@ -1687,6 +1687,13 @@
     "oracle_text_sha256": "fb65c27c773befe300dbd7054b0d3c2491fe864b8c4f4edddccab10c6ea30880",
     "revision": "d2741fe4-37fe-427f-ae85-5107991d4eee",
     "rulings_uri": "https://api.scryfall.com/cards/d2741fe4-37fe-427f-ae85-5107991d4eee/rulings"
+   },
+   {
+    "name": "Riveteers Decoy",
+    "oracle_id": "1c4918e6-3810-458e-a11b-949bbc43e7cc",
+    "oracle_text_sha256": "2b1b0298e3a1663e847b1660fb56b737ec2ac072331e089e1197d7b4b5716abd",
+    "revision": "2d21701b-6a99-4e1c-82b2-0219f170b09f",
+    "rulings_uri": "https://api.scryfall.com/cards/2d21701b-6a99-4e1c-82b2-0219f170b09f/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -8803,6 +8810,18 @@
     "game.MovePermanent to zone.Library top"
    ],
    "review": "Capability review: mtg/cardprogram/README.md (conditional alternative costs and target/zone operations); mtg/game/cost/additional.go; mtg/game/primitive_move_permanent.go; behavioral prior art in mtg/rules/conditional_alternative_cost_test.go and mtg/cards/authored/aethertow.go. Card-specific source and rules review remains required from the worker."
+  },
+  {
+   "id": "resume-20a43e50-d0e0-43aa-95cf-1f3448c6e7b9-23",
+   "family": "card-followup",
+   "oracle_ids": [
+    "1c4918e6-3810-458e-a11b-949bbc43e7cc"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected Riveteers Decoy's must-be-blocked ability and Blitz consequences; the real-Engine probe accepts its Blitz alternative but retains no Blitz-paid marker, so the conditional consequences cannot be implemented correctly."
+   ],
+   "review": "Card Riveteers Decoy, checked Engine result for #4005 on 7209aba35e16cdc2dbd9bb514deaa7e47db5a59d: Implemented shared Blitz support: typed payment provenance, immediate haste, a draw on death, and a next-end-step sacrifice tied to the original permanent. No cards were registered; changes remain uncommitted in the isolated worktree.\nOn main c1089ccbb, `go test -overlay=.cardwork/gap-4005/overlay.json ./mtg/rules -run '^TestRiveteersDecoyBlitzPaymentProvenanceProbe$' -count=1` reproduced the missing payment marker.\n`go test ./mtg/rules -run '^TestBlitz(Paid|Early|Stack|Countered|Combines|Ability|Permanent)' -count=1 -v` passed all eight scenarios, including combined costs, copies, replay, and replaced entry.\n`go test ./mtg/game/... ./mtg/cardprogram/... ./mtg/rules/... -count=1` and `git diff --check` passed.\nSource review is in mtg/rules/blitz_test.go; verified rules and six rulings responses are retained under .cardwork/gap-4005/. Prepared copies are restricted to instants and sorceries and cannot become Blitz permanents."
   }
  ],
  "records": [
@@ -78066,8 +78085,10 @@
    "oracle_id": "1c4918e6-3810-458e-a11b-949bbc43e7cc",
    "revision": "2d21701b-6a99-4e1c-82b2-0219f170b09f",
    "name": "Riveteers Decoy",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-20a43e50-d0e0-43aa-95cf-1f3448c6e7b9-23",
+   "evidence": "mtg/rules/riveteers_decoy_test.go: TestAuthoredRiveteersDecoyScenario"
   },
   {
    "oracle_id": "1c4b6543-777e-4c3b-a9fb-5b7210d458d5",
