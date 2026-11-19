@@ -264,7 +264,7 @@ func (e *Engine) chooseCostedSpellTargets(g *game.Game, player game.PlayerID, de
 			offset += preferredCounts[index]
 		}
 		candidates := targetCandidatesForSpec(g, player, def, 0, game.Event{}, &spec)
-		candidates = filterAnnouncedManaValueTargets(g, spec, candidates, opt.Val(cast.XValue))
+		candidates = filterAnnouncedXBoundTargets(g, spec, candidates, opt.Val(cast.XValue))
 		if spec.DistinctFromPriorTargets {
 			candidates = filterTargetsDistinctFrom(candidates, targets)
 		}
@@ -286,7 +286,7 @@ func (e *Engine) chooseCostedSpellTargets(g *game.Game, player game.PlayerID, de
 			feasible := make(map[game.PlayerID][]game.Target)
 			for _, opponent := range choosingOpponentsForTargetSpec(g, player, def, 0, &spec) {
 				candidates := targetCandidatesForSpecChosenBy(g, player, opponent, def, 0, game.Event{}, &spec)
-				candidates = filterAnnouncedManaValueTargets(g, spec, candidates, opt.Val(cast.XValue))
+				candidates = filterAnnouncedXBoundTargets(g, spec, candidates, opt.Val(cast.XValue))
 				if spec.DistinctFromPriorTargets {
 					candidates = filterTargetsDistinctFrom(candidates, targets)
 				}

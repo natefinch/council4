@@ -50,9 +50,7 @@ func retargetChoices(g *game.Game, controller game.PlayerID, specs stackObjectSp
 			}
 			for i, target := range options {
 				if slices.Contains(options[:i], target) ||
-					(target != original || !keepUnchanged) &&
-						((spec.ManaValueAtMostX && !targetManaValueAtMost(g, target, xValue)) ||
-							(spec.ManaValueEqualsX && !targetManaValueEquals(g, target, xValue))) {
+					(target != original || !keepUnchanged) && !targetSatisfiesXBounds(g, &spec, target, xValue) {
 					continue
 				}
 				if len(filterTargetsDistinctFrom([]game.Target{target}, next[len(prefix):])) == 0 ||

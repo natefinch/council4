@@ -673,7 +673,7 @@ func generalActivation(g *game.Game, playerID game.PlayerID, permanent *game.Per
 	if !ok || !modesValidForBody(body, chosenModes) ||
 		!targetsValidForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, body, chosenModes, targets, xValue) ||
 		!bodyTargetCountsMatchX(g, playerID, card, permanent.ObjectID, body, chosenModes, targets, xValue) ||
-		!bodyTargetsSatisfyManaValueX(g, playerID, card, permanent.ObjectID, body, chosenModes, targets, xValue) {
+		!bodyTargetsSatisfyXBounds(g, playerID, card, permanent.ObjectID, body, chosenModes, targets, xValue) {
 		return activationCost{}
 	}
 	sourceCard, _ := g.GetCardInstance(permanent.CardInstanceID)

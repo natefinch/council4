@@ -2274,22 +2274,23 @@ type TargetSpec struct {
 	// ManaValueAtMostX requires every object chosen for this spec to have mana
 	// value less than or equal to the spell's chosen X ("target creature with
 	// mana value X or less", Dominate). The Selection matcher is X-blind, so the
-	// bound is enforced against the resolving object's X at announcement
-	// (spellTargetsSatisfyManaValueX) and re-checked at resolution (CR 608.2b),
-	// following the CountEqualsX precedent. Announcement over-generates every
-	// creature and the cast is legal only for targets whose mana value fits the
-	// chosen X. The default false imposes no X-derived mana value bound.
+	// bound is checked separately against the object's X at announcement and
+	// resolution (CR 601.2c, 608.2b). The default false imposes no bound.
 	ManaValueAtMostX bool
 
 	// ManaValueEqualsX requires every object chosen for this spec to have mana
 	// value exactly equal to the spell's or ability's chosen X ("target nontoken
 	// artifact you control with mana value X", The Mycosynth Gardens). Like
 	// ManaValueAtMostX the Selection matcher is X-blind, so the equality bound is
-	// enforced against the resolving object's X at announcement
-	// (targetsSatisfyManaValueX) and re-checked at resolution (CR 608.2b). It
-	// backs an X activation cost bound to the target's mana value; the default
-	// false imposes no X-derived mana value bound.
+	// enforced against the object's X at announcement and re-checked at
+	// resolution (CR 608.2b). The default false imposes no bound.
 	ManaValueEqualsX bool
+
+	// PowerAtMostX requires a battlefield permanent with current power less
+	// than or equal to the spell's or ability's announced X, as in Killing
+	// Glare. This is checked alongside Selection at announcement, on new
+	// targets, and again using current power at resolution (CR 608.2b).
+	PowerAtMostX bool
 
 	// SameGraveyard requires every card chosen for this spec to lie in one and
 	// the same graveyard ("Exile up to three target cards from a single

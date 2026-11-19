@@ -206,9 +206,9 @@ func (e *Engine) resolutionSpellChoices(g *game.Game, cast action.CastSpellActio
 	return choices
 }
 
-// X-dependent target legality changes at the candidates' mana values. Testing
-// those breakpoints, rather than a numeric policy sample, finds a minimum-cost
-// witness even when the first legal X is above the action sampler's range.
+// X-dependent target legality changes at the candidates' characteristic
+// values. Testing those breakpoints finds a minimum-cost witness even when
+// the first legal X is above the action sampler's range.
 func resolutionSpellXValues(g *game.Game, request payment.SpellRequest, cast action.CastSpellAction) []int {
 	values := []int{cast.XValue}
 	if spellFreeRequest(request) && costHasVariableMana(manaCostPtr(request.Card.ManaCost)) {
@@ -223,12 +223,23 @@ func resolutionSpellXValues(g *game.Game, request payment.SpellRequest, cast act
 		return values
 	}
 	specs := spellTargetSpecs(request.Card, cast.ChosenModes, castBranchForCast(cast))
-	if !slices.ContainsFunc(specs, func(spec game.TargetSpec) bool { return spec.ManaValueAtMostX || spec.ManaValueEqualsX }) {
+	manaValueBound := specsBindTargetsToManaValueX(specs)
+	powerBound := slices.ContainsFunc(specs, func(spec game.TargetSpec) bool { return spec.PowerAtMostX })
+	if !manaValueBound && !powerBound {
 		return values
 	}
-	for _, permanent := range g.Battlefield {
-		if value, ok := effectivePermanentManaValue(g, permanent); ok && value >= cast.XValue && !slices.Contains(values, value) {
+	add := func(value int, ok bool) {
+		if ok && value >= cast.XValue && !slices.Contains(values, value) {
 			values = append(values, value)
+		}
+	}
+	for _, permanent := range g.Battlefield {
+		if manaValueBound {
+			add(effectivePermanentManaValue(g, permanent))
+		}
+		if powerBound {
+			pt := effectivePermanentValues(g, permanent)
+			add(pt.power, pt.powerOK)
 		}
 	}
 	slices.Sort(values)

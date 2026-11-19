@@ -204,7 +204,7 @@ func visitTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *g
 			var seen []game.Target
 			for _, opponent := range opponents {
 				candidates := targetCandidatesForSpecChosenBy(g, controller, opponent, source, sourceObjectID, triggerEvent, &spec)
-				candidates = filterAnnouncedManaValueTargets(g, spec, candidates, choices.xValue)
+				candidates = filterAnnouncedXBoundTargets(g, spec, candidates, choices.xValue)
 				if spec.DistinctFromPriorTargets {
 					candidates = filterTargetsDistinctFrom(candidates, prefix)
 				}
@@ -227,7 +227,7 @@ func visitTargetChoicesForSpec(g *game.Game, controller game.PlayerID, source *g
 		return visitTargetChoicesForSpec(g, controller, source, sourceObjectID, triggerEvent, specs, specIndex+1, next, nextCounts, result, targetCounts, choices)
 	}
 	candidates := targetCandidatesForSpec(g, controller, source, sourceObjectID, triggerEvent, &spec)
-	candidates = filterAnnouncedManaValueTargets(g, spec, candidates, choices.xValue)
+	candidates = filterAnnouncedXBoundTargets(g, spec, candidates, choices.xValue)
 	if spec.DistinctFromPriorTargets {
 		candidates = filterTargetsDistinctFrom(candidates, prefix)
 	}
@@ -400,13 +400,13 @@ func targetCandidatesForSpecChosenBy(g *game.Game, sourceController, predicatePl
 	return candidates
 }
 
-func filterAnnouncedManaValueTargets(g *game.Game, spec game.TargetSpec, candidates []game.Target, xValue opt.V[int]) []game.Target {
-	if !xValue.Exists || !spec.ManaValueAtMostX && !spec.ManaValueEqualsX {
+func filterAnnouncedXBoundTargets(g *game.Game, spec game.TargetSpec, candidates []game.Target, xValue opt.V[int]) []game.Target {
+	if !xValue.Exists || !specHasTargetXBound(spec) {
 		return candidates
 	}
 	var matched []game.Target
 	for _, candidate := range candidates {
-		if targetsSatisfyManaValueXForSpecs(g, []game.TargetSpec{spec}, []int{1}, []game.Target{candidate}, xValue.Val) {
+		if targetSatisfiesXBounds(g, &spec, candidate, xValue.Val) {
 			matched = append(matched, candidate)
 		}
 	}

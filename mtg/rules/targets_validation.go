@@ -53,7 +53,7 @@ func spellTargetsValidForCast(g *game.Game, controller game.PlayerID, card *game
 	counts, ok := targetCountsForSpecs(g, controller, card, 0, game.Event{}, specs, targets)
 	return ok && targetCountsMatchX(specs, counts, xValue) &&
 		targetCountsMatchKicker(specs, counts, kickerCount) &&
-		targetsSatisfyManaValueXForSpecs(g, specs, counts, targets, xValue)
+		targetsSatisfyXBounds(g, specs, counts, targets, xValue)
 }
 
 func targetsValidForBody(g *game.Game, controller game.PlayerID, body game.Ability, targets []game.Target) bool {
@@ -189,28 +189,22 @@ func spellTargetsSatisfyManaValueX(g *game.Game, controller game.PlayerID, card 
 	if !ok {
 		return false
 	}
-	return targetsSatisfyManaValueXForSpecs(g, specs, counts, targets, xValue)
+	return targetsSatisfyXBounds(g, specs, counts, targets, xValue)
 }
 
-// bodyTargetsSatisfyManaValueX reports whether every target chosen for a
-// ManaValueAtMostX or ManaValueEqualsX spec of an activated ability fits the
-// ability's chosen X ("target nontoken artifact you control with mana value X",
-// The Mycosynth Gardens). It mirrors spellTargetsSatisfyManaValueX for the
-// activated-ability announcement path, whose target enumeration is likewise
-// X-blind. Abilities without an X-derived mana value spec are unaffected.
-func bodyTargetsSatisfyManaValueX(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, chosenModes []int, targets []game.Target, xValue int) bool {
+func bodyTargetsSatisfyXBounds(g *game.Game, controller game.PlayerID, source *game.CardDef, sourceObjectID id.ID, body game.Ability, chosenModes []int, targets []game.Target, xValue int) bool {
 	if body == nil {
 		return true
 	}
-	specs := bodyTargetSpecs(body, chosenModes)
-	if !specsBindTargetsToManaValueX(specs) {
+	specs := bodyTargetSpecs(body, chosenModes, xValue)
+	if !slices.ContainsFunc(specs, specHasTargetXBound) {
 		return true
 	}
 	counts, ok := bodyTargetCountsWithModes(g, controller, source, sourceObjectID, game.Event{}, body, chosenModes, targets, xValue)
 	if !ok {
 		return false
 	}
-	return targetsSatisfyManaValueXForSpecs(g, specs, counts, targets, xValue)
+	return targetsSatisfyXBounds(g, specs, counts, targets, xValue)
 }
 
 // specsBindTargetsToManaValueX reports whether any spec binds its targets' mana
@@ -225,12 +219,11 @@ func specsBindTargetsToManaValueX(specs []game.TargetSpec) bool {
 	return false
 }
 
-// targetsSatisfyManaValueXForSpecs reports whether every target chosen for a
-// ManaValueAtMostX or ManaValueEqualsX spec fits its X-derived mana value bound,
-// given the per-spec target counts. Specs without an X-derived bound impose no
-// constraint. It is shared by the spell and activated-ability announcement
-// checks so both enforce the bound identically.
-func targetsSatisfyManaValueXForSpecs(g *game.Game, specs []game.TargetSpec, counts []int, targets []game.Target, xValue int) bool {
+func specHasTargetXBound(spec game.TargetSpec) bool {
+	return spec.ManaValueAtMostX || spec.ManaValueEqualsX || spec.PowerAtMostX
+}
+
+func targetsSatisfyXBounds(g *game.Game, specs []game.TargetSpec, counts []int, targets []game.Target, xValue int) bool {
 	if len(counts) != len(specs) {
 		return false
 	}
@@ -243,15 +236,31 @@ func targetsSatisfyManaValueXForSpecs(g *game.Game, specs []game.TargetSpec, cou
 		slice := targets[targetIndex : targetIndex+count]
 		targetIndex += count
 		for _, target := range slice {
-			if spec.ManaValueAtMostX && !targetManaValueAtMost(g, target, xValue) {
-				return false
-			}
-			if spec.ManaValueEqualsX && !targetManaValueEquals(g, target, xValue) {
+			if !targetSatisfiesXBounds(g, &spec, target, xValue) {
 				return false
 			}
 		}
 	}
 	return targetIndex == len(targets)
+}
+
+func targetSatisfiesXBounds(g *game.Game, spec *game.TargetSpec, target game.Target, xValue int) bool {
+	if spec.ManaValueAtMostX && !targetManaValueAtMost(g, target, xValue) ||
+		spec.ManaValueEqualsX && !targetManaValueEquals(g, target, xValue) {
+		return false
+	}
+	if !spec.PowerAtMostX {
+		return true
+	}
+	if target.Kind != game.TargetPermanent {
+		return false
+	}
+	permanent, ok := permanentByObjectID(g, target.PermanentID)
+	if !ok {
+		return false
+	}
+	values := effectivePermanentValues(g, permanent)
+	return values.powerOK && values.power <= xValue
 }
 
 // targetManaValueAtMost reports whether a permanent target's mana value is at
@@ -607,8 +616,7 @@ func rescreenTargetsAtResolution(
 		for range counts[specIndex] {
 			target := rechecked[targetIndex]
 			if targetLegalForSpecAtResolution(g, controller, source, sourceObjectID, triggerEvent, &spec, target) &&
-				(!spec.ManaValueAtMostX || targetManaValueAtMost(g, target, xValue)) &&
-				(!spec.ManaValueEqualsX || targetManaValueEquals(g, target, xValue)) {
+				targetSatisfiesXBounds(g, &spec, target, xValue) {
 				anyLegal = true
 			} else {
 				rechecked[targetIndex] = game.DeferredTargetFrom(target)
