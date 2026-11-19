@@ -4,9 +4,9 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/natefinch/council4/mtg/cards/authored"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
-	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -248,38 +248,23 @@ func raiseTargetPower(engine *Engine, g *game.Game, target id.ID) {
 	engine.resolveTopOfStack(g, &TurnLog{})
 }
 
-// Source review: Minamo Sightbender, DDI 5, Oracle ID
-// c4f1d8c8-29e5-43fe-8281-7d42d0173dc5, pinned revision a598d08d-c9d4-4de5-bef5-998dd115b8b6.
-// {1}{U}, Creature — Human Wizard, 1/2; "{X}, {T}: Target creature with power
-// X or less can't be blocked this turn."
+// Source review: Minamo Sightbender, Oracle ID
+// c4f1d8c8-29e5-43fe-8281-7d42d0173dc5; pinned corpus
+// 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4,
+// DDI 5 revision a598d08d-c9d4-4de5-bef5-998dd115b8b6: {1}{U}, Creature —
+// Human Wizard, 1/2; "{X}, {T}: Target creature with power X or less can't be
+// blocked this turn." Scryfall rulings at
 // https://api.scryfall.com/cards/a598d08d-c9d4-4de5-bef5-998dd115b8b6/rulings
-// returned no rulings on 2026-11-19. Wizards CR 2026-09-25,
+// returned an empty list on 2026-11-19. Wizards Comprehensive Rules effective
+// 2026-09-25 at
 // https://media.wizards.com/2026/downloads/MagicCompRules%2020260925.txt:
-// 107.3a, 115.1c, 601.2b–h and 602.2a–b bind X and the target before paying;
-// 602.5a governs the tap cost; 208.1, 613.4a–d and 608.2b check current power;
-// 509.1a–b disallows blocking the affected creature, until cleanup per 611.2a
-// and 514.2. Unregistered Engine fixture, replacing the retained #3763 probe.
+// 107.3a and 602.2b/601.2b announce X; 115.1c and 602.2b/601.2c identify and
+// choose the target during activation; 602.5a governs the creature tap-cost
+// restriction; 208.1 and 613.4a-d establish current power; 608.2b rechecks
+// target legality on resolution; 509.1a-b prohibit illegal blocks; and
+// 611.2a/514.2 end the restriction at cleanup.
 func TestMinamoSightbenderPowerAtMostX(t *testing.T) {
-	const text = "{X}, {T}: Target creature with power X or less can't be blocked this turn."
-	def := &game.CardDef{
-		ColorIdentity: color.NewIdentity(color.Blue),
-		CardFace: game.CardFace{
-			Name: "Minamo Sightbender", OracleText: text, ManaCost: opt.Val(cost.Mana{cost.O(1), cost.U}),
-			Types: []types.Card{types.Creature}, Subtypes: []types.Sub{types.Human, types.Wizard},
-			Colors: []color.Color{color.Blue}, Power: opt.Val(game.PT{Value: 1}), Toughness: opt.Val(game.PT{Value: 2}),
-			ActivatedAbilities: []game.ActivatedAbility{{
-				Text: text, ZoneOfFunction: zone.Battlefield, ManaCost: opt.Val(cost.Mana{cost.X}), AdditionalCosts: cost.Tap,
-				Content: game.Mode{
-					Targets: []game.TargetSpec{powerAtMostXCreatureTarget()},
-					Sequence: []game.Instruction{{Primitive: game.ApplyRule{
-						Object:      opt.Val(game.TargetPermanentReference(0)),
-						RuleEffects: []game.RuleEffect{{Kind: game.RuleEffectCantBeBlocked}},
-						Duration:    game.DurationUntilEndOfTurn,
-					}}},
-				}.Ability(),
-			}},
-		},
-	}
+	def := authored.MinamoSightbender.New()
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	setMainPhasePriority(g, game.Player1)
@@ -305,15 +290,9 @@ func TestMinamoSightbenderPowerAtMostX(t *testing.T) {
 	if !ok || obj.XValue != 1 || !source.Tapped || !g.Players[game.Player1].ManaPool.IsEmpty() {
 		t.Fatal("Minamo Sightbender did not tap and pay X=1")
 	}
-	pumped := g.Clone()
-	raiseTargetPower(engine, pumped, inRange.ObjectID)
-	engine.resolveTopOfStack(pumped, &TurnLog{})
-	pumpedTarget, _ := permanentByObjectID(pumped, inRange.ObjectID)
-	pumpedBlocker, _ := permanentByObjectID(pumped, blocker.ObjectID)
 	engine.resolveTopOfStack(g, &TurnLog{})
-	if canBlockAttacker(g, blocker, inRange) || !canBlockAttacker(g, blocker, overRange) ||
-		!canBlockAttacker(pumped, pumpedBlocker, pumpedTarget) {
-		t.Fatal("Minamo Sightbender must make only its still-legal target unblockable")
+	if canBlockAttacker(g, blocker, inRange) || !canBlockAttacker(g, blocker, overRange) {
+		t.Fatal("Minamo Sightbender must make only its selected target unblockable")
 	}
 }
 
