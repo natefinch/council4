@@ -1869,6 +1869,41 @@
     "oracle_text_sha256": "454339708b785a18895febab5fb4882dadbea5f6863bcdda74ccb11864bbe80e",
     "revision": "d6dcff21-5900-43c4-a38b-cdc19c704ce4",
     "rulings_uri": "https://api.scryfall.com/cards/d6dcff21-5900-43c4-a38b-cdc19c704ce4/rulings"
+   },
+   {
+    "name": "Skyshroud Ridgeback",
+    "oracle_id": "34a160bc-5d7e-483c-b24c-ab30b7d313b0",
+    "oracle_text_sha256": "aae78af399ef77f93178668035c73b2f751eafb73d60f345424b6ca8531818b6",
+    "revision": "410896ab-d3dc-478c-bfd1-c0cad5b1180a",
+    "rulings_uri": "https://api.scryfall.com/cards/410896ab-d3dc-478c-bfd1-c0cad5b1180a/rulings"
+   },
+   {
+    "name": "Cloudskate",
+    "oracle_id": "648e4072-b991-46fd-b057-1e807091dcdf",
+    "oracle_text_sha256": "03e43ad243b8b19ba240f33bb09a9ad3a62c1ccf399c083504cfc7705e13be55",
+    "revision": "e7f97e50-3aeb-4c79-81b1-505a2f32d8ac",
+    "rulings_uri": "https://api.scryfall.com/cards/e7f97e50-3aeb-4c79-81b1-505a2f32d8ac/rulings"
+   },
+   {
+    "name": "Skyshroud Behemoth",
+    "oracle_id": "77bee041-6f96-44e3-a18c-b52e508b9bdf",
+    "oracle_text_sha256": "263f0a99762e095f9221359d374842ef847bb18090a3b8bc6f2dbbb94e8703c9",
+    "revision": "1c01d17e-45a2-4b6f-aaa5-2af9c8f26181",
+    "rulings_uri": "https://api.scryfall.com/cards/1c01d17e-45a2-4b6f-aaa5-2af9c8f26181/rulings"
+   },
+   {
+    "name": "Rejuvenation Chamber",
+    "oracle_id": "c1ebe189-db71-47cd-a763-8cb8c305383a",
+    "oracle_text_sha256": "0acf0140dc9bcbec75fb900d28f63634264b6556ea51e7ed1b1510f382e2007c",
+    "revision": "b97f86ce-4758-4ae3-af29-b08a4d771652",
+    "rulings_uri": "https://api.scryfall.com/cards/b97f86ce-4758-4ae3-af29-b08a4d771652/rulings"
+   },
+   {
+    "name": "Blastoderm",
+    "oracle_id": "d6ee8bd6-0207-46ee-9892-c1d1b23b934e",
+    "oracle_text_sha256": "b931194a3a43394180d175ecc7b63ee95ca8a0d46fe464bdb9f67f96b90cbaf9",
+    "revision": "1aeb6b3a-1e84-4181-9e7f-d5a88ebf08b1",
+    "rulings_uri": "https://api.scryfall.com/cards/1aeb6b3a-1e84-4181-9e7f-d5a88ebf08b1/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9268,6 +9303,25 @@
     "Expected: paying Replicate twice while casting Shattering Spree creates two copies that may target new artifacts. Actual: the available repeatable cost and cast-count declarations are Multikicker-specific; no Replicate cost/state can be represented, and using Kicker would misdeclare the card."
    ],
    "review": "Card Shattering Spree, checked Engine result for #4028 on 75c015389d956b9342f3a9748b92afb58fcc8bd4: Implemented Replicate for #4028 in the isolated worktree. Each paid instance triggers separately and creates one retargetable, non-cast copy per payment, even if the original was countered. No cards were registered or changes merged.\nOn current main (3d5e7fff6bc5ded499df9c2967d3510ac16fbc4c), `go test ./mtg/rules -run '^TestLoseFocusReplicateCostProbe$' -count=1 -v` reproduced the two-payment cast rejection.\nPassed `go test ./mtg/rules ./mtg/sim -run '^(TestLoseFocusReplicateEngine|TestReplicate.*)$' -count=1 -v`. Lose Focus made two independently retargeted copies after the original was countered; one target survived by paying {2}, and the other was countered. Shared scenarios covered combined and declined costs, unaffordable payments, paid and free exile casts, cast card copies, Flashback, Storm, Cascade, cloning, and JSON replay.\nPassed `go test ./mtg/rules ./mtg/game ./mtg/game/action ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1` and `git diff --check`.\nSource review is in `mtg/rules/replicate_test.go`; the baseline probe, Oracle responses, rulings, and verified CR are retained in `.cardwork/source/`. None of the eight named plays requires a Mutate or prepared-cast combination."
+  },
+  {
+   "id": "fading-upkeep-2026-11-20",
+   "family": "fading-upkeep",
+   "oracle_ids": [
+    "34a160bc-5d7e-483c-b24c-ab30b7d313b0",
+    "648e4072-b991-46fd-b057-1e807091dcdf",
+    "77bee041-6f96-44e3-a18c-b52e508b9bdf",
+    "c1ebe189-db71-47cd-a763-8cb8c305383a",
+    "d6ee8bd6-0207-46ee-9892-c1d1b23b934e"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.TriggerPattern (EventBeginningOfStep, StepUpkeep)",
+    "game.RemoveCounter",
+    "game.SacrificePermanents",
+    "CardPlacement.EntryCounters"
+   ],
+   "review": "Capability selection only: existing upkeep-trigger, counter-removal, and sacrifice operations; mtg/rules/suspend_upkeep_trigger_test.go at origin/main 6eed1741e05cbbfacf99bcc8b5758781428e110c. Primary-source and rules review remains for the author."
   }
  ],
  "records": [
@@ -98444,8 +98498,10 @@
    "oracle_id": "34a160bc-5d7e-483c-b24c-ab30b7d313b0",
    "revision": "410896ab-d3dc-478c-bfd1-c0cad5b1180a",
    "name": "Skyshroud Ridgeback",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "fading-upkeep",
+   "batch": "fading-upkeep-2026-11-20",
+   "evidence": "mtg/rules/fading_family_test.go: TestSkyshroudRidgebackUpkeepRemovesFadeThenSacrifices"
   },
   {
    "oracle_id": "34a1eb04-08f6-49d8-a1d1-b987a76bd8b1",
@@ -139058,8 +139114,10 @@
    "oracle_id": "648e4072-b991-46fd-b057-1e807091dcdf",
    "revision": "e7f97e50-3aeb-4c79-81b1-505a2f32d8ac",
    "name": "Cloudskate",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "fading-upkeep",
+   "batch": "fading-upkeep-2026-11-20",
+   "evidence": "mtg/rules/fading_family_test.go: TestCloudskateFadingAndFlying"
   },
   {
    "oracle_id": "6492c381-0fa1-4d43-bf72-d8956d8a34b6",
@@ -155863,8 +155921,10 @@
    "oracle_id": "77bee041-6f96-44e3-a18c-b52e508b9bdf",
    "revision": "1c01d17e-45a2-4b6f-aaa5-2af9c8f26181",
    "name": "Skyshroud Behemoth",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "fading-upkeep",
+   "batch": "fading-upkeep-2026-11-20",
+   "evidence": "mtg/rules/fading_family_test.go: TestSkyshroudBehemothEntersTappedAndFades"
   },
   {
    "oracle_id": "77c7ba06-d247-421d-9e0c-54c3000c1b78",
@@ -218478,8 +218538,10 @@
    "oracle_id": "c1ebe189-db71-47cd-a763-8cb8c305383a",
    "revision": "b97f86ce-4758-4ae3-af29-b08a4d771652",
    "name": "Rejuvenation Chamber",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "fading-upkeep",
+   "batch": "fading-upkeep-2026-11-20",
+   "evidence": "mtg/rules/fading_family_test.go: TestRejuvenationChamberActivatesForLifeAndFades"
   },
   {
    "oracle_id": "c1ed20c0-f75d-4aca-8874-6955bd9fb21b",
@@ -236599,8 +236661,10 @@
    "oracle_id": "d6ee8bd6-0207-46ee-9892-c1d1b23b934e",
    "revision": "1aeb6b3a-1e84-4181-9e7f-d5a88ebf08b1",
    "name": "Blastoderm",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "fading-upkeep",
+   "batch": "fading-upkeep-2026-11-20",
+   "evidence": "mtg/rules/fading_family_test.go: TestBlastodermShroudAndFading"
   },
   {
    "oracle_id": "d6eef6a7-0cf4-4ee8-90e0-727a283c3be9",
