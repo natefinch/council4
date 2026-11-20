@@ -1855,6 +1855,13 @@
     "oracle_text_sha256": "46e557cc5c618bce014291b5f4034676d874be71dc8aa23a2e2fcd8800dea5bd",
     "revision": "c011b432-ec39-44c8-bf2a-1c3fec32a576",
     "rulings_uri": "https://api.scryfall.com/cards/c011b432-ec39-44c8-bf2a-1c3fec32a576/rulings"
+   },
+   {
+    "name": "Vacuumelt",
+    "oracle_id": "eb421a1b-147f-422b-bb8d-483a182a4096",
+    "oracle_text_sha256": "022d1b4cb8229adaec7c6e946c91019c4bf2a3351163e7d08d9b85ff1c22bcd6",
+    "revision": "32dfe9aa-8303-460b-a4c3-e5533af2e1fd",
+    "rulings_uri": "https://api.scryfall.com/cards/32dfe9aa-8303-460b-a4c3-e5533af2e1fd/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9230,6 +9237,18 @@
     "Expected: cast Leap of Flame for {U}{R}, pay its {U}{R} Replicate cost twice, and produce two copies. Actual: the Engine only represents repeated Kicker/Multikicker payments, so the Replicate cost and trigger count cannot be played faithfully."
    ],
    "review": "Card Leap of Flame, checked Engine result for #4028 on 75c015389d956b9342f3a9748b92afb58fcc8bd4: Implemented Replicate for #4028 in the isolated worktree. Each paid instance triggers separately and creates one retargetable, non-cast copy per payment, even if the original was countered. No cards were registered or changes merged.\nOn current main (3d5e7fff6bc5ded499df9c2967d3510ac16fbc4c), `go test ./mtg/rules -run '^TestLoseFocusReplicateCostProbe$' -count=1 -v` reproduced the two-payment cast rejection.\nPassed `go test ./mtg/rules ./mtg/sim -run '^(TestLoseFocusReplicateEngine|TestReplicate.*)$' -count=1 -v`. Lose Focus made two independently retargeted copies after the original was countered; one target survived by paying {2}, and the other was countered. Shared scenarios covered combined and declined costs, unaffordable payments, paid and free exile casts, cast card copies, Flashback, Storm, Cascade, cloning, and JSON replay.\nPassed `go test ./mtg/rules ./mtg/game ./mtg/game/action ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1` and `git diff --check`.\nSource review is in `mtg/rules/replicate_test.go`; the baseline probe, Oracle responses, rulings, and verified CR are retained in `.cardwork/source/`. None of the eight named plays requires a Mutate or prepared-cast combination."
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-30",
+   "family": "card-followup",
+   "oracle_ids": [
+    "eb421a1b-147f-422b-bb8d-483a182a4096"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected paying Replicate {2}{U} twice to cast Vacuumelt and create two copies; actual Engine rejects the two-payment cast because the available repeated-cost route requires Multikicker."
+   ],
+   "review": "Card Vacuumelt, checked Engine result for #4028 on 75c015389d956b9342f3a9748b92afb58fcc8bd4: Implemented Replicate for #4028 in the isolated worktree. Each paid instance triggers separately and creates one retargetable, non-cast copy per payment, even if the original was countered. No cards were registered or changes merged.\nOn current main (3d5e7fff6bc5ded499df9c2967d3510ac16fbc4c), `go test ./mtg/rules -run '^TestLoseFocusReplicateCostProbe$' -count=1 -v` reproduced the two-payment cast rejection.\nPassed `go test ./mtg/rules ./mtg/sim -run '^(TestLoseFocusReplicateEngine|TestReplicate.*)$' -count=1 -v`. Lose Focus made two independently retargeted copies after the original was countered; one target survived by paying {2}, and the other was countered. Shared scenarios covered combined and declined costs, unaffordable payments, paid and free exile casts, cast card copies, Flashback, Storm, Cascade, cloning, and JSON replay.\nPassed `go test ./mtg/rules ./mtg/game ./mtg/game/action ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1` and `git diff --check`.\nSource review is in `mtg/rules/replicate_test.go`; the baseline probe, Oracle responses, rulings, and verified CR are retained in `.cardwork/source/`. None of the eight named plays requires a Mutate or prepared-cast combination."
   }
  ],
  "records": [
@@ -253936,8 +253955,10 @@
    "oracle_id": "eb421a1b-147f-422b-bb8d-483a182a4096",
    "revision": "32dfe9aa-8303-460b-a4c3-e5533af2e1fd",
    "name": "Vacuumelt",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-30",
+   "evidence": "mtg/rules/vacuumelt_test.go: TestVacuumeltReplicateReturnsTargetToOwnerHand"
   },
   {
    "oracle_id": "eb448589-28e1-49d4-ba3e-7ddb4341fdc5",
