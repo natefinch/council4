@@ -344,6 +344,8 @@ const (
 	Conspire
 	// Phasing modifies the untap step (CR 702.26a).
 	Phasing
+	// Replicate is a repeatable additional casting cost and a cast trigger (CR 702.56).
+	Replicate
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount

@@ -65,6 +65,9 @@ type CastSpellAction struct {
 	ChosenModes []int
 	KickerPaid  bool
 	KickerCount int
+	// ReplicateCounts announces one payment count per declared instance, in
+	// declaration order. An empty slice declines all Replicate costs.
+	ReplicateCounts []int `json:",omitempty"`
 	// Bargained records that the spell's Bargain additional cost was paid as it
 	// was cast (CR 702.166b): its controller sacrificed an artifact, enchantment,
 	// or token.
@@ -194,6 +197,7 @@ func PlayLandFaceFromZone(cardID id.ID, sourceZone zone.Type, face game.FaceInde
 func AnnounceSpell(cast CastSpellAction) Action {
 	cast.Targets = append([]game.Target(nil), cast.Targets...)
 	cast.ChosenModes = append([]int(nil), cast.ChosenModes...)
+	cast.ReplicateCounts = copyInts(cast.ReplicateCounts)
 	return Action{Kind: ActionCastSpell, castSpell: cast}
 }
 
@@ -490,6 +494,7 @@ func (a Action) CastSpellPayload() (CastSpellAction, bool) {
 	payload := a.castSpell
 	payload.Targets = copyTargets(payload.Targets)
 	payload.ChosenModes = copyInts(payload.ChosenModes)
+	payload.ReplicateCounts = copyInts(payload.ReplicateCounts)
 	return payload, true
 }
 
@@ -618,6 +623,14 @@ func (a Action) Validate() error {
 		}
 		if a.castSpell.KickerCount < 0 || a.castSpell.KickerCount > 0 && !a.castSpell.KickerPaid {
 			return errors.New("cast spell action has invalid kicker count")
+		}
+		for _, count := range a.castSpell.ReplicateCounts {
+			if count < 0 {
+				return errors.New("cast spell action has negative replicate count")
+			}
+		}
+		if len(a.castSpell.ReplicateCounts) != 0 && (a.castSpell.Mutate || a.castSpell.SourceZone == zone.Battlefield) {
+			return errors.New("replicate is not supported on mutate or prepared casts")
 		}
 		if a.castSpell.Mutate && a.castSpell.MutateTargetID == 0 {
 			return errors.New("mutate cast action missing target permanent ID")
@@ -753,6 +766,7 @@ func castSpellActionEmpty(a CastSpellAction) bool {
 		a.XValue == 0 &&
 		len(a.ChosenModes) == 0 &&
 		!a.KickerPaid &&
+		len(a.ReplicateCounts) == 0 &&
 		!a.Bargained &&
 		!a.Overloaded &&
 		!a.Bestowed &&

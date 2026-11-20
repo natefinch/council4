@@ -139,6 +139,32 @@ type MutateKeyword struct {
 	Cost cost.Mana
 }
 
+// ReplicateKeyword declares one instance of Replicate with a fixed mana cost.
+// Put it in the spell face's StaticAbilities; the Engine supplies the cast trigger.
+type ReplicateKeyword struct {
+	Cost cost.Mana
+}
+
+// ReplicateCosts returns each instance in declaration order (CR 702.56b).
+func (f *CardFace) ReplicateCosts() []cost.Mana {
+	var costs []cost.Mana
+	for _, body := range f.StaticAbilities {
+		for _, keyword := range body.KeywordAbilities {
+			if replicate, ok := keyword.(ReplicateKeyword); ok {
+				costs = append(costs, replicate.Cost)
+			}
+		}
+	}
+	return costs
+}
+
+func (ReplicateKeyword) isKeywordAbility() {}
+func (ReplicateKeyword) keyword() Keyword  { return Replicate }
+func (ability ReplicateKeyword) cloneKeywordAbility() KeywordAbility {
+	ability.Cost = slices.Clone(ability.Cost)
+	return ability
+}
+
 // KickerKeyword parameterizes Kicker additional costs and bonus instructions.
 type KickerKeyword struct {
 	Cost            cost.Mana

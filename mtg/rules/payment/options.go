@@ -1,6 +1,7 @@
 package payment
 
 import (
+	"math"
 	"slices"
 
 	"github.com/natefinch/council4/mtg/game/zone"
@@ -207,10 +208,78 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 	if !req.FaceDown {
 		options = applyConspireCost(options, req.Card, spendSpell)
 	}
+	if len(req.ReplicateCounts) != 0 {
+		options = applyReplicateCosts(options, req)
+	}
 	for i := range options {
 		options[i].spendAs = req.SpendAnyMana
 		options[i].spendSpell = spendSpell
 		options[i].faceDown = req.FaceDown
+	}
+	return options
+}
+
+// Replicate adds mana to every otherwise available cost option, not another
+// alternative. A missing mana cost remains unpayable unless a route provides
+// an alternative, including the explicit zero cost of "without paying."
+func applyReplicateCosts(options []spellCostOption, req SpellRequest) []spellCostOption {
+	if req.Card == nil || req.FaceDown {
+		return nil
+	}
+	costs := req.Card.ReplicateCosts()
+	if len(costs) != len(req.ReplicateCounts) {
+		return nil
+	}
+	// Both payment of fixed symbols and creation of copies materialize one
+	// entry per unit. Bound pathological proposals separately from sampling.
+	const maxReplicateEntries = 1 << 16
+	var extra cost.Mana
+	generic, payments := 0, 0
+	for i, count := range req.ReplicateCounts {
+		if count < 0 || count > maxReplicateEntries-payments || len(costs[i]) == 0 {
+			return nil
+		}
+		payments += count
+		if count == 0 {
+			continue
+		}
+		for _, symbol := range costs[i] {
+			switch symbol.Kind {
+			case cost.GenericSymbol:
+				if symbol.Generic < 0 || symbol.Generic > (math.MaxInt-generic)/count {
+					return nil
+				}
+				generic += symbol.Generic * count
+			case cost.ColoredSymbol, cost.ColorlessSymbol:
+				if count > maxReplicateEntries-len(extra) {
+					return nil
+				}
+				for range count {
+					extra = append(extra, symbol)
+				}
+			default:
+				return nil
+			}
+		}
+	}
+	if generic > math.MaxInt-len(extra) {
+		return nil
+	}
+	total := generic + len(extra)
+	if generic > 0 {
+		extra = append(extra, cost.O(generic))
+	}
+	if total > 0 {
+		payable := options[:0]
+		for _, option := range options {
+			if option.manaCost == nil || (*option.manaCost).ManaValue() > math.MaxInt-total {
+				continue
+			}
+			combined := slices.Concat(*option.manaCost, extra)
+			option.manaCost = &combined
+			payable = append(payable, option)
+		}
+		options = payable
 	}
 	return options
 }

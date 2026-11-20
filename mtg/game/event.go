@@ -342,6 +342,8 @@ type Event struct {
 	// Unlike a lookup on the stack, it remains available to the trigger even
 	// after the spell leaves the stack.
 	KickerCount int
+	// ReplicateCounts snapshots the payments of each instance on EventSpellCast.
+	ReplicateCounts []int `json:",omitempty"`
 
 	// Bargained records whether a spell-cast or entering-permanent spell's
 	// Bargain additional cost was paid as it was cast (CR 702.166b). It is false
@@ -674,6 +676,7 @@ func cloneEvents(events []Event) []Event {
 }
 
 func cloneEvent(event Event) Event {
+	event.ReplicateCounts = cloneSlice(event.ReplicateCounts)
 	event.CardTypes = append([]types.Card(nil), event.CardTypes...)
 	event.CardSupertypes = append([]types.Super(nil), event.CardSupertypes...)
 	event.CardSubtypes = append([]types.Sub(nil), event.CardSubtypes...)

@@ -54,6 +54,7 @@ func prepareEventWithSimultaneousEntries(g *game.Game, event game.Event, simulta
 	if event.Kind == game.EventSpellCast {
 		if spell, ok := stackObjectByID(g, event.StackObjectID); ok && spell.Kind == game.StackSpell {
 			event.KickerCount = effectiveKickerCount(spell.KickerPaid, spell.KickerCount)
+			event.ReplicateCounts = slices.Clone(spell.ReplicateCounts)
 		}
 		if event.PlayerEventOrdinalThisTurn == 0 {
 			event.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, event.Controller)

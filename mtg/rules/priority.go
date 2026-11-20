@@ -353,6 +353,7 @@ func actionsEqual(a, b action.Action) bool {
 			aPayload.XValue == bPayload.XValue &&
 			aPayload.KickerPaid == bPayload.KickerPaid &&
 			aPayload.KickerCount == bPayload.KickerCount &&
+			slices.Equal(aPayload.ReplicateCounts, bPayload.ReplicateCounts) &&
 			aPayload.Bargained == bPayload.Bargained &&
 			aPayload.Offspring == bPayload.Offspring &&
 			aPayload.Bestowed == bPayload.Bestowed &&
