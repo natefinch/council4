@@ -1911,6 +1911,13 @@
     "oracle_text_sha256": "d578f7bb3b9fbe1c28dc4723f27a208560b08ec92d3c65f917c2cc5391895ebd",
     "revision": "451f317f-f587-4187-9e02-6ac5d7ae9cd8",
     "rulings_uri": "https://api.scryfall.com/cards/451f317f-f587-4187-9e02-6ac5d7ae9cd8/rulings"
+   },
+   {
+    "name": "Rising Miasma",
+    "oracle_id": "83fb7dfb-64a4-4320-b544-830c29f24df9",
+    "oracle_text_sha256": "7e92d3954a445e5b1c7ddc7cda3956d7a02a7c702e3d3ee29d0eef9949e07da4",
+    "revision": "4f9a8e87-3b8b-4dbf-9c1e-0a3290a33a0b",
+    "rulings_uri": "https://api.scryfall.com/cards/4f9a8e87-3b8b-4dbf-9c1e-0a3290a33a0b/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9342,6 +9349,23 @@
     "CreateTokens"
    ],
    "review": "Capability-fit only: docs/card-authoring.md#reviewed-continuation-commands and mtg/cardprogram/README.md#capability-lookup. Assigned author must complete source and rules review."
+  },
+  {
+   "id": "rising-miasma-awaken-20261120",
+   "family": "Awaken with global creature shrink",
+   "oracle_ids": [
+    "83fb7dfb-64a4-4320-b544-830c29f24df9"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "cost.Alternative",
+    "game.TargetSpec.AlternativeCost",
+    "ctx.View().Source().AlternativeCost",
+    "game.AddCounter",
+    "game.ApplyContinuous",
+    "game.ContinuousEffect"
+   ],
+   "review": "Selection-only capability fit: existing Awaken declarations in mtg/cards/authored/boiling_earth.go and mtg/cards/authored/roil_spout.go; branch-target evidence in mtg/rules/cast_branch_target_gate_test.go; global -2/-2 precedent in mtg/cards/authored/massacre.go. The author must complete source and rules review."
   }
  ],
  "records": [
@@ -166233,8 +166257,10 @@
    "oracle_id": "83fb7dfb-64a4-4320-b544-830c29f24df9",
    "revision": "4f9a8e87-3b8b-4dbf-9c1e-0a3290a33a0b",
    "name": "Rising Miasma",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "Awaken with global creature shrink",
+   "batch": "rising-miasma-awaken-20261120",
+   "evidence": "mtg/rules/rising_miasma_test.go: TestRisingMiasmaScenario"
   },
   {
    "oracle_id": "840119bf-e60f-4ff7-9c9b-d420d09df545",
