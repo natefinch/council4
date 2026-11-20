@@ -2247,6 +2247,10 @@ type CopyStackObject struct {
 	// a dynamic result of zero creates no copies and no copy replacement applies.
 	DynamicCount        Quantity
 	MayChooseNewTargets bool
+	// UseTriggerSpellLKI lets an EventStackObjectReference copy the triggering
+	// cast spell after it leaves the stack (CR 608.2h). Other references must
+	// not set it; an ordinary event reference still requires a live object.
+	UseTriggerSpellLKI bool
 	// SetColors is a copiable exception that replaces each spell copy's color
 	// values while preserving every other copiable value. nil leaves colors
 	// unchanged.

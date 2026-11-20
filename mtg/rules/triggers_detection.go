@@ -1649,6 +1649,9 @@ func castSpellSelfTriggers(g *game.Game, event game.Event) []pendingTriggeredAbi
 		if pattern.Event != game.EventSpellCast || pattern.Source != game.TriggerSourceSelf || !pattern.SelfWasCast {
 			continue
 		}
+		if pattern.RequireKickerPaid && !event.KickerPaid {
+			continue
+		}
 		if !triggerInterveningIf(g, source, event.Controller, &triggered.Trigger, &event) {
 			continue
 		}

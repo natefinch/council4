@@ -3228,6 +3228,9 @@ func (p CopyStackObject) validatePrimitive(targets []TargetSpec, checkTargets bo
 	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
 		return err
 	}
+	if p.UseTriggerSpellLKI && p.Object.Kind() != ObjectReferenceEventStackObject {
+		return errors.New("copy stack object last known information requires an event stack object reference")
+	}
 	if p.Count < 0 {
 		return errors.New("copy stack object count must be nonnegative")
 	}
