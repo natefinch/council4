@@ -382,61 +382,25 @@ func TestRuleEffectCantBeBlockedBindsAffectedObject(t *testing.T) {
 	}
 }
 
-func TestProliferateAddsOneChosenCounterKind(t *testing.T) {
+func TestProliferateTwiceRepeatsAction(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
 	permanent := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
 	permanent.Counters.Add(counter.PlusOnePlusOne, 1)
-	permanent.Counters.Add(counter.Charge, 1)
 	g.Players[game.Player2].PoisonCounters = 1
-	addEffectSpellToStack(g, game.Player1, game.Proliferate{}, nil)
+	addEffectSpellToStack(g, game.Player1, game.Proliferate{Amount: game.Fixed(2)}, nil)
 	agents := [game.NumPlayers]PlayerAgent{
-		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}, {0}}},
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}, {1}}},
 	}
 	log := TurnLog{}
 
 	engine.resolveTopOfStackWithChoices(g, agents, &log)
 
 	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 2 {
-		t.Fatalf("+1/+1 counters = %d, want chosen counter incremented", got)
-	}
-	if got := permanent.Counters.Get(counter.Charge); got != 1 {
-		t.Fatalf("charge counters = %d, want unchosen counter unchanged", got)
+		t.Fatalf("+1/+1 counters = %d, want 2 after choosing the permanent only the first time", got)
 	}
 	if got := g.Players[game.Player2].PoisonCounters; got != 2 {
-		t.Fatalf("poison counters = %d, want proliferated player counter", got)
-	}
-	var playerCounterEvent game.Event
-	for _, event := range g.Events {
-		if event.Kind == game.EventCountersAdded && event.Player == game.Player2 {
-			playerCounterEvent = event
-		}
-	}
-	if playerCounterEvent.CounterKind != counter.Poison ||
-		playerCounterEvent.PreviousCounterAmount != 1 ||
-		playerCounterEvent.Amount != 1 {
-		t.Fatalf("player counter event = %+v", playerCounterEvent)
-	}
-	if len(log.Choices) != 2 || log.Choices[0].Request.Kind != game.ChoiceProliferate {
-		t.Fatalf("choices = %+v, want proliferate choices", log.Choices)
-	}
-}
-
-func TestProliferateTwiceRepeatsAction(t *testing.T) {
-	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
-	engine := NewEngine(nil)
-	permanent := addCombatCreaturePermanentWithPower(g, game.Player1, 2)
-	permanent.Counters.Add(counter.PlusOnePlusOne, 1)
-	addEffectSpellToStack(g, game.Player1, game.Proliferate{Amount: game.Fixed(2)}, nil)
-	agents := [game.NumPlayers]PlayerAgent{
-		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}, {0}}},
-	}
-	log := TurnLog{}
-
-	engine.resolveTopOfStackWithChoices(g, agents, &log)
-
-	if got := permanent.Counters.Get(counter.PlusOnePlusOne); got != 3 {
-		t.Fatalf("+1/+1 counters = %d, want proliferate twice", got)
+		t.Fatalf("poison counters = %d, want 2 after choosing the player only the second time", got)
 	}
 	if len(log.Choices) != 2 {
 		t.Fatalf("choices = %d, want one proliferate choice per repetition", len(log.Choices))

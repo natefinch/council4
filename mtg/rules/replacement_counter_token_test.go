@@ -298,30 +298,29 @@ func TestAnyCounterPlacementReplacementUsesPlacingController(t *testing.T) {
 func TestAnyCounterPlacementReplacementDoublesProliferatedCounters(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	addReplacementPermanent(t, g, game.Player1, anyCounterDoublingReplacementCardDef())
-	opponentCreature := addCombatPermanent(g, game.Player2, &game.CardDef{CardFace: game.CardFace{
+	addReplacementPermanent(t, g, game.Player1, anyCounterDoublingReplacementCardDef())
+	setMainPhasePriority(g, game.Player2)
+	opponentCreature := addCombatPermanent(g, game.Player3, &game.CardDef{CardFace: game.CardFace{
 		Name:  "Opponent Creature",
 		Types: []types.Card{types.Creature},
 	}})
 	opponentCreature.Counters.Add(counter.Stun, 1)
 	g.Players[game.Player2].PoisonCounters = 1
 
-	if !addProliferatedCounter(g, game.Player1, proliferateTarget{
-		permanentID: opponentCreature.ObjectID,
-		counters:    []counter.Kind{counter.Stun},
-	}, counter.Stun) {
-		t.Fatal("addProliferatedCounter(permanent) = false, want true")
+	addEffectSpellToStack(g, game.Player1, game.Proliferate{}, nil)
+	NewEngine(nil).resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0, 1}}},
+	}, &TurnLog{})
+
+	if got := opponentCreature.Counters.Get(counter.Stun); got != 5 {
+		t.Fatalf("proliferated stun counters = %d, want 5 after both replacements", got)
 	}
-	if got := opponentCreature.Counters.Get(counter.Stun); got != 3 {
-		t.Fatalf("proliferated stun counters = %d, want 3", got)
+	if got := g.Players[game.Player2].PoisonCounters; got != 5 {
+		t.Fatalf("proliferated poison counters = %d, want 5 after both replacements", got)
 	}
-	if !addProliferatedCounter(g, game.Player1, proliferateTarget{
-		player:   game.Player2,
-		counters: []counter.Kind{counter.Poison},
-	}, counter.Poison) {
-		t.Fatal("addProliferatedCounter(player) = false, want true")
-	}
-	if got := g.Players[game.Player2].PoisonCounters; got != 3 {
-		t.Fatalf("proliferated poison counters = %d, want 3", got)
+	if decisions := g.ReplacementDecisions; len(decisions) != 2 ||
+		decisions[0].Player != game.Player2 || decisions[1].Player != game.Player3 {
+		t.Fatalf("replacement decisions = %+v, want the affected player and controller in APNAP order", decisions)
 	}
 }
 
