@@ -1792,6 +1792,13 @@
     "oracle_text_sha256": "e4e8491ed4abb1b43c8e7d95223d65aa35f66bb18db78331fafd3ea62d1aecb3",
     "revision": "f05f5d93-50d1-4aa6-af05-383a6808345b",
     "rulings_uri": "https://api.scryfall.com/cards/f05f5d93-50d1-4aa6-af05-383a6808345b/rulings"
+   },
+   {
+    "name": "Boiling Earth",
+    "oracle_id": "fb34b671-b61a-47e2-90fa-dbe5cf6d3743",
+    "oracle_text_sha256": "1de93a7bd54d97f1645e0f5e4319425490b3b02b7d99b88450227e80e1cff6f9",
+    "revision": "cdaab44c-4ce1-43fb-915c-c687fe8559ce",
+    "rulings_uri": "https://api.scryfall.com/cards/cdaab44c-4ce1-43fb-915c-c687fe8559ce/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9050,6 +9057,19 @@
     "game.ApplyContinuous (LayerPowerToughnessModify, DurationUntilEndOfTurn)"
    ],
    "review": "Capability-fit packet: docs/card-authoring.md (Reviewed continuation commands); mtg/cardprogram/README.md (conditional alternative-cost entry); mtg/cards/authored/night_clubber.go; mtg/rules/conditional_alternative_cost_test.go. Oracle and rules source review is not claimed and remains required during implementation."
+  },
+  {
+   "id": "boiling-earth-awaken-20261119",
+   "family": "boiling-earth-awaken-damage",
+   "oracle_ids": [
+    "fb34b671-b61a-47e2-90fa-dbe5cf6d3743"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.Damage",
+    "TargetSpec.AlternativeCost"
+   ],
+   "review": "Capability-only preflight: mtg/cardprogram/README.md (conditional Awaken target capability), existing game.Damage examples, and mtg/rules/cast_branch_target_gate_test.go. The card author must review primary sources and applicable rules; no source or rules review is claimed here."
   }
  ],
  "records": [
@@ -267294,8 +267314,10 @@
    "oracle_id": "fb34b671-b61a-47e2-90fa-dbe5cf6d3743",
    "revision": "cdaab44c-4ce1-43fb-915c-c687fe8559ce",
    "name": "Boiling Earth",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "boiling-earth-awaken-damage",
+   "batch": "boiling-earth-awaken-20261119",
+   "evidence": "mtg/rules/boiling_earth_test.go: TestBoilingEarthScenario"
   },
   {
    "oracle_id": "fb34e487-f7a9-48ad-8f42-00295a80a160",
