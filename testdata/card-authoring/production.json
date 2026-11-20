@@ -1862,6 +1862,13 @@
     "oracle_text_sha256": "022d1b4cb8229adaec7c6e946c91019c4bf2a3351163e7d08d9b85ff1c22bcd6",
     "revision": "32dfe9aa-8303-460b-a4c3-e5533af2e1fd",
     "rulings_uri": "https://api.scryfall.com/cards/32dfe9aa-8303-460b-a4c3-e5533af2e1fd/rulings"
+   },
+   {
+    "name": "Shattering Spree",
+    "oracle_id": "fe725b27-49ef-41bc-91f9-9cd9871ad863",
+    "oracle_text_sha256": "454339708b785a18895febab5fb4882dadbea5f6863bcdda74ccb11864bbe80e",
+    "revision": "d6dcff21-5900-43c4-a38b-cdc19c704ce4",
+    "rulings_uri": "https://api.scryfall.com/cards/d6dcff21-5900-43c4-a38b-cdc19c704ce4/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9249,6 +9256,18 @@
     "Expected paying Replicate {2}{U} twice to cast Vacuumelt and create two copies; actual Engine rejects the two-payment cast because the available repeated-cost route requires Multikicker."
    ],
    "review": "Card Vacuumelt, checked Engine result for #4028 on 75c015389d956b9342f3a9748b92afb58fcc8bd4: Implemented Replicate for #4028 in the isolated worktree. Each paid instance triggers separately and creates one retargetable, non-cast copy per payment, even if the original was countered. No cards were registered or changes merged.\nOn current main (3d5e7fff6bc5ded499df9c2967d3510ac16fbc4c), `go test ./mtg/rules -run '^TestLoseFocusReplicateCostProbe$' -count=1 -v` reproduced the two-payment cast rejection.\nPassed `go test ./mtg/rules ./mtg/sim -run '^(TestLoseFocusReplicateEngine|TestReplicate.*)$' -count=1 -v`. Lose Focus made two independently retargeted copies after the original was countered; one target survived by paying {2}, and the other was countered. Shared scenarios covered combined and declined costs, unaffordable payments, paid and free exile casts, cast card copies, Flashback, Storm, Cascade, cloning, and JSON replay.\nPassed `go test ./mtg/rules ./mtg/game ./mtg/game/action ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1` and `git diff --check`.\nSource review is in `mtg/rules/replicate_test.go`; the baseline probe, Oracle responses, rulings, and verified CR are retained in `.cardwork/source/`. None of the eight named plays requires a Mutate or prepared-cast combination."
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-31",
+   "family": "card-followup",
+   "oracle_ids": [
+    "fe725b27-49ef-41bc-91f9-9cd9871ad863"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected: paying Replicate twice while casting Shattering Spree creates two copies that may target new artifacts. Actual: the available repeatable cost and cast-count declarations are Multikicker-specific; no Replicate cost/state can be represented, and using Kicker would misdeclare the card."
+   ],
+   "review": "Card Shattering Spree, checked Engine result for #4028 on 75c015389d956b9342f3a9748b92afb58fcc8bd4: Implemented Replicate for #4028 in the isolated worktree. Each paid instance triggers separately and creates one retargetable, non-cast copy per payment, even if the original was countered. No cards were registered or changes merged.\nOn current main (3d5e7fff6bc5ded499df9c2967d3510ac16fbc4c), `go test ./mtg/rules -run '^TestLoseFocusReplicateCostProbe$' -count=1 -v` reproduced the two-payment cast rejection.\nPassed `go test ./mtg/rules ./mtg/sim -run '^(TestLoseFocusReplicateEngine|TestReplicate.*)$' -count=1 -v`. Lose Focus made two independently retargeted copies after the original was countered; one target survived by paying {2}, and the other was countered. Shared scenarios covered combined and declined costs, unaffordable payments, paid and free exile casts, cast card copies, Flashback, Storm, Cascade, cloning, and JSON replay.\nPassed `go test ./mtg/rules ./mtg/game ./mtg/game/action ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1` and `git diff --check`.\nSource review is in `mtg/rules/replicate_test.go`; the baseline probe, Oracle responses, rulings, and verified CR are retained in `.cardwork/source/`. None of the eight named plays requires a Mutate or prepared-cast combination."
   }
  ],
  "records": [
@@ -270352,8 +270371,10 @@
    "oracle_id": "fe725b27-49ef-41bc-91f9-9cd9871ad863",
    "revision": "d6dcff21-5900-43c4-a38b-cdc19c704ce4",
    "name": "Shattering Spree",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-31",
+   "evidence": "mtg/rules/shattering_spree_test.go: TestAuthoredShatteringSpreeScenario; pinned Oracle printing d6dcff21-5900-43c4-a38b-cdc19c704ce4; Scryfall WotC rulings 2024-01-12; CR 2026-11-06 601.2b/c/f-i, 603.2-3, 113.7a, 608.2b, 701.8a-c, 702.56a-b, 707.10"
   },
   {
    "oracle_id": "fe742976-ef13-4c25-972f-254b1ed436de",
