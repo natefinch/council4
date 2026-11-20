@@ -1806,6 +1806,13 @@
     "oracle_text_sha256": "18941e844a554c4d219221c07deff812386e3bf47e05e4c341c7169676512487",
     "revision": "ee9fdecc-ba16-4aa2-9c20-7c2942ec143e",
     "rulings_uri": "https://api.scryfall.com/cards/ee9fdecc-ba16-4aa2-9c20-7c2942ec143e/rulings"
+   },
+   {
+    "name": "Rush of Ice",
+    "oracle_id": "e9d62416-c4b1-4982-9593-174d46e975c7",
+    "oracle_text_sha256": "1022e0bd3843c69b863ee0b248e1630036af93609c43ae3af5bf01993feffabc",
+    "revision": "f9ae6f63-d1b2-4bf9-a423-ed6fbb540d4b",
+    "rulings_uri": "https://api.scryfall.com/cards/f9ae6f63-d1b2-4bf9-a423-ed6fbb540d4b/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9092,6 +9099,23 @@
     "game.ApplyContinuous"
    ],
    "review": "Author source review required. Capability-fit references: mtg/cards/authored/submerge.go (target creature to owner's library), mtg/cards/authored/coastal_discovery.go and boiling_earth.go (Awaken), and mtg/rules/cast_branch_target_gate_test.go."
+  },
+  {
+   "id": "rush-of-ice-20261119",
+   "family": "awaken-tap-freeze",
+   "oracle_ids": [
+    "e9d62416-c4b1-4982-9593-174d46e975c7"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "cost.Alternative",
+    "TargetSpec.AlternativeCost",
+    "Tap",
+    "SkipNextUntap",
+    "AddCounter",
+    "ApplyContinuous"
+   ],
+   "review": "Capability-fit only: existing tap/freeze implementation in mtg/cards/t/take_into_custody.go and mtg/rules/skip_next_untap_test.go; Awaken examples in mtg/cards/authored/boiling_earth.go, roil_spout.go, coastal_discovery.go and mtg/rules/cast_branch_target_gate_test.go. Worker must perform and record the required primary-source review."
   }
  ],
  "records": [
@@ -252394,8 +252418,10 @@
    "oracle_id": "e9d62416-c4b1-4982-9593-174d46e975c7",
    "revision": "f9ae6f63-d1b2-4bf9-a423-ed6fbb540d4b",
    "name": "Rush of Ice",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "awaken-tap-freeze",
+   "batch": "rush-of-ice-20261119",
+   "evidence": "mtg/rules/rush_of_ice_test.go: TestRushOfIceScenario"
   },
   {
    "oracle_id": "e9da499c-fa43-4e94-8395-5c030ff39502",
