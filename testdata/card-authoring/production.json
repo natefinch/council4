@@ -1827,6 +1827,13 @@
     "oracle_text_sha256": "22d1bc32aad0a97c6158705669ba1bd971b088235fa62963903143888d641ead",
     "revision": "52bed0d4-3bcf-4770-b9c9-2a1d0666d220",
     "rulings_uri": "https://api.scryfall.com/cards/52bed0d4-3bcf-4770-b9c9-2a1d0666d220/rulings"
+   },
+   {
+    "name": "Train of Thought",
+    "oracle_id": "90ba0366-57ff-4dc4-a290-3925548129ce",
+    "oracle_text_sha256": "6acd3f4e7904dde2dcafaf7d0cebf74830868f807e725d32b195c2b92dfc3c09",
+    "revision": "a9c1c674-0742-45be-afd5-2dbcd6b499ae",
+    "rulings_uri": "https://api.scryfall.com/cards/a9c1c674-0742-45be-afd5-2dbcd6b499ae/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9154,6 +9161,18 @@
     "Expected: cast Super Combo for {1}{G}, optionally paying its {2} Replicate cost twice, then create two copies. Actual: the Engine rejected the cast through its Multikicker-specific repeated-cost action; it has no Replicate cost declaration or cast-payment route."
    ],
    "review": "Card Super Combo, checked Engine result for #4028 on 75c015389d956b9342f3a9748b92afb58fcc8bd4: Implemented Replicate for #4028 in the isolated worktree. Each paid instance triggers separately and creates one retargetable, non-cast copy per payment, even if the original was countered. No cards were registered or changes merged.\nOn current main (3d5e7fff6bc5ded499df9c2967d3510ac16fbc4c), `go test ./mtg/rules -run '^TestLoseFocusReplicateCostProbe$' -count=1 -v` reproduced the two-payment cast rejection.\nPassed `go test ./mtg/rules ./mtg/sim -run '^(TestLoseFocusReplicateEngine|TestReplicate.*)$' -count=1 -v`. Lose Focus made two independently retargeted copies after the original was countered; one target survived by paying {2}, and the other was countered. Shared scenarios covered combined and declined costs, unaffordable payments, paid and free exile casts, cast card copies, Flashback, Storm, Cascade, cloning, and JSON replay.\nPassed `go test ./mtg/rules ./mtg/game ./mtg/game/action ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1` and `git diff --check`.\nSource review is in `mtg/rules/replicate_test.go`; the baseline probe, Oracle responses, rulings, and verified CR are retained in `.cardwork/source/`. None of the eight named plays requires a Mutate or prepared-cast combination."
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-26",
+   "family": "card-followup",
+   "oracle_ids": [
+    "90ba0366-57ff-4dc4-a290-3925548129ce"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected Train of Thought to accept its {1}{U} Replicate cost and copy once per payment; actual ordinary casting works, but the only current repeatable-cost route is Multikicker-specific and rejects the requested payment."
+   ],
+   "review": "Card Train of Thought, checked Engine result for #4028 on 75c015389d956b9342f3a9748b92afb58fcc8bd4: Implemented Replicate for #4028 in the isolated worktree. Each paid instance triggers separately and creates one retargetable, non-cast copy per payment, even if the original was countered. No cards were registered or changes merged.\nOn current main (3d5e7fff6bc5ded499df9c2967d3510ac16fbc4c), `go test ./mtg/rules -run '^TestLoseFocusReplicateCostProbe$' -count=1 -v` reproduced the two-payment cast rejection.\nPassed `go test ./mtg/rules ./mtg/sim -run '^(TestLoseFocusReplicateEngine|TestReplicate.*)$' -count=1 -v`. Lose Focus made two independently retargeted copies after the original was countered; one target survived by paying {2}, and the other was countered. Shared scenarios covered combined and declined costs, unaffordable payments, paid and free exile casts, cast card copies, Flashback, Storm, Cascade, cloning, and JSON replay.\nPassed `go test ./mtg/rules ./mtg/game ./mtg/game/action ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1` and `git diff --check`.\nSource review is in `mtg/rules/replicate_test.go`; the baseline probe, Oracle responses, rulings, and verified CR are retained in `.cardwork/source/`. None of the eight named plays requires a Mutate or prepared-cast combination."
   }
  ],
  "records": [
@@ -177056,8 +177075,10 @@
    "oracle_id": "90ba0366-57ff-4dc4-a290-3925548129ce",
    "revision": "a9c1c674-0742-45be-afd5-2dbcd6b499ae",
    "name": "Train of Thought",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-26",
+   "evidence": "mtg/rules/train_of_thought_test.go: TestAuthoredTrainOfThoughtReplicateDrawsForEachPayment"
   },
   {
    "oracle_id": "90bccf66-58ec-445d-ac96-c6013054a1b4",
