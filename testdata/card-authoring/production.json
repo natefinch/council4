@@ -1799,6 +1799,13 @@
     "oracle_text_sha256": "1de93a7bd54d97f1645e0f5e4319425490b3b02b7d99b88450227e80e1cff6f9",
     "revision": "cdaab44c-4ce1-43fb-915c-c687fe8559ce",
     "rulings_uri": "https://api.scryfall.com/cards/cdaab44c-4ce1-43fb-915c-c687fe8559ce/rulings"
+   },
+   {
+    "name": "Roil Spout",
+    "oracle_id": "ebc1d343-26f1-4d85-ac3a-610da24c990e",
+    "oracle_text_sha256": "18941e844a554c4d219221c07deff812386e3bf47e05e4c341c7169676512487",
+    "revision": "ee9fdecc-ba16-4aa2-9c20-7c2942ec143e",
+    "rulings_uri": "https://api.scryfall.com/cards/ee9fdecc-ba16-4aa2-9c20-7c2942ec143e/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9070,6 +9077,21 @@
     "TargetSpec.AlternativeCost"
    ],
    "review": "Capability-only preflight: mtg/cardprogram/README.md (conditional Awaken target capability), existing game.Damage examples, and mtg/rules/cast_branch_target_gate_test.go. The card author must review primary sources and applicable rules; no source or rules review is claimed here."
+  },
+  {
+   "id": "roil-spout-single-2026-11-19",
+   "family": "roil-spout-awaken-library-top",
+   "oracle_ids": [
+    "ebc1d343-26f1-4d85-ac3a-610da24c990e"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "TargetSpec.AlternativeCost",
+    "game.MovePermanent",
+    "game.AddCounter",
+    "game.ApplyContinuous"
+   ],
+   "review": "Author source review required. Capability-fit references: mtg/cards/authored/submerge.go (target creature to owner's library), mtg/cards/authored/coastal_discovery.go and boiling_earth.go (Awaken), and mtg/rules/cast_branch_target_gate_test.go."
   }
  ],
  "records": [
@@ -254142,8 +254164,10 @@
    "oracle_id": "ebc1d343-26f1-4d85-ac3a-610da24c990e",
    "revision": "ee9fdecc-ba16-4aa2-9c20-7c2942ec143e",
    "name": "Roil Spout",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "roil-spout-awaken-library-top",
+   "batch": "roil-spout-single-2026-11-19",
+   "evidence": "mtg/rules/roil_spout_test.go: TestRoilSpoutScenario"
   },
   {
    "oracle_id": "ebc3ca0f-35eb-4606-90ab-eb64556f81fe",
