@@ -1932,6 +1932,13 @@
     "oracle_text_sha256": "63f7342d661058c6e36f9d72040cb6839ef554768d9718c44c88ad75b86e5a3d",
     "revision": "bdb1972f-2ef7-4fe2-8c8e-ab07f48a3176",
     "rulings_uri": "https://api.scryfall.com/cards/bdb1972f-2ef7-4fe2-8c8e-ab07f48a3176/rulings"
+   },
+   {
+    "name": "Resize",
+    "oracle_id": "2c092ed4-4dbb-41ec-9e07-e59b9676802e",
+    "oracle_text_sha256": "f08a59603856724749c59aa30a39373977cd6beca46d0ec1ffdb3ef1ccb8733e",
+    "revision": "c5dded16-e516-430e-a528-c49a483f03b4",
+    "rulings_uri": "https://api.scryfall.com/cards/c5dded16-e516-430e-a528-c49a483f03b4/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9407,6 +9414,18 @@
     "Expected Grim Harvest's Recover {2}{B} trigger when a creature enters its owner's graveyard, then optional payment to return Grim Harvest or decline and exile it. Actual: the trigger is not queued."
    ],
    "review": "Card Grim Harvest, checked Engine result for #375 on a171412435c7346eb4c01cd451900a66363590a3: Implemented shared Recover support: the Engine captures the exact graveyard source before each qualifying death. Existing payment and movement operations return that incarnation on payment or exile it otherwise. No cards were registered.\nAll six retained probes reproduced the missing trigger on main baseline 74beb1ae5ec08efd3f6ef7a7c16223c4caf06a41.\nPassed: go test -overlay .cardwork/sources/recover-family/overlay.json ./mtg/game ./mtg/rules -tags cardwork_probe -run '^Test(ValidateGraveyardDiesTrigger|Recover.*)$' -count=1 -v. Executed all six named probes and shared payment, ownership, simultaneous-death, replacement, clone, and copy scenarios. Oracle and rules evidence is retained alongside the overlay.\nPassed: go test ./mtg/game ./mtg/cardprogram ./mtg/rules -count=1; go test ./mtg/cards -count=1; git diff --check."
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-39",
+   "family": "card-followup",
+   "oracle_ids": [
+    "2c092ed4-4dbb-41ec-9e07-e59b9676802e"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected Resize's Recover {1}{G} trigger when a creature enters its owner's graveyard, then optional payment to return Resize or decline and exile it. Actual: the trigger is not queued."
+   ],
+   "review": "Card Resize, checked Engine result for #375 on a171412435c7346eb4c01cd451900a66363590a3: Implemented shared Recover support: the Engine captures the exact graveyard source before each qualifying death. Existing payment and movement operations return that incarnation on payment or exile it otherwise. No cards were registered.\nAll six retained probes reproduced the missing trigger on main baseline 74beb1ae5ec08efd3f6ef7a7c16223c4caf06a41.\nPassed: go test -overlay .cardwork/sources/recover-family/overlay.json ./mtg/game ./mtg/rules -tags cardwork_probe -run '^Test(ValidateGraveyardDiesTrigger|Recover.*)$' -count=1 -v. Executed all six named probes and shared payment, ownership, simultaneous-death, replacement, clone, and copy scenarios. Oracle and rules evidence is retained alongside the overlay.\nPassed: go test ./mtg/game ./mtg/cardprogram ./mtg/rules -count=1; go test ./mtg/cards -count=1; git diff --check."
   }
  ],
  "records": [
@@ -91162,8 +91181,10 @@
    "oracle_id": "2c092ed4-4dbb-41ec-9e07-e59b9676802e",
    "revision": "c5dded16-e516-430e-a528-c49a483f03b4",
    "name": "Resize",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-39",
+   "evidence": "mtg/rules/resize_test.go: TestResizeSpellAndRecover"
   },
   {
    "oracle_id": "2c09ca09-8e62-4fe3-9b3d-61573dd2ffbc",
