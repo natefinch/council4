@@ -420,6 +420,9 @@ func TestAlternativeCostTargetAnnouncementAndResolution(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			e, g, def := alternativeTargetScene(t)
+			def.AlternativeCosts[0].Condition = cost.AlternativeConditionYourTeamCastSpellThisTurn
+			castSurgeSetupSpell(t, e, g, game.Player1)
+			e.resolveTopOfStack(g, &TurnLog{})
 			card := addCardToHand(g, game.Player1, def)
 			opposing := addBasicLandPermanent(g, game.Player2, types.Island)
 			opposingTarget := []game.Target{game.PermanentTarget(opposing.ObjectID)}
@@ -501,6 +504,9 @@ func TestAlternativeCostTargetCombinedPaymentAndReplay(t *testing.T) {
 		// the gate. Buyback also shifts the payment option index away from
 		// the declared alternative index.
 		def.AlternativeCosts = append(def.AlternativeCosts, def.AlternativeCosts[0])
+		def.AlternativeCosts[0].Condition = cost.AlternativeConditionYourTeamCastSpellThisTurn
+		castSurgeSetupSpell(t, e, g, game.Player1)
+		e.resolveTopOfStack(g, &TurnLog{})
 		def.StaticAbilities = []game.StaticAbility{{KeywordAbilities: []game.KeywordAbility{game.BuybackKeyword{
 			Cost: cost.Mana{cost.O(1)}, AdditionalCosts: []cost.Additional{{Kind: cost.AdditionalPayLife, Amount: 2}},
 		}}}}
@@ -578,14 +584,12 @@ func TestAlternativeCostTargetStackCopies(t *testing.T) {
 	for _, route := range []string{"direct", "storm"} {
 		t.Run(route, func(t *testing.T) {
 			e, g, def := alternativeTargetScene(t)
+			def.AlternativeCosts[0].Condition = cost.AlternativeConditionYourTeamCastSpellThisTurn
 			if route == "storm" {
 				def.StaticAbilities = []game.StaticAbility{{KeywordAbilities: game.SimpleKeywords(game.Storm)}}
-				prior := addCardToHand(g, game.Player1, simpleGainLifeInstant("Prior cast"))
-				if !e.applyAction(g, game.Player1, action.CastSpell(prior, nil, 0, nil)) {
-					t.Fatal("failed to cast the spell storm should count")
-				}
-				e.resolveTopOfStack(g, &TurnLog{})
 			}
+			castSurgeSetupSpell(t, e, g, game.Player1)
+			e.resolveTopOfStack(g, &TurnLog{})
 			card := addCardToHand(g, game.Player1, def)
 			first := addBasicLandPermanent(g, game.Player1, types.Island)
 			second := addBasicLandPermanent(g, game.Player1, types.Island)
@@ -654,6 +658,7 @@ func TestAlternativeCostTargetOtherCastRoutes(t *testing.T) {
 	for _, route := range []string{"paid exile", "prepared copy", "free physical", "free exile copy"} {
 		t.Run(route, func(t *testing.T) {
 			e, g, def := alternativeTargetScene(t)
+			def.AlternativeCosts[0].Condition = cost.AlternativeConditionYourTeamCastSpellThisTurn
 			land := addBasicLandPermanent(g, game.Player1, types.Island)
 			targets := []game.Target{game.PermanentTarget(land.ObjectID)}
 			g.Players[game.Player1].ManaPool.Add(mana.C, 5)
@@ -661,20 +666,32 @@ func TestAlternativeCostTargetOtherCastRoutes(t *testing.T) {
 			wantBranch := cost.AlternativeIndex(1)
 			wantCopy := route == "prepared copy" || route == "free exile copy"
 			var ok bool
+			castPaid := func(cast action.Action) bool {
+				t.Helper()
+				if containsAction(e.legalActions(g, game.Player1), cast) {
+					t.Fatal("paid alternative was offered without its required cast history")
+				}
+				castSurgeSetupSpell(t, e, g, game.Player1)
+				e.resolveTopOfStack(g, &TurnLog{})
+				return containsAction(e.legalActions(g, game.Player1), cast) && e.applyAction(g, game.Player1, cast)
+			}
 			switch route {
 			case "paid exile":
 				card := addCardToExile(g, game.Player1, def)
 				g.RuleEffects = append(g.RuleEffects, castSpellsFromExileEffect(g, game.Player1))
 				cast := action.CastSpellFaceFromZone(card, zone.Exile, game.FaceFront, targets, 0, nil)
-				ok = containsAction(e.legalActions(g, game.Player1), cast) && e.applyAction(g, game.Player1, cast)
+				ok = castPaid(cast)
 			case "prepared copy":
 				source := prepareCard()
 				source.Alternate = opt.Val(def.CardFace)
 				permanent := addCombatPermanent(g, game.Player1, source)
 				permanent.Prepared = true
 				cast := action.CastSpellFaceFromZone(permanent.CardInstanceID, zone.Battlefield, game.FaceAlternate, targets, 0, nil)
-				ok = containsAction(e.legalActions(g, game.Player1), cast) && e.applyAction(g, game.Player1, cast) && !permanent.Prepared
+				ok = castPaid(cast) && !permanent.Prepared
 			case "free physical", "free exile copy":
+				// Even when Surge is available, a required free cast cannot pay it.
+				castSurgeSetupSpell(t, e, g, game.Player1)
+				e.resolveTopOfStack(g, &TurnLog{})
 				wantBranch = 0
 				card := addCardToExile(g, game.Player1, def)
 				if wantCopy {

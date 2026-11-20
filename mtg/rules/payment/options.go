@@ -670,6 +670,8 @@ func alternativePredicateSatisfied(s State, playerID game.PlayerID, predicate co
 		return count >= predicate.Count
 	case cost.AlternativeConditionOpponentCastSpellsThisTurn:
 		return s.OpponentCastSpellsThisTurn(playerID, predicate.Count)
+	case cost.AlternativeConditionYourTeamCastSpellThisTurn:
+		return s.YourTeamCastSpellThisTurn(playerID)
 	default:
 		return false
 	}

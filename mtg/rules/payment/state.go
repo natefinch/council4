@@ -86,6 +86,10 @@ type stateQueries interface {
 	// cast count reaches count.
 	OpponentCastSpellsThisTurn(playerID game.PlayerID, count int) bool
 
+	// YourTeamCastSpellThisTurn reports whether playerID or a teammate has
+	// already cast a spell this turn, backing the Surge alternative cost.
+	YourTeamCastSpellThisTurn(playerID game.PlayerID) bool
+
 	// AdditionalDynamicAmountValue resolves a rules-derived additional-cost
 	// amount against live game state.
 	AdditionalDynamicAmountValue(playerID game.PlayerID, kind cost.AdditionalDynamicAmount) int
