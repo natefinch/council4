@@ -543,13 +543,14 @@ func removePermanentFromBattlefield(g *game.Game, objectID id.ID) (*game.Permane
 }
 
 type preparedPermanentZoneMove struct {
-	permanent         *game.Permanent
-	snapshot          game.ObjectSnapshot
-	event             game.Event
-	replacement       zoneChangeReplacementResult
-	actualDestination zone.Type
-	componentMoves    []mergedCardZoneMove
-	retained          counter.Set
+	permanent              *game.Permanent
+	snapshot               game.ObjectSnapshot
+	event                  game.Event
+	replacement            zoneChangeReplacementResult
+	actualDestination      zone.Type
+	componentMoves         []mergedCardZoneMove
+	retained               counter.Set
+	graveyardDeathTriggers []game.EventTriggeredAbility
 }
 
 // preparePermanentZoneMove computes everything needed to move a permanent off the
@@ -706,6 +707,7 @@ func finishPermanentZoneMove(g *game.Game, move *preparedPermanentZoneMove) bool
 			component.retained = cloneCounters(permanent.Counters)
 		}
 	}
+	move.graveyardDeathTriggers = captureGraveyardDeathSourceTriggers(g, move)
 	return true
 }
 
@@ -732,14 +734,13 @@ func applyPreparedPermanentZoneMove(g *game.Game, move *preparedPermanentZoneMov
 	if removed.Token {
 		storeDepartingCounters(g, removed.ObjectID, move.retained)
 		destinationCards.Add(removed.ObjectID)
-		move.event = emitPermanentLeaveEvents(g, removed, move.event.Controller, move.event.SubjectGoaded, move.event.SubjectGoadedKnown, move.actualDestination, move.event.SimultaneousID, move.event.ControlledTriggerDoublers)
 	} else {
 		storeDepartingCounters(g, removed.CardInstanceID, move.retained)
 		destinationCards.Add(removed.CardInstanceID)
 		shuffleLibraryIfRequested(g, destinationCards, move.actualDestination, move.replacement.shuffleIntoLibrary)
 		placeRedirectExileCounter(g, removed.Owner, removed.CardInstanceID, move.replacement)
-		move.event = emitPermanentLeaveEvents(g, removed, move.event.Controller, move.event.SubjectGoaded, move.event.SubjectGoadedKnown, move.actualDestination, move.event.SimultaneousID, move.event.ControlledTriggerDoublers)
 	}
+	move.event = emitPermanentLeaveEvents(g, move)
 	for _, component := range move.componentMoves {
 		if component.faceDown {
 			emitEvent(g, game.Event{
@@ -1493,31 +1494,18 @@ func shuffleLibraryIfRequested(g *game.Game, cards *zone.Zone, destination zone.
 	}
 }
 
-func emitPermanentLeaveEvents(g *game.Game, permanent *game.Permanent, controller game.PlayerID, subjectGoaded, subjectGoadedKnown bool, destination zone.Type, simultaneousID id.ID, doublers *game.ControlledTriggerDoublerSnapshot) game.Event {
-	event := game.Event{
-		Controller:                controller,
-		Player:                    permanent.Owner,
-		CardID:                    permanent.CardInstanceID,
-		Face:                      permanent.Face,
-		FaceDown:                  permanent.FaceDown,
-		PermanentID:               permanent.ObjectID,
-		SubjectGoaded:             subjectGoaded,
-		SubjectGoadedKnown:        subjectGoadedKnown,
-		TokenName:                 permanentTokenName(permanent),
-		TokenDef:                  permanent.TokenDef,
-		FromZone:                  zone.Battlefield,
-		ToZone:                    destination,
-		SimultaneousID:            simultaneousID,
-		ControlledTriggerDoublers: doublers,
-	}
+func emitPermanentLeaveEvents(g *game.Game, move *preparedPermanentZoneMove) game.Event {
+	event := move.event
+	event.ToZone = move.actualDestination
 	if card, ok := g.GetCardInstance(event.CardID); ok {
 		card.ZoneVersion++
 		event.CardZoneVersion = card.ZoneVersion
 	}
 	event = emitZoneChangeEvent(g, event)
-	if destination == zone.Graveyard {
+	if event.ToZone == zone.Graveyard {
 		death := event
 		death.Kind = game.EventPermanentDied
+		death.TriggeredAbilities = move.graveyardDeathTriggers
 		emitEvent(g, death)
 	}
 	return event

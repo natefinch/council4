@@ -594,7 +594,7 @@ func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Abili
 	case *TriggeredAbility:
 		if !validTriggeredSourceZone(abilityBody) {
 			v.add(faceName, appendPath(path, "ZoneOfFunction"), CardDefIssueInvalidAbilityBody,
-				"off-battlefield triggers require an explicit graveyard upkeep, combat, or end-step card source")
+				"off-battlefield triggers require an explicit graveyard step or dies trigger with a card source")
 		}
 		v.validateTriggerPattern(faceName, appendPath(path, "Trigger.Pattern"), &abilityBody.Trigger.Pattern)
 		if abilityBody.Trigger.InterveningCondition.Exists {

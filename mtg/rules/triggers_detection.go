@@ -999,8 +999,11 @@ func eventTriggeredAbilities(g *game.Game, event game.Event, events []game.Event
 func captureEventTriggeredAbilities(g *game.Game, event game.Event) []game.EventTriggeredAbility {
 	g.BeginStaticSourceFrame()
 	defer g.EndStaticSourceFrame()
+	return snapshotEventTriggeredAbilities(g, suppressOpponentEnteringTriggers(g, eventTriggeredAbilities(g, event, g.Events)))
+}
+
+func snapshotEventTriggeredAbilities(g *game.Game, triggers []pendingTriggeredAbility) []game.EventTriggeredAbility {
 	var captured []game.EventTriggeredAbility
-	triggers := suppressOpponentEnteringTriggers(g, eventTriggeredAbilities(g, event, g.Events))
 	for _, trigger := range triggers {
 		body := game.EventTriggeredAbility{
 			Controller: trigger.controller, SourceID: trigger.sourceID, SourceCardID: trigger.sourceCardID,

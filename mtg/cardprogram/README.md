@@ -570,9 +570,15 @@ token creation/library search, and monarch/blessing/initiative/dungeon events.
 Color-dependent legacy tapped-for-mana declarations observe the completed mana
 production event, when its colors are known.
 
-Cycled-card and cast-spell self triggers, graveyard step sources and explicit
-leave/dies look-back exceptions use the shared source matcher. Damage captures
-active ability sources before damage consequences; source-characteristic LKI does
+Cycled-card and cast-spell self triggers, graveyard step and dies sources, and
+explicit leave/dies look-back exceptions use the shared source matcher. For
+Recover, declare a `TriggeredAbility` with `ZoneOfFunction: zone.Graveyard`,
+`EventPermanentDied`, `Player: TriggerPlayerYou` (the dying creature's owner,
+not its battlefield controller), and a creature `SubjectSelection`. The source
+must already be in the graveyard before the death, including for a simultaneous
+batch. Use `Pay` and `MoveCard` with `CardReferenceSource` for the two resolution
+branches; those moves require the exact captured graveyard incarnation.
+Damage captures active ability sources before damage consequences; source-characteristic LKI does
 not restore abilities that left before the damage. Library-to-graveyard
 self triggers and inherent monarch abilities retain their dedicated capture.
 Saga chapters preserve their classification. State, madness, delayed, reflexive,
