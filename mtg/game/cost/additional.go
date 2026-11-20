@@ -469,4 +469,8 @@ const (
 	// AlternativeConditionOpponentControlsPermanentSubtype requires that some
 	// opponent of the caster controls a permanent of the specified subtype.
 	AlternativeConditionOpponentControlsPermanentSubtype
+	// AlternativeConditionYourTeamCastSpellThisTurn requires that the caster
+	// or a teammate has already cast a spell this turn (Surge, CR 702.117a).
+	// In free-for-all, only the caster qualifies (CR 102.4).
+	AlternativeConditionYourTeamCastSpellThisTurn
 )

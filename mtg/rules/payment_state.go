@@ -76,6 +76,11 @@ func (s *rulesPaymentState) OpponentCastSpellsThisTurn(playerID game.PlayerID, c
 	return anyOpponentCastSpellsThisTurn(s.g, playerID, count)
 }
 
+func (s *rulesPaymentState) YourTeamCastSpellThisTurn(playerID game.PlayerID) bool {
+	// The engine models free-for-all, where "your team" is just you (CR 102.4).
+	return eventsThisTurnWindow(s.g).any(eventKindController(game.EventSpellCast, playerID))
+}
+
 func (s *rulesPaymentState) AdditionalDynamicAmountValue(playerID game.PlayerID, kind cost.AdditionalDynamicAmount) int {
 	switch kind {
 	case cost.AdditionalDynamicCommanderColorIdentityCount:

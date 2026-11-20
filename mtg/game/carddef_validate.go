@@ -245,7 +245,8 @@ func (v *cardDefValidator) validateAlternativePredicate(faceName, path string, p
 	switch predicate.Kind {
 	case cost.AlternativeConditionNone, cost.AlternativeConditionControlsCommander,
 		cost.AlternativeConditionNotYourTurn, cost.AlternativeConditionYourTurn,
-		cost.AlternativeConditionOpponentLostLifeThisTurn, cost.AlternativeConditionOpponentGainedLifeThisTurn:
+		cost.AlternativeConditionOpponentLostLifeThisTurn, cost.AlternativeConditionOpponentGainedLifeThisTurn,
+		cost.AlternativeConditionYourTeamCastSpellThisTurn:
 	case cost.AlternativeConditionControlsPermanentSubtype, cost.AlternativeConditionOpponentControlsPermanentSubtype:
 		if predicate.Subtype == "" {
 			report("Subtype", "controls-subtype alternative cost has no subtype")

@@ -271,6 +271,7 @@ func (fakePaymentState) OpponentGainedLifeThisTurn(game.PlayerID) bool { return 
 func (fakePaymentState) AttackingCreatureCount() int { return 0 }
 
 func (fakePaymentState) OpponentCastSpellsThisTurn(game.PlayerID, int) bool { return false }
+func (fakePaymentState) YourTeamCastSpellThisTurn(game.PlayerID) bool       { return false }
 
 func (fakePaymentState) AdditionalDynamicAmountValue(game.PlayerID, cost.AdditionalDynamicAmount) int {
 	return 0
