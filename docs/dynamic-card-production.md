@@ -57,10 +57,14 @@ register, it polls the PR and the reviewed commit's checks every 30 seconds.
 Queued and running checks do not need a manual resume, including checks that
 appear at the final merge gate. If checks are still pending after 240 active
 waits (two hours plus API request time), the workflow pauses with the head and
-PR to inspect. Missing registrations and external approvals also pause. A paused
-run does not wake automatically when CI later changes; inspect its current PR
-and resume the same run. If main advances, the workflow integrates it and
-repeats the affected checks/review before merging.
+PR to inspect. When CI is green but GitHub still reports `BLOCKED`, `UNKNOWN` or
+`UNSTABLE`, the workflow rechecks the PR, protections and exact-head checks
+every 15 seconds for up to five minutes, including at the final merge gate. It still
+requires `CLEAN` to merge and reports the last merge state if polling runs out.
+Missing registrations and external approvals also pause. A paused run does not
+wake automatically when GitHub's status later changes; inspect its current PR
+and resume the same run. If main advances, the workflow integrates it and repeats
+the affected checks/review before merging.
 
 A final fresh PR/check/protection read precedes ordinary
 `gh pr merge --squash --match-head-commit`. There is no `--admin`, direct
