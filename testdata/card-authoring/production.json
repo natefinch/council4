@@ -1981,6 +1981,20 @@
     "oracle_text_sha256": "f175357a161fe228f7ea84ae155c57ac6de932fad1b5b92231a4f81581a2d9a1",
     "revision": "0a5b059f-2fa3-474f-9c74-6d4021703add",
     "rulings_uri": "https://api.scryfall.com/cards/0a5b059f-2fa3-474f-9c74-6d4021703add/rulings"
+   },
+   {
+    "name": "Boulder Salvo",
+    "oracle_id": "16df20e2-5228-4543-84b7-74a3170d9d31",
+    "oracle_text_sha256": "f14112fc8393b4a1315488b9f7f535039efafddf1a8cad817f2ad5f9e2b035d6",
+    "revision": "4e269989-bb22-4da4-a374-434a572e8e8f",
+    "rulings_uri": "https://api.scryfall.com/cards/4e269989-bb22-4da4-a374-434a572e8e8f/rulings"
+   },
+   {
+    "name": "Fall of the Titans",
+    "oracle_id": "55e564b4-7c08-4109-bd67-da5f31fe002e",
+    "oracle_text_sha256": "8a186e12c8952eb990e2c0297a8f05702b3d9a4bec9bf177035415ecbeba8ab2",
+    "revision": "8c21da73-0dad-4b2b-8cc6-61861bed9410",
+    "rulings_uri": "https://api.scryfall.com/cards/8c21da73-0dad-4b2b-8cc6-61861bed9410/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9542,6 +9556,22 @@
     "Expected Jwar Isle Avenger to be castable for {2}{U} after its controller cast another spell this turn; actual Engine result: no Surge cast was offered because the only available cast-history alternative predicate requires an opponent’s cast."
    ],
    "review": "Card Jwar Isle Avenger, checked Engine result for #4050 on 33c08f9ac1151373d2654b8ac5658fad912e119c: Added AlternativeConditionYourTeamCastSpellThisTurn. In free-for-all, Jwar Isle Avenger can pay {2}{U} after its caster completes another spell cast that turn. Card registration was left to the card worker.\nOn main 7bbde906, go test ./mtg/rules -run '^TestJwarIsleAvengerSurgeCostAfterCasterCast$' -count=1 reproduced the missing cast. The updated scenario passes, verifying {2}{U} payment, mana value 5, and entry with flying.\nPassed: go test ./mtg/game ./mtg/game/cost ./mtg/rules ./mtg/rules/payment -count=1. Covered turn reset, opponent casts, copies, combined payment, exile routes, and replay.\nSource review: mtg/rules/jwar_isle_avenger_surge_test.go; raw sources retained in .cardwork/surge/."
+  },
+  {
+   "id": "surge-damage-spells-20261120",
+   "family": "surge-damage-spells",
+   "oracle_ids": [
+    "16df20e2-5228-4543-84b7-74a3170d9d31",
+    "55e564b4-7c08-4109-bd67-da5f31fe002e"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "cost.Alternative (Surge)",
+    "game.TargetSpec",
+    "game.DynamicAmountX",
+    "game.Damage"
+   ],
+   "review": "Capability-fit review only; no source or rules review claimed. References: mtg/cardprogram/README.md#capability-lookup (Surge); mtg/rules/jwar_isle_avenger_surge_test.go; mtg/game/cost/additional.go; mtg/game/dynamic_amount.go; mtg/game/primitive.go (Damage)."
   }
  ],
  "records": [
@@ -73897,8 +73927,10 @@
    "oracle_id": "16df20e2-5228-4543-84b7-74a3170d9d31",
    "revision": "4e269989-bb22-4da4-a374-434a572e8e8f",
    "name": "Boulder Salvo",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "surge-damage-spells",
+   "batch": "surge-damage-spells-20261120",
+   "evidence": "mtg/rules/surge_damage_spells_test.go: TestBoulderSalvoSurgeTargetCreatureDamage"
   },
   {
    "oracle_id": "16dfd80a-9847-45b8-954f-2af9b7cfa21d",
@@ -127049,8 +127081,10 @@
    "oracle_id": "55e564b4-7c08-4109-bd67-da5f31fe002e",
    "revision": "8c21da73-0dad-4b2b-8cc6-61861bed9410",
    "name": "Fall of the Titans",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "surge-damage-spells",
+   "batch": "surge-damage-spells-20261120",
+   "evidence": "mtg/rules/surge_damage_spells_test.go: TestFallOfTheTitansSurgeEachTargetXDamage"
   },
   {
    "oracle_id": "55e897e9-5c70-4e32-8f24-3e0fefa319cd",
