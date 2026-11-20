@@ -2,6 +2,7 @@ package rules
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/game"
@@ -272,47 +273,24 @@ func TestSlimeAndBountyPlacementRemovalAndProliferate(t *testing.T) {
 		t.Fatalf("after removal counters = %v; want one slime removed and bounty untouched", recipient.Counters.All())
 	}
 
-	var labels []string
-	recorder := &recordingProliferateAgent{pick: "bounty", labels: &labels}
 	addEffectSpellToStack(g, game.Player1, game.Proliferate{}, nil)
 	log := TurnLog{}
-	e.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{game.Player1: recorder}, &log)
-	if !slices.Equal(labels, []string{"bounty", "slime"}) {
-		t.Fatalf("proliferate options = %v; want public slime and bounty kinds", labels)
+	e.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{
+		game.Player1: &choiceOnlyAgent{choices: [][]int{{0}}},
+	}, &log)
+	if len(log.Choices) != 1 {
+		t.Fatalf("proliferate decisions = %d, want 1", len(log.Choices))
 	}
-	if recipient.Counters.Get(counter.Bounty) != 2 || recipient.Counters.Get(counter.Slime) != 1 {
-		t.Fatalf("after proliferating bounty counters = %v; want bounty 2 and slime unchanged", recipient.Counters.All())
+	options := log.Choices[0].Request.Options
+	if len(options) != 1 || !strings.Contains(options[0].Label, "bounty") || !strings.Contains(options[0].Label, "slime") {
+		t.Fatalf("proliferate options = %v; want one recipient showing public slime and bounty kinds", options)
 	}
-	recorder.pick = "slime"
-	addEffectSpellToStack(g, game.Player1, game.Proliferate{}, nil)
-	e.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{game.Player1: recorder}, &log)
-	if recipient.Counters.Get(counter.Slime) != 3 {
-		t.Fatalf("proliferated slime = %d; want slime replacement to double the proliferated counter", recipient.Counters.Get(counter.Slime))
+	if recipient.Counters.Get(counter.Bounty) != 2 || recipient.Counters.Get(counter.Slime) != 3 {
+		t.Fatalf("after proliferate counters = %v; want bounty 2 and replacement-adjusted slime 3", recipient.Counters.All())
 	}
 	if last := countersAddedEvents(g, counter.Slime); last[len(last)-1].Controller != game.Player1 || last[len(last)-1].Amount != 2 {
 		t.Fatalf("proliferated slime event = %+v; want actor Player1 and doubled amount", last[len(last)-1])
 	}
-}
-
-type recordingProliferateAgent struct {
-	pick   string
-	labels *[]string
-}
-
-func (*recordingProliferateAgent) ChooseAction(PlayerObservation, []action.Action) action.Action {
-	return action.Pass()
-}
-
-func (a *recordingProliferateAgent) ChooseChoice(_ PlayerObservation, request game.ChoiceRequest) []int {
-	*a.labels = (*a.labels)[:0]
-	chosen := -1
-	for _, option := range request.Options {
-		*a.labels = append(*a.labels, option.Label)
-		if option.Label == a.pick {
-			chosen = option.Index
-		}
-	}
-	return []int{chosen}
 }
 
 // TestSludgeMonsterEntersOrAttacksTargetsUpToOneOtherCreature proves the
