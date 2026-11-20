@@ -1939,6 +1939,13 @@
     "oracle_text_sha256": "f08a59603856724749c59aa30a39373977cd6beca46d0ec1ffdb3ef1ccb8733e",
     "revision": "c5dded16-e516-430e-a528-c49a483f03b4",
     "rulings_uri": "https://api.scryfall.com/cards/c5dded16-e516-430e-a528-c49a483f03b4/rulings"
+   },
+   {
+    "name": "Icefall",
+    "oracle_id": "30baca42-50e2-45f8-8f99-8e2f9795b4da",
+    "oracle_text_sha256": "93f0da7378ea0bb6e10692bec986dd34ce3f92fc42fac3ac8979495f1ab3de9d",
+    "revision": "6cf90fc3-b08b-4261-a194-d6b06fdd59d8",
+    "rulings_uri": "https://api.scryfall.com/cards/6cf90fc3-b08b-4261-a194-d6b06fdd59d8/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9426,6 +9433,18 @@
     "Expected Resize's Recover {1}{G} trigger when a creature enters its owner's graveyard, then optional payment to return Resize or decline and exile it. Actual: the trigger is not queued."
    ],
    "review": "Card Resize, checked Engine result for #375 on a171412435c7346eb4c01cd451900a66363590a3: Implemented shared Recover support: the Engine captures the exact graveyard source before each qualifying death. Existing payment and movement operations return that incarnation on payment or exile it otherwise. No cards were registered.\nAll six retained probes reproduced the missing trigger on main baseline 74beb1ae5ec08efd3f6ef7a7c16223c4caf06a41.\nPassed: go test -overlay .cardwork/sources/recover-family/overlay.json ./mtg/game ./mtg/rules -tags cardwork_probe -run '^Test(ValidateGraveyardDiesTrigger|Recover.*)$' -count=1 -v. Executed all six named probes and shared payment, ownership, simultaneous-death, replacement, clone, and copy scenarios. Oracle and rules evidence is retained alongside the overlay.\nPassed: go test ./mtg/game ./mtg/cardprogram ./mtg/rules -count=1; go test ./mtg/cards -count=1; git diff --check."
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-40",
+   "family": "card-followup",
+   "oracle_ids": [
+    "30baca42-50e2-45f8-8f99-8e2f9795b4da"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected Icefall's Recover {R}{R} trigger when a creature enters its owner's graveyard, then optional payment to return Icefall or decline and exile it. Actual: the trigger is not queued."
+   ],
+   "review": "Card Icefall, checked Engine result for #375 on a171412435c7346eb4c01cd451900a66363590a3: Implemented shared Recover support: the Engine captures the exact graveyard source before each qualifying death. Existing payment and movement operations return that incarnation on payment or exile it otherwise. No cards were registered.\nAll six retained probes reproduced the missing trigger on main baseline 74beb1ae5ec08efd3f6ef7a7c16223c4caf06a41.\nPassed: go test -overlay .cardwork/sources/recover-family/overlay.json ./mtg/game ./mtg/rules -tags cardwork_probe -run '^Test(ValidateGraveyardDiesTrigger|Recover.*)$' -count=1 -v. Executed all six named probes and shared payment, ownership, simultaneous-death, replacement, clone, and copy scenarios. Oracle and rules evidence is retained alongside the overlay.\nPassed: go test ./mtg/game ./mtg/cardprogram ./mtg/rules -count=1; go test ./mtg/cards -count=1; git diff --check."
   }
  ],
  "records": [
@@ -95293,8 +95312,10 @@
    "oracle_id": "30baca42-50e2-45f8-8f99-8e2f9795b4da",
    "revision": "6cf90fc3-b08b-4261-a194-d6b06fdd59d8",
    "name": "Icefall",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-40",
+   "evidence": "mtg/rules/icefall_test.go: TestIcefallDestroyTargetAndRecoverChoices"
   },
   {
    "oracle_id": "30bb01c1-9253-4251-80e7-fb8236b3d858",
