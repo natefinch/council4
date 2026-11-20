@@ -1848,6 +1848,13 @@
     "oracle_text_sha256": "b339c677927026ef26e20fb2c63e90b5a443b95665bead0026c6b293e5f6c252",
     "revision": "bf9f85b3-eb8c-43de-aaac-8a887e9c58da",
     "rulings_uri": "https://api.scryfall.com/cards/bf9f85b3-eb8c-43de-aaac-8a887e9c58da/rulings"
+   },
+   {
+    "name": "Leap of Flame",
+    "oracle_id": "cf3b1070-2c08-49b9-aa78-fe676fab38aa",
+    "oracle_text_sha256": "46e557cc5c618bce014291b5f4034676d874be71dc8aa23a2e2fcd8800dea5bd",
+    "revision": "c011b432-ec39-44c8-bf2a-1c3fec32a576",
+    "rulings_uri": "https://api.scryfall.com/cards/c011b432-ec39-44c8-bf2a-1c3fec32a576/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9211,6 +9218,18 @@
     "Expected: pay Gigadrowse’s Replicate {U} cost twice and have its cast trigger create two independently retargetable copies. Actual: this checkout only declares repeatable Kicker costs and records Kicker-specific counts, so the Replicate cost and trigger cannot be represented faithfully."
    ],
    "review": "Card Gigadrowse, checked Engine result for #4028 on 75c015389d956b9342f3a9748b92afb58fcc8bd4: Implemented Replicate for #4028 in the isolated worktree. Each paid instance triggers separately and creates one retargetable, non-cast copy per payment, even if the original was countered. No cards were registered or changes merged.\nOn current main (3d5e7fff6bc5ded499df9c2967d3510ac16fbc4c), `go test ./mtg/rules -run '^TestLoseFocusReplicateCostProbe$' -count=1 -v` reproduced the two-payment cast rejection.\nPassed `go test ./mtg/rules ./mtg/sim -run '^(TestLoseFocusReplicateEngine|TestReplicate.*)$' -count=1 -v`. Lose Focus made two independently retargeted copies after the original was countered; one target survived by paying {2}, and the other was countered. Shared scenarios covered combined and declined costs, unaffordable payments, paid and free exile casts, cast card copies, Flashback, Storm, Cascade, cloning, and JSON replay.\nPassed `go test ./mtg/rules ./mtg/game ./mtg/game/action ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1` and `git diff --check`.\nSource review is in `mtg/rules/replicate_test.go`; the baseline probe, Oracle responses, rulings, and verified CR are retained in `.cardwork/source/`. None of the eight named plays requires a Mutate or prepared-cast combination."
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-29",
+   "family": "card-followup",
+   "oracle_ids": [
+    "cf3b1070-2c08-49b9-aa78-fe676fab38aa"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected: cast Leap of Flame for {U}{R}, pay its {U}{R} Replicate cost twice, and produce two copies. Actual: the Engine only represents repeated Kicker/Multikicker payments, so the Replicate cost and trigger count cannot be played faithfully."
+   ],
+   "review": "Card Leap of Flame, checked Engine result for #4028 on 75c015389d956b9342f3a9748b92afb58fcc8bd4: Implemented Replicate for #4028 in the isolated worktree. Each paid instance triggers separately and creates one retargetable, non-cast copy per payment, even if the original was countered. No cards were registered or changes merged.\nOn current main (3d5e7fff6bc5ded499df9c2967d3510ac16fbc4c), `go test ./mtg/rules -run '^TestLoseFocusReplicateCostProbe$' -count=1 -v` reproduced the two-payment cast rejection.\nPassed `go test ./mtg/rules ./mtg/sim -run '^(TestLoseFocusReplicateEngine|TestReplicate.*)$' -count=1 -v`. Lose Focus made two independently retargeted copies after the original was countered; one target survived by paying {2}, and the other was countered. Shared scenarios covered combined and declined costs, unaffordable payments, paid and free exile casts, cast card copies, Flashback, Storm, Cascade, cloning, and JSON replay.\nPassed `go test ./mtg/rules ./mtg/game ./mtg/game/action ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1` and `git diff --check`.\nSource review is in `mtg/rules/replicate_test.go`; the baseline probe, Oracle responses, rulings, and verified CR are retained in `.cardwork/source/`. None of the eight named plays requires a Mutate or prepared-cast combination."
   }
  ],
  "records": [
@@ -229701,8 +229720,10 @@
    "oracle_id": "cf3b1070-2c08-49b9-aa78-fe676fab38aa",
    "revision": "c011b432-ec39-44c8-bf2a-1c3fec32a576",
    "name": "Leap of Flame",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-29",
+   "evidence": "mtg/rules/leap_of_flame_test.go: TestLeapOfFlameReplicateBuffsThreeCreatures; printing c011b432-ec39-44c8-bf2a-1c3fec32a576; Scryfall rulings 2026-11-19: 0; CR 2026-11-06 115.1a, 601.2a-i, 603.2-4, 608.2b, 611.2a, 613.1f-g, 702.56a, 707.10/.10c"
   },
   {
    "oracle_id": "cf3b79cc-ce97-48e9-a578-625e323d1b62",
