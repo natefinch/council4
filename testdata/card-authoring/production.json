@@ -1820,6 +1820,13 @@
     "oracle_text_sha256": "634ba32326425f6b22559f8214a8249d7a0a9f544253afb947efcf7d11b22ffd",
     "revision": "985bdb0c-ce6c-4506-8163-76f3b2fdf5fb",
     "rulings_uri": "https://api.scryfall.com/cards/985bdb0c-ce6c-4506-8163-76f3b2fdf5fb/rulings"
+   },
+   {
+    "name": "Super Combo",
+    "oracle_id": "68555673-2833-459a-b415-e2805f837778",
+    "oracle_text_sha256": "22d1bc32aad0a97c6158705669ba1bd971b088235fa62963903143888d641ead",
+    "revision": "52bed0d4-3bcf-4770-b9c9-2a1d0666d220",
+    "rulings_uri": "https://api.scryfall.com/cards/52bed0d4-3bcf-4770-b9c9-2a1d0666d220/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9135,6 +9142,18 @@
     "Expected: Lose Focus can be cast while paying its Replicate cost twice. Actual: its ordinary cast is legal, but the Engine rejects the two-payment attempt because the available repeatable-cost path requires KickerKeyword; using it would misdeclare Replicate as Multikicker."
    ],
    "review": "Card Lose Focus, checked Engine result for #4028 on 75c015389d956b9342f3a9748b92afb58fcc8bd4: Implemented Replicate for #4028 in the isolated worktree. Each paid instance triggers separately and creates one retargetable, non-cast copy per payment, even if the original was countered. No cards were registered or changes merged.\nOn current main (3d5e7fff6bc5ded499df9c2967d3510ac16fbc4c), `go test ./mtg/rules -run '^TestLoseFocusReplicateCostProbe$' -count=1 -v` reproduced the two-payment cast rejection.\nPassed `go test ./mtg/rules ./mtg/sim -run '^(TestLoseFocusReplicateEngine|TestReplicate.*)$' -count=1 -v`. Lose Focus made two independently retargeted copies after the original was countered; one target survived by paying {2}, and the other was countered. Shared scenarios covered combined and declined costs, unaffordable payments, paid and free exile casts, cast card copies, Flashback, Storm, Cascade, cloning, and JSON replay.\nPassed `go test ./mtg/rules ./mtg/game ./mtg/game/action ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1` and `git diff --check`.\nSource review is in `mtg/rules/replicate_test.go`; the baseline probe, Oracle responses, rulings, and verified CR are retained in `.cardwork/source/`. None of the eight named plays requires a Mutate or prepared-cast combination."
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-25",
+   "family": "card-followup",
+   "oracle_ids": [
+    "68555673-2833-459a-b415-e2805f837778"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected: cast Super Combo for {1}{G}, optionally paying its {2} Replicate cost twice, then create two copies. Actual: the Engine rejected the cast through its Multikicker-specific repeated-cost action; it has no Replicate cost declaration or cast-payment route."
+   ],
+   "review": "Card Super Combo, checked Engine result for #4028 on 75c015389d956b9342f3a9748b92afb58fcc8bd4: Implemented Replicate for #4028 in the isolated worktree. Each paid instance triggers separately and creates one retargetable, non-cast copy per payment, even if the original was countered. No cards were registered or changes merged.\nOn current main (3d5e7fff6bc5ded499df9c2967d3510ac16fbc4c), `go test ./mtg/rules -run '^TestLoseFocusReplicateCostProbe$' -count=1 -v` reproduced the two-payment cast rejection.\nPassed `go test ./mtg/rules ./mtg/sim -run '^(TestLoseFocusReplicateEngine|TestReplicate.*)$' -count=1 -v`. Lose Focus made two independently retargeted copies after the original was countered; one target survived by paying {2}, and the other was countered. Shared scenarios covered combined and declined costs, unaffordable payments, paid and free exile casts, cast card copies, Flashback, Storm, Cascade, cloning, and JSON replay.\nPassed `go test ./mtg/rules ./mtg/game ./mtg/game/action ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1` and `git diff --check`.\nSource review is in `mtg/rules/replicate_test.go`; the baseline probe, Oracle responses, rulings, and verified CR are retained in `.cardwork/source/`. None of the eight named plays requires a Mutate or prepared-cast combination."
   }
  ],
  "records": [
@@ -142319,8 +142338,10 @@
    "oracle_id": "68555673-2833-459a-b415-e2805f837778",
    "revision": "52bed0d4-3bcf-4770-b9c9-2a1d0666d220",
    "name": "Super Combo",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-25",
+   "evidence": "mtg/rules/super_combo_test.go: TestSuperComboReplicateScenario; printing 52bed0d4-3bcf-4770-b9c9-2a1d0666d220; Scryfall WotC rulings 2026-01-27; CR 2026-11-06 601.2b/c/f-i, 603.2-4, 608.2b/h, 702.56a-b, 707.10/.10c, 113.7a, 120.1"
   },
   {
    "oracle_id": "6858702a-e563-4dcb-a50d-65406cea7c86",
