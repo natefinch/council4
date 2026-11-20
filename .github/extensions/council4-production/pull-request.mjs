@@ -4,6 +4,9 @@ import path from "node:path";
 import { writeJSON } from "./telemetry.mjs";
 
 const repository = "natefinch/council4";
+const settlingMergeStates = new Set(["BLOCKED", "UNKNOWN", "UNSTABLE"]);
+const mergeStateWindowMs = 5 * 60_000;
+const mergeStatePollMs = 15_000;
 
 export function assessChecks(pr, checks, required, expectedHead) {
   if (pr.headRefOid !== expectedHead || pr.baseRefName !== "main" || pr.isDraft || pr.state !== "OPEN") {
@@ -37,7 +40,10 @@ export function assessChecks(pr, checks, required, expectedHead) {
   if (required.reviewRequired && pr.reviewDecision !== "APPROVED") return { status: "review_required" };
   if (["CHANGES_REQUESTED", "REVIEW_REQUIRED"].includes(pr.reviewDecision)) return { status: "review_required" };
   if (pr.mergeStateStatus === "BEHIND") return { status: "behind" };
-  if (pr.mergeStateStatus !== "CLEAN") return { status: "not_mergeable", mergeStateStatus: pr.mergeStateStatus };
+  if (pr.mergeStateStatus !== "CLEAN") return {
+    status: "not_mergeable", mergeStateStatus: pr.mergeStateStatus,
+    reason: `GitHub merge state is ${pr.mergeStateStatus}`,
+  };
   return { status: "ready" };
 }
 
@@ -178,7 +184,7 @@ export function pullRequestAPI(command, signal, wait = ms => delay(ms, undefined
 export async function landPullRequest({
   root, work, task, expected, sessionId, signal, git, changes, protection, api,
   validate, reviewIntegration, fixCI, ciFixRounds = 1, ciInfrastructureReruns = 2, checkpoint,
-  watchCI = watch => watch(),
+  watchCI = watch => watch(), wait = ms => delay(ms, undefined, { signal }), now = () => performance.now(),
 }) {
   if (!validate || !reviewIntegration) throw new Error("PR landing requires local validation and integration-review hooks");
   const file = checkpoint ?? path.join(work.path, ".cardwork", "production-landing.json");
@@ -305,20 +311,33 @@ export async function landPullRequest({
     pr = await api.view(work.path, pr.number);
     if (pr.state === "MERGED") return confirmMerged(pr);
     let assessed = assessChecks(pr, await api.checks(work.path, state.head), required, state.head);
+    let mergeStateDeadline;
     for (;;) {
       if (assessed.status === "pending") {
         assessed = await watchCI(() => api.watch(work.path, pr.number, state.head, required), { pr: state.pr, head: state.head });
         if (assessed.status === "merged") return confirmMerged(assessed.pr);
       }
-      if (assessed.status !== "ready") break;
-      if (await fetchMain() !== main) continue landing;
-      // Even at the final gate, newly registered checks must be awaited and
-      // failures go through normal CI repair. Only a fresh ready read can merge.
+      const finalGate = assessed.status === "ready";
+      if (finalGate) {
+        if (await fetchMain() !== main) continue landing;
+      } else if (assessed.status === "not_mergeable" && settlingMergeStates.has(assessed.mergeStateStatus)) {
+        // Check runs may finish before GitHub recomputes the PR's merge status.
+        const observedAt = now();
+        mergeStateDeadline ??= observedAt + mergeStateWindowMs;
+        const remaining = mergeStateDeadline - observedAt;
+        if (remaining <= 0) {
+          assessed.reason += ` after five minutes waiting for merge status on ${state.head}`;
+          break;
+        }
+        await wait(Math.min(mergeStatePollMs, remaining));
+      } else {
+        break;
+      }
       pr = await api.view(work.path, pr.number);
       if (pr.state === "MERGED") return confirmMerged(pr);
       required = await protection(root, signal);
       assessed = assessChecks(pr, await api.checks(work.path, state.head), required, state.head);
-      if (assessed.status === "ready") return confirmMerged(await api.merge(work.path, pr.number, state.head));
+      if (finalGate && assessed.status === "ready") return confirmMerged(await api.merge(work.path, pr.number, state.head));
     }
     if (assessed.status === "failed") {
       const evidence = await api.failedLogs(work.path, assessed);
