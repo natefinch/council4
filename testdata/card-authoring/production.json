@@ -1841,6 +1841,13 @@
     "oracle_text_sha256": "f3c5ec56242165d34271e083980826ff44f81c20dac617562a3b0d77e9290685",
     "revision": "795a7929-2c32-4006-bdf1-def0a4400f59",
     "rulings_uri": "https://api.scryfall.com/cards/795a7929-2c32-4006-bdf1-def0a4400f59/rulings"
+   },
+   {
+    "name": "Gigadrowse",
+    "oracle_id": "9cc64a91-82d2-4be1-812f-531863e99801",
+    "oracle_text_sha256": "b339c677927026ef26e20fb2c63e90b5a443b95665bead0026c6b293e5f6c252",
+    "revision": "bf9f85b3-eb8c-43de-aaac-8a887e9c58da",
+    "rulings_uri": "https://api.scryfall.com/cards/bf9f85b3-eb8c-43de-aaac-8a887e9c58da/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9192,6 +9199,18 @@
     "Expected a legal Pyromatics cast paying Replicate twice and producing two copies; the ordinary cast is legal, but the current repeated-cost path rejects the two-payment attempt because Pyromatics has no Kicker declaration."
    ],
    "review": "Card Pyromatics, checked Engine result for #4028 on 75c015389d956b9342f3a9748b92afb58fcc8bd4: Implemented Replicate for #4028 in the isolated worktree. Each paid instance triggers separately and creates one retargetable, non-cast copy per payment, even if the original was countered. No cards were registered or changes merged.\nOn current main (3d5e7fff6bc5ded499df9c2967d3510ac16fbc4c), `go test ./mtg/rules -run '^TestLoseFocusReplicateCostProbe$' -count=1 -v` reproduced the two-payment cast rejection.\nPassed `go test ./mtg/rules ./mtg/sim -run '^(TestLoseFocusReplicateEngine|TestReplicate.*)$' -count=1 -v`. Lose Focus made two independently retargeted copies after the original was countered; one target survived by paying {2}, and the other was countered. Shared scenarios covered combined and declined costs, unaffordable payments, paid and free exile casts, cast card copies, Flashback, Storm, Cascade, cloning, and JSON replay.\nPassed `go test ./mtg/rules ./mtg/game ./mtg/game/action ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1` and `git diff --check`.\nSource review is in `mtg/rules/replicate_test.go`; the baseline probe, Oracle responses, rulings, and verified CR are retained in `.cardwork/source/`. None of the eight named plays requires a Mutate or prepared-cast combination."
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-28",
+   "family": "card-followup",
+   "oracle_ids": [
+    "9cc64a91-82d2-4be1-812f-531863e99801"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected: pay Gigadrowse’s Replicate {U} cost twice and have its cast trigger create two independently retargetable copies. Actual: this checkout only declares repeatable Kicker costs and records Kicker-specific counts, so the Replicate cost and trigger cannot be represented faithfully."
+   ],
+   "review": "Card Gigadrowse, checked Engine result for #4028 on 75c015389d956b9342f3a9748b92afb58fcc8bd4: Implemented Replicate for #4028 in the isolated worktree. Each paid instance triggers separately and creates one retargetable, non-cast copy per payment, even if the original was countered. No cards were registered or changes merged.\nOn current main (3d5e7fff6bc5ded499df9c2967d3510ac16fbc4c), `go test ./mtg/rules -run '^TestLoseFocusReplicateCostProbe$' -count=1 -v` reproduced the two-payment cast rejection.\nPassed `go test ./mtg/rules ./mtg/sim -run '^(TestLoseFocusReplicateEngine|TestReplicate.*)$' -count=1 -v`. Lose Focus made two independently retargeted copies after the original was countered; one target survived by paying {2}, and the other was countered. Shared scenarios covered combined and declined costs, unaffordable payments, paid and free exile casts, cast card copies, Flashback, Storm, Cascade, cloning, and JSON replay.\nPassed `go test ./mtg/rules ./mtg/game ./mtg/game/action ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1` and `git diff --check`.\nSource review is in `mtg/rules/replicate_test.go`; the baseline probe, Oracle responses, rulings, and verified CR are retained in `.cardwork/source/`. None of the eight named plays requires a Mutate or prepared-cast combination."
   }
  ],
  "records": [
@@ -187429,8 +187448,10 @@
    "oracle_id": "9cc64a91-82d2-4be1-812f-531863e99801",
    "revision": "bf9f85b3-eb8c-43de-aaac-8a887e9c58da",
    "name": "Gigadrowse",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-28",
+   "evidence": "mtg/rules/gigadrowse_test.go: TestGigadrowseReplicateTapsTargetPermanent"
   },
   {
    "oracle_id": "9cc69ea5-42a2-4306-ac6d-cff5adb20bcb",
