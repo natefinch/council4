@@ -1096,6 +1096,70 @@ for (const [scenario, initial, conclusion] of [
   });
 }
 
+for (const at of ["after CI finishes", "at the final merge gate"]) {
+  test(`Landing waits for GitHub's merge status to settle ${at}`, async t => {
+    const f = await repositoryFixture(t);
+    const services = landingServices(f);
+    const view = services.api.view;
+    let openReads = 0;
+    const mergeStates = ["BLOCKED", "UNKNOWN", "UNSTABLE", "CLEAN"];
+    services.api.view = async (...args) => {
+      const pr = await view(...args);
+      if (pr.state === "OPEN" && ++openReads > 2) {
+        return { ...pr, mergeStateStatus: mergeStates.shift() ?? "CLEAN" };
+      }
+      return pr;
+    };
+    if (at === "after CI finishes") {
+      let firstRead = true;
+      services.api.checks = async (_cwd, head) => {
+        const checks = successfulChecks(head);
+        if (firstRead) checks.runs[1].status = "in_progress";
+        firstRead = false;
+        return checks;
+      };
+      services.api.watch = pullRequestAPI(assert.fail, undefined, assert.fail).watch;
+    }
+    let waits = 0;
+    services.wait = async () => {
+      assert.equal(services.calls.merged, 0);
+      waits++;
+    };
+    const result = await land(f.repo, f.work, { title: "card" }, f.expected, "session", undefined, services);
+    assert.equal(result.published, true);
+    assert.equal(waits, 3);
+    assert.equal(services.calls.merged, 1);
+  });
+}
+
+test("A persistently blocked PR stops polling after five minutes, including API latency", async t => {
+  const f = await repositoryFixture(t);
+  const services = landingServices(f);
+  const view = services.api.view;
+  services.api.view = async (...args) => ({ ...await view(...args), mergeStateStatus: "BLOCKED" });
+  let elapsed = 0;
+  const waits = [];
+  services.now = () => elapsed;
+  services.wait = async ms => {
+    assert.ok(elapsed + ms <= 300_000);
+    waits.push(ms);
+    elapsed += ms;
+  };
+  const checks = services.api.checks;
+  services.api.checks = async (...args) => {
+    if (waits.length && elapsed < 300_000) elapsed += 1_000;
+    return checks(...args);
+  };
+  const result = await land(f.repo, f.work, { title: "card" }, f.expected, "session", undefined, services);
+  assert.equal(elapsed, 300_000);
+  assert.equal(waits[0], 15_000);
+  assert.equal(waits.at(-1), 12_000);
+  assert.equal(result.published, false);
+  assert.equal(result.status, "not_mergeable");
+  assert.match(result.reason, /BLOCKED.*five minutes/);
+  assert.equal(services.calls.merged, 0);
+});
+
 test("Landing publishes only a PR branch and verifies CI before squash merge; replay is idempotent", async t => {
   const f = await repositoryFixture(t);
   const services = landingServices(f);
@@ -1354,6 +1418,7 @@ test("Failed or missing CI, external review and nonmergeable PRs never merge", a
   for (const mode of ["failure", "missing", "pending", "approval", "conflict", "stale"]) {
     const f = await repositoryFixture(t);
     const services = landingServices(f);
+    services.wait = assert.fail;
     if (mode === "failure") services.api.checks = async (_cwd, head) => {
       const checks = successfulChecks(head);
       checks.runs[1].conclusion = "failure";
