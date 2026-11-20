@@ -1925,6 +1925,13 @@
     "oracle_text_sha256": "ce4631fb19e74ea4a9e175ea9bbb168f96c2471e614d74dc4037d9740ce3e8ec",
     "revision": "13a6ecc6-83c8-408b-8600-687cdb383ca9",
     "rulings_uri": "https://api.scryfall.com/cards/13a6ecc6-83c8-408b-8600-687cdb383ca9/rulings"
+   },
+   {
+    "name": "Grim Harvest",
+    "oracle_id": "231ca538-b277-4c12-979f-57640a0e87f0",
+    "oracle_text_sha256": "63f7342d661058c6e36f9d72040cb6839ef554768d9718c44c88ad75b86e5a3d",
+    "revision": "bdb1972f-2ef7-4fe2-8c8e-ab07f48a3176",
+    "rulings_uri": "https://api.scryfall.com/cards/bdb1972f-2ef7-4fe2-8c8e-ab07f48a3176/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9388,6 +9395,18 @@
     "cardprogram.Context.Destroy"
    ],
    "review": "Capability-fit references only; no source or rules review claimed: mtg/cards/authored/one_dozen_eyes.go and mtg/rules/one_dozen_eyes_test.go (mode choice/additional cost); mtg/cards/authored/production_destruction.go and mtg/rules/production_destruction_test.go (typed target and shared Destroy)."
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-38",
+   "family": "card-followup",
+   "oracle_ids": [
+    "231ca538-b277-4c12-979f-57640a0e87f0"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected Grim Harvest's Recover {2}{B} trigger when a creature enters its owner's graveyard, then optional payment to return Grim Harvest or decline and exile it. Actual: the trigger is not queued."
+   ],
+   "review": "Card Grim Harvest, checked Engine result for #375 on a171412435c7346eb4c01cd451900a66363590a3: Implemented shared Recover support: the Engine captures the exact graveyard source before each qualifying death. Existing payment and movement operations return that incarnation on payment or exile it otherwise. No cards were registered.\nAll six retained probes reproduced the missing trigger on main baseline 74beb1ae5ec08efd3f6ef7a7c16223c4caf06a41.\nPassed: go test -overlay .cardwork/sources/recover-family/overlay.json ./mtg/game ./mtg/rules -tags cardwork_probe -run '^Test(ValidateGraveyardDiesTrigger|Recover.*)$' -count=1 -v. Executed all six named probes and shared payment, ownership, simultaneous-death, replacement, clone, and copy scenarios. Oracle and rules evidence is retained alongside the overlay.\nPassed: go test ./mtg/game ./mtg/cardprogram ./mtg/rules -count=1; go test ./mtg/cards -count=1; git diff --check."
   }
  ],
  "records": [
@@ -84159,8 +84178,10 @@
    "oracle_id": "231ca538-b277-4c12-979f-57640a0e87f0",
    "revision": "bdb1972f-2ef7-4fe2-8c8e-ab07f48a3176",
    "name": "Grim Harvest",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-38",
+   "evidence": "mtg/rules/grim_harvest_test.go: TestGrimHarvestSpellAndRecoverChoices"
   },
   {
    "oracle_id": "231f8edb-4ea1-44be-8794-b76a31462dfc",
