@@ -1778,6 +1778,13 @@
     "oracle_text_sha256": "cd0af652438696d50c62b3cac241d8d4c1bf37ebdbfa32f7924ef1b029e11b71",
     "revision": "5fd93980-55f6-43a0-87db-5fa1203aa7b6",
     "rulings_uri": "https://api.scryfall.com/cards/5fd93980-55f6-43a0-87db-5fa1203aa7b6/rulings"
+   },
+   {
+    "name": "Coastal Discovery",
+    "oracle_id": "f7c84690-8c7c-41a6-b430-a9771030f903",
+    "oracle_text_sha256": "9a5052b19fd233eefa58e1f1a721bf5129581db1ac97fb1454b11b81de39034d",
+    "revision": "c1df2411-0b0d-4b93-bf30-a22487b3c6ef",
+    "rulings_uri": "https://api.scryfall.com/cards/c1df2411-0b0d-4b93-bf30-a22487b3c6ef/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9011,6 +9018,18 @@
     "game.MoveTopOfLibrary"
    ],
    "review": "Capability references: mtg/cardprogram/README.md#capability-lookup (Conspire); mtg/game/primitive_move_top_of_library.go (MoveTopOfLibrary); mtg/rules/conspire_test.go"
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-8",
+   "family": "card-followup",
+   "oracle_ids": [
+    "f7c84690-8c7c-41a6-b430-a9771030f903"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected the {3}{U} cast to have no target and the {5}{U} Awaken cast to require a land you control. Actual: the available TargetGateAlways probe permits targeting a land even when only the base cost is payable; TargetGate/CastBranch have no generic alternative-cost branch."
+   ],
+   "review": "Card Coastal Discovery, checked Engine result for #4020 on 9b6736edc4959e421c5624c56a32f4547f306103: Implemented #4020 locally. `TargetSpec.AlternativeCost` binds a target to a specific declared cost, and `ctx.View().Source().AlternativeCost` exposes that choice during resolution. Coastal Discovery remains unregistered.\nReproduced on main f381c2b67aabda16f877006fad884ba5bf96cfac: `go test -vet=off -overlay \"$PWD/.cardwork/4020-main-overlay.json\" -tags cardwork ./mtg/rules -run '^TestCoastalDiscoveryAwakenAlternativeCostTargetGateProbe$' -count=1 -v` failed because the base-cost cast could target a land.\n`go test ./mtg/rules -run '^TestAlternativeCostTarget' -count=1 -v` passed: base and alternative casts, illegal targets, countering, combined mana and life costs, clone/replay, direct and storm copies, paid exile, prepared copies, and free casts.\n`go test ./mtg/game/... ./mtg/cardprogram ./mtg/rules/... -count=1` and `git diff --check` passed.\nVerified Oracle and rulings, and the 2026-11-06 Comprehensive Rules. Source record is in `mtg/rules/cast_branch_target_gate_test.go`; raw responses are retained under `.cardwork/`. Face-down and mutate casts use their own costs and cannot select the declared alternative."
   }
  ],
  "records": [
@@ -264339,8 +264358,10 @@
    "oracle_id": "f7c84690-8c7c-41a6-b430-a9771030f903",
    "revision": "c1df2411-0b0d-4b93-bf30-a22487b3c6ef",
    "name": "Coastal Discovery",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-8",
+   "evidence": "mtg/rules/coastal_discovery_test.go: TestCoastalDiscoveryAwakenAlternativeDrawsAndAnimatesForest; TestCoastalDiscoveryBaseCostDrawsWithoutTarget"
   },
   {
    "oracle_id": "f7c89d03-606e-4284-90dd-64b1fbebfb4d",
