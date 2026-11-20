@@ -244,6 +244,10 @@ func dynamicAmountValueBeforeLayerWithGroupMember(g *game.Game, obj opt.V[*game.
 		if obj.Exists {
 			amount = obj.Val.KickerCount
 		}
+	case game.DynamicAmountEventSpellTimesKicked:
+		if obj.Exists && obj.Val.HasTriggerEvent && obj.Val.TriggerEvent.Kind == game.EventSpellCast {
+			amount = obj.Val.TriggerEvent.KickerCount
+		}
 	case game.DynamicAmountPaidCostCounters:
 		if obj.Exists {
 			amount = paidCostCounterAmount(obj.Val, dynamic.CostKey)

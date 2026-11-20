@@ -338,6 +338,11 @@ type Event struct {
 	// kicker cost was paid. It is false for objects that were not kicked.
 	KickerPaid bool
 
+	// KickerCount snapshots the number of kicker payments on EventSpellCast.
+	// Unlike a lookup on the stack, it remains available to the trigger even
+	// after the spell leaves the stack.
+	KickerCount int
+
 	// Bargained records whether a spell-cast or entering-permanent spell's
 	// Bargain additional cost was paid as it was cast (CR 702.166b). It is false
 	// for objects that were not bargained. It feeds the "if it was bargained"

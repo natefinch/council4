@@ -47,7 +47,7 @@ func (c *programContext) Copy(operation game.CopyStackObject, player game.Player
 		return cardprogram.Copies{}, err
 	}
 	resolver := newEffectResolver(c.engine, c.game, c.obj, c.agents, c.log)
-	original, available := copyStackObjectSource(resolver, operation.Object)
+	original, available := copyStackObjectSource(resolver, operation)
 	outcome := cardprogram.Copies{Available: available}
 	if !available || !isPlayerAlive(c.game, player) {
 		return outcome, nil

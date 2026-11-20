@@ -51,8 +51,13 @@ func prepareEventWithSimultaneousEntries(g *game.Game, event game.Event, simulta
 			event.DamageSourceWasEnchanted = snapshotWasEnchanted(g, snapshot)
 		}
 	}
-	if event.Kind == game.EventSpellCast && event.PlayerEventOrdinalThisTurn == 0 {
-		event.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, event.Controller)
+	if event.Kind == game.EventSpellCast {
+		if spell, ok := stackObjectByID(g, event.StackObjectID); ok && spell.Kind == game.StackSpell {
+			event.KickerCount = effectiveKickerCount(spell.KickerPaid, spell.KickerCount)
+		}
+		if event.PlayerEventOrdinalThisTurn == 0 {
+			event.PlayerEventOrdinalThisTurn = nextSpellCastOrdinalThisTurn(g, event.Controller)
+		}
 	}
 	if event.Kind == game.EventSpellCast && !event.CascadeInstances.Exists {
 		event.CascadeInstances = opt.Val(spellCascadeInstancesAtCast(g, event))

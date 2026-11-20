@@ -2715,7 +2715,7 @@ func handleChangeStackObjectController(r *effectResolver, prim game.ChangeStackO
 // independently of the original; when the effect allows it, the resolving
 // controller may choose new targets for the copy (CR 707.10c).
 func handleCopyStackObject(r *effectResolver, prim game.CopyStackObject) effectResolved {
-	original, ok := copyStackObjectSource(r, prim.Object)
+	original, ok := copyStackObjectSource(r, prim)
 	if !ok {
 		return effectResolved{accepted: true}
 	}
@@ -2815,12 +2815,18 @@ func prepareStackSpellCopy(g *game.Game, original, copyObj *game.StackObject, se
 // copies. It supports a chosen stack-object target ("Copy target spell."), the
 // triggering spell of a spell-cast trigger ("Whenever you cast a spell ...,
 // copy that spell.", Reflections of Littjara), and the resolving spell itself
-// ("copy this spell", Sevinne's Reclamation). The resolving spell has already
-// been popped from the stack when its effects run, so the resolving case copies
-// the resolving object directly rather than looking it up by ID.
-func copyStackObjectSource(r *effectResolver, ref game.ObjectReference) (*game.StackObject, bool) {
+// ("copy this spell", Sevinne's Reclamation). Cast triggers may opt in to
+// last known information (CR 608.2h); a resolving spell is available directly.
+func copyStackObjectSource(r *effectResolver, prim game.CopyStackObject) (*game.StackObject, bool) {
+	ref := prim.Object
 	if ref.Kind() == game.ObjectReferenceResolvingStackObject {
 		return r.obj, true
+	}
+	if prim.UseTriggerSpellLKI {
+		if !r.obj.HasTriggerEvent || r.obj.TriggerEvent.Kind != game.EventSpellCast {
+			return nil, false
+		}
+		return triggeringSpellOrLKI(r.game, r.obj)
 	}
 	stackObjectID, ok := copyStackObjectSourceID(r.game, r.obj, ref)
 	if !ok {

@@ -363,6 +363,12 @@ const (
 	// effect resolves (CR 608.2h), so an ApplyContinuous P/T set freezes it.
 	// Added last so existing kinds keep their wire values.
 	DynamicAmountGreatestCommanderManaValue
+	// DynamicAmountEventSpellTimesKicked reads the number of kicker payments
+	// captured by the resolving ability's spell-cast event, independent of
+	// whether the cast spell is still on the stack. Without a spell-cast event
+	// it yields zero. DynamicAmountTimesKicked instead reads the resolving
+	// object's own cast or entry state.
+	DynamicAmountEventSpellTimesKicked
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves
