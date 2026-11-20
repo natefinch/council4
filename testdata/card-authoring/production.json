@@ -1974,6 +1974,13 @@
     "oracle_text_sha256": "ffcbb322215c674174e9c46510b6ac74bd8eebfe1b17726f5360389baa305562",
     "revision": "2509482a-68d8-4e94-9d1e-5b069ebdc2e4",
     "rulings_uri": "https://api.scryfall.com/cards/2509482a-68d8-4e94-9d1e-5b069ebdc2e4/rulings"
+   },
+   {
+    "name": "Jwar Isle Avenger",
+    "oracle_id": "2db8fc61-13af-4227-83f9-9f426ab978d3",
+    "oracle_text_sha256": "f175357a161fe228f7ea84ae155c57ac6de932fad1b5b92231a4f81581a2d9a1",
+    "revision": "0a5b059f-2fa3-474f-9c74-6d4021703add",
+    "rulings_uri": "https://api.scryfall.com/cards/0a5b059f-2fa3-474f-9c74-6d4021703add/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9523,6 +9530,18 @@
     "game.Damage"
    ],
    "review": "Capability-fit only; not source-reviewed. On d12bd20dd11529683ebab22e1bede4662d687531, existing entwine-mode examples are mtg/cards/authored/rain_of_rust.go and mtg/cards/authored/one_dozen_eyes.go; game.Damage and permanent/player targeting are also used by existing authored cards."
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-47",
+   "family": "card-followup",
+   "oracle_ids": [
+    "2db8fc61-13af-4227-83f9-9f426ab978d3"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected Jwar Isle Avenger to be castable for {2}{U} after its controller cast another spell this turn; actual Engine result: no Surge cast was offered because the only available cast-history alternative predicate requires an opponent’s cast."
+   ],
+   "review": "Card Jwar Isle Avenger, checked Engine result for #4050 on 33c08f9ac1151373d2654b8ac5658fad912e119c: Added AlternativeConditionYourTeamCastSpellThisTurn. In free-for-all, Jwar Isle Avenger can pay {2}{U} after its caster completes another spell cast that turn. Card registration was left to the card worker.\nOn main 7bbde906, go test ./mtg/rules -run '^TestJwarIsleAvengerSurgeCostAfterCasterCast$' -count=1 reproduced the missing cast. The updated scenario passes, verifying {2}{U} payment, mana value 5, and entry with flying.\nPassed: go test ./mtg/game ./mtg/game/cost ./mtg/rules ./mtg/rules/payment -count=1. Covered turn reset, opponent casts, copies, combined payment, exile routes, and replay.\nSource review: mtg/rules/jwar_isle_avenger_surge_test.go; raw sources retained in .cardwork/surge/."
   }
  ],
  "records": [
@@ -92606,8 +92625,10 @@
    "oracle_id": "2db8fc61-13af-4227-83f9-9f426ab978d3",
    "revision": "0a5b059f-2fa3-474f-9c74-6d4021703add",
    "name": "Jwar Isle Avenger",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-47",
+   "evidence": "mtg/rules/jwar_isle_avenger_surge_test.go: TestJwarIsleAvengerSurgeCostAfterCasterCast"
   },
   {
    "oracle_id": "2dba8d8d-891e-482e-8014-879f701d0619",

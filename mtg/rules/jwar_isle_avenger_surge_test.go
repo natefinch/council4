@@ -3,9 +3,9 @@ package rules
 import (
 	"testing"
 
+	"github.com/natefinch/council4/mtg/cards/authored"
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/action"
-	"github.com/natefinch/council4/mtg/game/color"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/mana"
@@ -34,10 +34,11 @@ import (
 // with applicable additional costs/modifiers, and gated on a completed
 // earlier cast this turn; printed mana value is unchanged); 500.1 and 514.2
 // (turn boundary); 702.9a-b
-// (Flying); 305.1, 602.2, 701.6a, 702.40a, 707.10 and 707.12 (land plays,
+// (Flying); 305.1, 602.2, 701.6a, 707.10 and 707.12 (land plays,
 // activations and spell copies aren't casts; countering doesn't undo casting,
 // and a cast copy of a card is a new cast).
-// This Engine fixture does not register the card.
+// The named-card scenario uses the registered authored definition; remaining
+// Surge edge cases below exercise the shared operation independently.
 func TestJwarIsleAvengerSurgeCostAfterCasterCast(t *testing.T) {
 	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 	engine := NewEngine(nil)
@@ -45,22 +46,7 @@ func TestJwarIsleAvengerSurgeCostAfterCasterCast(t *testing.T) {
 	castSurgeSetupSpell(t, engine, g, game.Player1)
 	engine.resolveTopOfStack(g, &TurnLog{})
 
-	avenger := &game.CardDef{CardFace: game.CardFace{
-		Name:             "Jwar Isle Avenger",
-		ManaCost:         opt.Val(cost.Mana{cost.O(4), cost.U}),
-		Colors:           []color.Color{color.Blue},
-		Types:            []types.Card{types.Creature},
-		Subtypes:         []types.Sub{types.Sphinx},
-		Power:            opt.Val(game.PT{Value: 3}),
-		Toughness:        opt.Val(game.PT{Value: 3}),
-		OracleText:       "Surge {2}{U} (You may cast this spell for its surge cost if you or a teammate has cast another spell this turn.)\nFlying",
-		StaticAbilities:  []game.StaticAbility{game.FlyingStaticBody},
-		AlternativeCosts: []cost.Alternative{surgeProbeAlternative()},
-	}}
-	if issues := game.ValidateCardDef(avenger); len(issues) != 0 {
-		t.Fatalf("Surge fixture failed declaration validation: %v", issues)
-	}
-	avengerID := addCardToHand(g, game.Player1, avenger)
+	avengerID := addCardToHand(g, game.Player1, authored.JwarIsleAvenger.New())
 	g.Players[game.Player1].ManaPool.Add(mana.C, 2)
 	g.Players[game.Player1].ManaPool.Add(mana.U, 1)
 
