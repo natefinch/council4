@@ -14,6 +14,7 @@ func verifiedEntries() []cardset.Entry {
 		MurderousRider, GumdropPoisoner, QuestingDruid, QuirionDryad)
 	entries = append(entries, Bedevil, Terminate, Vindicate, Disenchant, Naturalize, GleefulSabotage, BurnTrail, MemorySluice, GhastlyDiscovery, BarkshellBlessing)
 	entries = append(entries, AnOfferYouCantRefuse, Counterspell, Negate, EssenceScatter, Disallow)
+	entries = append(entries, OverwhelmingDenial)
 	entries = append(entries, EladamrisCall, SteelshapersGift, Fabricate, IdyllicTutor, SylvanScrying, DemonicTutor, DiabolicTutor)
 	entries = append(entries, DeathDenied, WildestDreams, RatsFeast, ShatteredCrypt, ReturnToTheRanks, ChampionOfStraySouls)
 	entries = append(entries, RestlessDreams, TurbulentDreams, NostalgicDreams)
