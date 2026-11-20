@@ -2037,6 +2037,13 @@
     "oracle_text_sha256": "1415064e7993d1b8e1ac50fd27cde67696befb7336c6f1b3adecb2475cb7805e",
     "revision": "dd83129b-7e8c-4cc5-a7b3-e0ae221d7ad4",
     "rulings_uri": "https://api.scryfall.com/cards/dd83129b-7e8c-4cc5-a7b3-e0ae221d7ad4/rulings"
+   },
+   {
+    "name": "Overwhelming Denial",
+    "oracle_id": "45aa8bdb-54da-4069-bd6c-c63396154464",
+    "oracle_text_sha256": "059d4e1f0ec395ec033d587c89bf0f7c57abd59ec71ef97e9ee391088f505f9f",
+    "revision": "33ff1000-1a4e-43f6-aa02-1dbe9fac6901",
+    "rulings_uri": "https://api.scryfall.com/cards/33ff1000-1a4e-43f6-aa02-1dbe9fac6901/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9645,6 +9652,20 @@
     "game.Draw (target player, two cards)"
    ],
    "review": "Capability-fit review only; no rulings or Comprehensive Rules reviewed. References: docs/card-authoring.md#reviewed-continuation-commands and mtg/cardprogram/README.md#capability-lookup (Surge, target declarations, game.Draw). The author must complete the card's source and rules review."
+  },
+  {
+   "id": "overwhelming-denial-2026-11-20",
+   "family": "single-card-overwhelming-denial",
+   "oracle_ids": [
+    "45aa8bdb-54da-4069-bd6c-c63396154464"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "cost.Alternative",
+    "game.CantBeCounteredStaticBody",
+    "game.CounterObject"
+   ],
+   "review": "Pinned corpus 6da9ced0e19bd384771ab8f14051cc45a8dc90302082b875fa6e039d2399a1b4; card-authoring capability lookup for Surge, counter protection, and countering spells. Author source and rules review remains required."
   }
  ],
  "records": [
@@ -113598,8 +113619,10 @@
    "oracle_id": "45aa8bdb-54da-4069-bd6c-c63396154464",
    "revision": "33ff1000-1a4e-43f6-aa02-1dbe9fac6901",
    "name": "Overwhelming Denial",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "single-card-overwhelming-denial",
+   "batch": "overwhelming-denial-2026-11-20",
+   "evidence": "mtg/rules/overwhelming_denial_test.go: TestOverwhelmingDenialSurgeUncounterableAndCountersTargetSpell"
   },
   {
    "oracle_id": "45aeac84-4705-4179-be3f-b31bde844ea0",
