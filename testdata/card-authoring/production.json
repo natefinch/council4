@@ -2030,6 +2030,13 @@
     "oracle_text_sha256": "fdbbdd5d62abf87508376d494efa37de141292ef03203941bd6d29e9aa64105c",
     "revision": "f8c2e662-d8c3-44d4-b666-fe0d4a046271",
     "rulings_uri": "https://api.scryfall.com/cards/f8c2e662-d8c3-44d4-b666-fe0d4a046271/rulings"
+   },
+   {
+    "name": "Comparative Analysis",
+    "oracle_id": "59b869b9-cb48-4152-ad91-52f582e2df5b",
+    "oracle_text_sha256": "1415064e7993d1b8e1ac50fd27cde67696befb7336c6f1b3adecb2475cb7805e",
+    "revision": "dd83129b-7e8c-4cc5-a7b3-e0ae221d7ad4",
+    "rulings_uri": "https://api.scryfall.com/cards/dd83129b-7e8c-4cc5-a7b3-e0ae221d7ad4/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9625,6 +9632,19 @@
     "Context.Execute(game.MoveTopOfLibrary)"
    ],
    "review": "Capability-fit reference: docs/card-authoring.md#reviewed-continuation-commands and mtg/cardprogram/README.md#capability-lookup; existing combat-damage trigger and MoveTopOfLibrary paths inspected. Card-specific primary-source and rules review remains required from the author."
+  },
+  {
+   "id": "comparative-analysis-surge-6da9ced0",
+   "family": "surge-targeted-draw",
+   "oracle_ids": [
+    "59b869b9-cb48-4152-ad91-52f582e2df5b"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "cost.Alternative (Surge; AlternativeConditionYourTeamCastSpellThisTurn)",
+    "game.Draw (target player, two cards)"
+   ],
+   "review": "Capability-fit review only; no rulings or Comprehensive Rules reviewed. References: docs/card-authoring.md#reviewed-continuation-commands and mtg/cardprogram/README.md#capability-lookup (Surge, target declarations, game.Draw). The author must complete the card's source and rules review."
   }
  ],
  "records": [
@@ -130361,8 +130381,10 @@
    "oracle_id": "59b869b9-cb48-4152-ad91-52f582e2df5b",
    "revision": "dd83129b-7e8c-4cc5-a7b3-e0ae221d7ad4",
    "name": "Comparative Analysis",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "surge-targeted-draw",
+   "batch": "comparative-analysis-surge-6da9ced0",
+   "evidence": "mtg/rules/comparative_analysis_test.go: TestComparativeAnalysisSurgeDrawsTargetPlayerTwoCards"
   },
   {
    "oracle_id": "59c620fb-a58d-4038-a7e2-0185324b5123",
