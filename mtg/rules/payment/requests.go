@@ -47,6 +47,8 @@ type SpellRequest struct {
 	XValue      int
 	KickerPaid  bool
 	KickerCount int
+	// ReplicateCounts requests the independently announced Replicate payments.
+	ReplicateCounts []int
 	// Bargained requests the bargained cast (CR 702.166b): the spell's Bargain
 	// additional cost — sacrifice one artifact, enchantment, or token — is added
 	// to every cost option so the cast is legal only when the caster can pay it.

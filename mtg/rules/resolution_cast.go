@@ -35,9 +35,11 @@ func (e *Engine) resolutionSpell(g *game.Game, source *game.Player, card *game.C
 	update := func() {
 		object.ChosenModes = slices.Clone(cast.ChosenModes)
 		object.XValue, object.KickerPaid, object.KickerCount = cast.XValue, cast.KickerPaid, cast.KickerCount
+		object.ReplicateCounts = slices.Clone(cast.ReplicateCounts)
 		object.Bargained, object.OffspringPaid = cast.Bargained, cast.Offspring
 		object.GiftPromised, object.GiftRecipient = cast.GiftPromised, cast.GiftRecipient
 		request.XValue, request.KickerPaid, request.KickerCount = cast.XValue, cast.KickerPaid, cast.KickerCount
+		request.ReplicateCounts = cast.ReplicateCounts
 		request.Bargained, request.Offspring = cast.Bargained, cast.Offspring
 		request.ChosenModes = cast.ChosenModes
 	}
@@ -194,6 +196,7 @@ func (e *Engine) resolutionSpellChoices(g *game.Game, cast action.CastSpellActio
 				candidate.XValue = x
 				next := request
 				next.XValue, next.KickerPaid, next.KickerCount = candidate.XValue, candidate.KickerPaid, candidate.KickerCount
+				next.ReplicateCounts = candidate.ReplicateCounts
 				next.Bargained, next.Offspring, next.ChosenModes = candidate.Bargained, candidate.Offspring, mode
 				if !castRouteAllowsX(request.Card, candidate.XValue, next) || !castGiftRecipientValid(g, request.PlayerID, candidate) {
 					continue
@@ -258,6 +261,7 @@ func resolutionAnnouncementView(g *game.Game, cast action.CastSpellAction) *game
 			proposed := *object
 			proposed.ChosenModes = slices.Clone(cast.ChosenModes)
 			proposed.XValue, proposed.KickerPaid, proposed.KickerCount = cast.XValue, cast.KickerPaid, cast.KickerCount
+			proposed.ReplicateCounts = cast.ReplicateCounts
 			proposed.Bargained, proposed.OffspringPaid = cast.Bargained, cast.Offspring
 			proposed.GiftPromised, proposed.GiftRecipient = cast.GiftPromised, cast.GiftRecipient
 			object = &proposed

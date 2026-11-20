@@ -1669,6 +1669,22 @@ func castSpellSelfTriggers(g *game.Game, event game.Event) []pendingTriggeredAbi
 		})
 	}
 	pending = append(pending, cascadeCastTriggers(g, source, event)...)
+	for _, count := range event.ReplicateCounts {
+		if count <= 0 {
+			continue
+		}
+		pending = append(pending, pendingTriggeredAbility{
+			controller: event.Controller, sourceID: source.ObjectID,
+			sourceCardID: source.CardInstanceID, sourceToken: source.TokenDef, face: event.Face,
+			inline: &game.TriggeredAbility{
+				Text: "Replicate",
+				Content: game.Mode{Sequence: []game.Instruction{{Primitive: game.CopyStackObject{
+					Object: game.EventStackObjectReference(), Count: count, MayChooseNewTargets: true, UseTriggerSpellLKI: true,
+				}}}}.Ability(),
+			},
+			event: event, hasEvent: true, ordinaryTrigger: true,
+		})
+	}
 	return append(pending, stormCastTriggers(g, source, event)...)
 }
 

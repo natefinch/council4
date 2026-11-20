@@ -147,7 +147,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 	if cast.Permission != (game.PlayPermission{}) {
 		validationPermission = []game.PlayPermission{cast.Permission}
 	}
-	if !e.canCastSpellFaceFromZoneWithOptions(g, playerID, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed, cast.Offspring, validationPermission...) {
+	if !e.canCastAnnouncedSpell(g, playerID, cast, validationPermission...) {
 		return actionFailed, nil
 	}
 	card, ok := g.GetCardInstance(cast.CardID)
@@ -184,6 +184,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 		XValue:                        cast.XValue,
 		KickerPaid:                    cast.KickerPaid,
 		KickerCount:                   cast.KickerCount,
+		ReplicateCounts:               slices.Clone(cast.ReplicateCounts),
 		GiftPromised:                  cast.GiftPromised,
 		GiftRecipient:                 cast.GiftRecipient,
 		Bargained:                     cast.Bargained,
@@ -317,6 +318,7 @@ func priorityCastRequest(playerID game.PlayerID, spellDef *game.CardDef, sourceZ
 		XValue:          cast.XValue,
 		KickerPaid:      cast.KickerPaid,
 		KickerCount:     cast.KickerCount,
+		ReplicateCounts: cast.ReplicateCounts,
 		Bargained:       cast.Bargained,
 		Offspring:       cast.Offspring,
 		ChosenModes:     cast.ChosenModes,
@@ -976,6 +978,14 @@ func (e *Engine) canCastOverloadedSpellFaceFromZoneWithOptions(g *game.Game, pla
 }
 
 func (e *Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int, overloaded bool, giftPromised bool, bargained bool, bestowed bool, offspring bool, announced ...game.PlayPermission) bool {
+	return e.canCastSpellFaceFromZoneWithPayments(g, playerID, cardID, sourceZone, face, targets, xValue, chosenModes, kickerCount, overloaded, giftPromised, bargained, bestowed, offspring, nil, announced...)
+}
+
+func (e *Engine) canCastAnnouncedSpell(g *game.Game, playerID game.PlayerID, cast action.CastSpellAction, announced ...game.PlayPermission) bool {
+	return e.canCastSpellFaceFromZoneWithPayments(g, playerID, cast.CardID, normalizedCastSourceZone(cast), cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed, cast.Offspring, cast.ReplicateCounts, announced...)
+}
+
+func (e *Engine) canCastSpellFaceFromZoneWithPayments(g *game.Game, playerID game.PlayerID, cardID id.ID, sourceZone zone.Type, face game.FaceIndex, targets []game.Target, xValue int, chosenModes []int, kickerCount int, overloaded bool, giftPromised bool, bargained bool, bestowed bool, offspring bool, replicateCounts []int, announced ...game.PlayPermission) bool {
 	if !canAct(g, playerID) || playerID != g.Turn.PriorityPlayer {
 		return false
 	}
@@ -1087,6 +1097,7 @@ func (e *Engine) canCastSpellFaceFromZoneWithOptions(g *game.Game, playerID game
 		XValue:          xValue,
 		KickerPaid:      kickerPaid,
 		KickerCount:     kickerCount,
+		ReplicateCounts: replicateCounts,
 		Bargained:       bargained,
 		Offspring:       offspring,
 		ChosenModes:     chosenModes,

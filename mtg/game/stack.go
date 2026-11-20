@@ -203,6 +203,8 @@ type StackObject struct {
 	// Kicker it is zero (KickerPaid carries the paid-once state). It scales
 	// "for each time it was kicked" amounts as the spell resolves.
 	KickerCount int
+	// ReplicateCounts records paid casting choices (also copied under CR 707.10).
+	ReplicateCounts []int `json:",omitempty"`
 
 	// Bargained is true if this spell's Bargain additional cost was paid as it
 	// was cast (CR 702.166b): its controller sacrificed an artifact, enchantment,

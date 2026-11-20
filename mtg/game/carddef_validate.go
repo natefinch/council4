@@ -837,6 +837,9 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		if keyword.Kind == KeywordNone {
 			v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "simple keyword must set Kind")
 		}
+		if keyword.Kind == Replicate {
+			v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "replicate requires a ReplicateKeyword cost")
+		}
 	case WardKeyword:
 		v.validateWardKeywordCost(faceName, path, keyword)
 	case CumulativeUpkeepKeyword:
@@ -866,6 +869,14 @@ func (v *cardDefValidator) validateKeywordAbility(faceName, path string, ability
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
 	case MutateKeyword:
 		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+	case ReplicateKeyword:
+		v.validateManaKeywordCost(faceName, path, keyword.Cost)
+		for _, symbol := range keyword.Cost {
+			if symbol.Kind != cost.GenericSymbol && symbol.Kind != cost.ColoredSymbol && symbol.Kind != cost.ColorlessSymbol {
+				v.add(faceName, path, CardDefIssueInvalidKeywordAbility, "replicate requires fixed generic, colored or colorless mana")
+				break
+			}
+		}
 	case KickerKeyword:
 		v.validateKickerKeywordCost(faceName, path, keyword)
 		if len(keyword.BonusContent.Modes) > 0 {

@@ -18,6 +18,8 @@ const maxSampledXValue = 20
 // Numeric samples bound policy candidates, never an exact announcement's legality.
 const maxSampledMultikickCount = 20
 
+const maxSampledReplicateCount = 20
+
 const maxSampledNumericTargetChoices = 64
 
 // appendMultikickedCastActions enumerates Multikicker casts that pay the kicker
@@ -361,7 +363,7 @@ func (e *Engine) legalCastActions(g *game.Game, playerID game.PlayerID) []action
 			}
 		}
 	}
-	return actions
+	return e.appendReplicateCastSamples(g, playerID, actions)
 }
 
 func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID) []action.Action {
@@ -382,6 +384,38 @@ func (e *Engine) legalCommanderCastActions(g *game.Game, playerID game.PlayerID)
 			continue
 		}
 		actions = append(actions, e.legalCommanderCardCastActions(g, playerID, card)...)
+	}
+	return e.appendReplicateCastSamples(g, playerID, actions)
+}
+
+// Replicate does not change modes or targets. Sample it on top of existing
+// cast branches, one instance at a time; exact announcements also allow mixed
+// payments and counts beyond the policy samples.
+func (e *Engine) appendReplicateCastSamples(g *game.Game, player game.PlayerID, actions []action.Action) []action.Action {
+	for _, base := range actions {
+		cast, ok := base.CastSpellPayload()
+		if !ok || cast.Mutate {
+			continue
+		}
+		card, ok := g.GetCardInstance(cast.CardID)
+		if !ok {
+			continue
+		}
+		def, ok := cardFaceDef(card, cast.Face)
+		if !ok {
+			continue
+		}
+		costs := def.ReplicateCosts()
+		for i := range costs {
+			cast.ReplicateCounts = make([]int, len(costs))
+			for count := 1; count <= maxSampledReplicateCount; count++ {
+				cast.ReplicateCounts[i] = count
+				if !e.canCastAnnouncedSpell(g, player, cast) {
+					break
+				}
+				actions = append(actions, action.AnnounceSpell(cast))
+			}
+		}
 	}
 	return actions
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-// chooseCastAnnouncements takes the caster's X, multikicker and mode choices
+// chooseCastAnnouncements takes the caster's X, repeatable cost and mode choices
 // for cast (CR 601.2b).
 func (e *Engine) chooseCastAnnouncements(g *game.Game, player game.PlayerID, def *game.CardDef, cast action.CastSpellAction, free bool, agents [game.NumPlayers]PlayerAgent, log *TurnLog, announced ...func(action.CastSpellAction)) (action.CastSpellAction, bool) {
 	publish := func() {
@@ -34,6 +34,17 @@ func (e *Engine) chooseCastAnnouncements(g *game.Game, player game.PlayerID, def
 		cast.KickerCount = e.chooseAnnouncementNumber(g, player, "Choose how many times to pay multikicker.", 0,
 			effectiveKickerCount(cast.KickerPaid, cast.KickerCount), private, agents, log)
 		cast.KickerPaid = cast.KickerCount > 0
+		publish()
+	}
+	if costs := def.ReplicateCosts(); len(costs) != 0 {
+		counts := make([]int, len(costs))
+		copy(counts, cast.ReplicateCounts)
+		for i, manaCost := range costs {
+			counts[i] = e.chooseAnnouncementNumber(g, player,
+				fmt.Sprintf("Choose how many times to pay replicate %d (%s).", i+1, manaCost),
+				0, counts[i], private, agents, log)
+		}
+		cast.ReplicateCounts = counts
 		publish()
 	}
 	branch := castBranchForCast(cast)

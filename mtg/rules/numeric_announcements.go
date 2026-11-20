@@ -48,9 +48,7 @@ func (e *Engine) announcementLegal(g *game.Game, player game.PlayerID, announcem
 		if cast.Permission != (game.PlayPermission{}) {
 			permission = []game.PlayPermission{cast.Permission}
 		}
-		return e.canCastSpellFaceFromZoneWithOptions(g, player, cast.CardID, source, cast.Face,
-			cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount),
-			cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed, cast.Offspring, permission...)
+		return e.canCastAnnouncedSpell(g, player, cast, permission...)
 	}
 	activate, ok := announcement.ActivateAbilityPayload()
 	if !ok {

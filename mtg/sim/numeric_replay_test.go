@@ -3,6 +3,7 @@ package sim
 import (
 	"encoding/json"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/agent"
@@ -25,6 +26,80 @@ func (numericReplayPolicy) ChooseAction(obs rules.PlayerObservation, candidates 
 		}
 	}
 	return (agent.Agent{Strategy: agent.GenericStrategy{}}).ChooseAction(obs, candidates)
+}
+
+type replicateReplayPolicy struct{}
+
+func (replicateReplayPolicy) ChooseAction(obs rules.PlayerObservation, candidates []action.Action) action.Action {
+	for _, candidate := range candidates {
+		if cast, ok := candidate.CastSpellPayload(); ok {
+			// Each instance is sampled independently. Force an exact proposal
+			// rather than a candidate index so JSON must preserve both payments.
+			cast.ReplicateCounts = []int{2, 1}
+			return action.AnnounceSpell(cast)
+		}
+	}
+	return (agent.Agent{Strategy: agent.GenericStrategy{}}).ChooseAction(obs, candidates)
+}
+
+func TestReplicateAnnouncementsReplayThroughJSON(t *testing.T) {
+	def := &game.CardDef{CardFace: game.CardFace{
+		Name: "Replicate replay fixture", Types: []types.Card{types.Sorcery}, ManaCost: opt.Val(cost.Mana{cost.O(0)}),
+		StaticAbilities: []game.StaticAbility{{
+			KeywordAbilities: []game.KeywordAbility{
+				game.ReplicateKeyword{Cost: cost.Mana{cost.O(0)}},
+				game.ReplicateKeyword{Cost: cost.Mana{cost.O(0)}},
+			},
+		}},
+		SpellAbility: opt.Val(game.Mode{Sequence: []game.Instruction{{
+			Primitive: game.GainLife{Amount: game.Fixed(1), Player: game.ControllerReference()},
+		}}}.Ability()),
+	}}
+	cfg := Config{Seed: 4028, Games: 1, TurnLimit: 1, NewAgents: func(uint64) [game.NumPlayers]rules.PlayerAgent {
+		var policies [game.NumPlayers]rules.PlayerAgent
+		for i := range policies {
+			policies[i] = replicateReplayPolicy{}
+		}
+		return policies
+	}}
+	for i := range cfg.Configs {
+		for range 8 {
+			cfg.Configs[i].Deck = append(cfg.Configs[i].Deck, def)
+		}
+	}
+	result, record := RecordGame(cfg, 0)
+	found := false
+	for _, seat := range record.Seats {
+		for _, proposal := range seat.Announcements {
+			found = found || proposal.Cast != nil && slices.Equal(proposal.Cast.ReplicateCounts, []int{2, 1})
+		}
+	}
+	if !found || result.Execution.InvalidActions != 0 || result.Execution.InvalidChoices != 0 {
+		t.Fatal("recording omitted or rejected the exact Replicate announcement")
+	}
+	casts, copies := 0, 0
+	for _, event := range result.Events {
+		switch event.Kind {
+		case game.EventSpellCast:
+			casts++
+		case game.EventSpellCopied:
+			copies++
+		}
+	}
+	if casts == 0 || copies != casts*3 {
+		t.Fatalf("recorded %d casts and %d copies, want three copies per cast", casts, copies)
+	}
+	data, err := json.Marshal(record)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var restored ReplayRecord
+	if err := json.Unmarshal(data, &restored); err != nil {
+		t.Fatal(err)
+	}
+	if replayed := Replay(cfg.Configs, restored); !reflect.DeepEqual(result, replayed) {
+		t.Fatal("Replicate announcements diverged in actual JSON replay")
+	}
 }
 
 func (numericReplayPolicy) ChooseChoice(obs rules.PlayerObservation, request game.ChoiceRequest) []int {

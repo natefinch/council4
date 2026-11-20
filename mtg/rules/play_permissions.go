@@ -163,5 +163,5 @@ func (e *Engine) castActionPermissionLegal(g *game.Game, player game.PlayerID, c
 	if cast.Mutate {
 		return e.canCastMutateSpellWithX(g, player, cast.CardID, sourceZone, cast.MutateTargetID, cast.XValue, permission)
 	}
-	return e.canCastSpellFaceFromZoneWithOptions(g, player, cast.CardID, sourceZone, cast.Face, cast.Targets, cast.XValue, cast.ChosenModes, effectiveKickerCount(cast.KickerPaid, cast.KickerCount), cast.Overloaded, cast.GiftPromised, cast.Bargained, cast.Bestowed, cast.Offspring, permission)
+	return e.canCastAnnouncedSpell(g, player, cast, permission)
 }
