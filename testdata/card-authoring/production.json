@@ -1967,6 +1967,13 @@
     "oracle_text_sha256": "d8a1e16ced35fbff84de89f8c20c7364b0cb5986030bbd55412c1b0fc0d30edd",
     "revision": "17597c66-0d9f-41af-9160-0d92be88f450",
     "rulings_uri": "https://api.scryfall.com/cards/17597c66-0d9f-41af-9160-0d92be88f450/rulings"
+   },
+   {
+    "name": "Barbed Lightning",
+    "oracle_id": "f6e1eb52-9f13-425c-8309-1b08ed6557db",
+    "oracle_text_sha256": "ffcbb322215c674174e9c46510b6ac74bd8eebfe1b17726f5360389baa305562",
+    "revision": "2509482a-68d8-4e94-9d1e-5b069ebdc2e4",
+    "rulings_uri": "https://api.scryfall.com/cards/2509482a-68d8-4e94-9d1e-5b069ebdc2e4/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9502,6 +9509,20 @@
     "Expected Krovikan Rot's Recover {1}{B}{B} trigger when a creature enters its owner's graveyard, then optional payment to return Krovikan Rot or decline and exile it. Actual: the trigger is not queued."
    ],
    "review": "Card Krovikan Rot, checked Engine result for #375 on a171412435c7346eb4c01cd451900a66363590a3: Implemented shared Recover support: the Engine captures the exact graveyard source before each qualifying death. Existing payment and movement operations return that incarnation on payment or exile it otherwise. No cards were registered.\nAll six retained probes reproduced the missing trigger on main baseline 74beb1ae5ec08efd3f6ef7a7c16223c4caf06a41.\nPassed: go test -overlay .cardwork/sources/recover-family/overlay.json ./mtg/game ./mtg/rules -tags cardwork_probe -run '^Test(ValidateGraveyardDiesTrigger|Recover.*)$' -count=1 -v. Executed all six named probes and shared payment, ownership, simultaneous-death, replacement, clone, and copy scenarios. Oracle and rules evidence is retained alongside the overlay.\nPassed: go test ./mtg/game ./mtg/cardprogram ./mtg/rules -count=1; go test ./mtg/cards -count=1; git diff --check."
+  },
+  {
+   "id": "barbed-lightning-entwine-20261120",
+   "family": "entwine-damage",
+   "oracle_ids": [
+    "f6e1eb52-9f13-425c-8309-1b08ed6557db"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.AbilityContent.Modes + EscalateCost (existing entwine seam)",
+    "game.TargetSpec",
+    "game.Damage"
+   ],
+   "review": "Capability-fit only; not source-reviewed. On d12bd20dd11529683ebab22e1bede4662d687531, existing entwine-mode examples are mtg/cards/authored/rain_of_rust.go and mtg/cards/authored/one_dozen_eyes.go; game.Damage and permanent/player targeting are also used by existing authored cards."
   }
  ],
  "records": [
@@ -264023,8 +264044,10 @@
    "oracle_id": "f6e1eb52-9f13-425c-8309-1b08ed6557db",
    "revision": "2509482a-68d8-4e94-9d1e-5b069ebdc2e4",
    "name": "Barbed Lightning",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "entwine-damage",
+   "batch": "barbed-lightning-entwine-20261120",
+   "evidence": "mtg/rules/barbed_lightning_test.go: TestBarbedLightningEntwinedCreatureAndPlayerDamage"
   },
   {
    "oracle_id": "f6e72f4e-d6e0-4537-93c1-7045385c8401",
