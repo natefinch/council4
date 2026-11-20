@@ -1995,6 +1995,41 @@
     "oracle_text_sha256": "8a186e12c8952eb990e2c0297a8f05702b3d9a4bec9bf177035415ecbeba8ab2",
     "revision": "8c21da73-0dad-4b2b-8cc6-61861bed9410",
     "rulings_uri": "https://api.scryfall.com/cards/8c21da73-0dad-4b2b-8cc6-61861bed9410/rulings"
+   },
+   {
+    "name": "Ruination Guide",
+    "oracle_id": "3394ce74-c352-4ae1-a7bb-f6ef8ac1c810",
+    "oracle_text_sha256": "67e02ef23ad6531979da920148dd7c551852839a0786bc5e7c6802fbb7cc2db6",
+    "revision": "f0bdbe64-d985-4bc5-bb1d-4cbf12ef60b2",
+    "rulings_uri": "https://api.scryfall.com/cards/f0bdbe64-d985-4bc5-bb1d-4cbf12ef60b2/rulings"
+   },
+   {
+    "name": "Benthic Infiltrator",
+    "oracle_id": "b2977807-5f46-424a-a6e9-14262f8a723a",
+    "oracle_text_sha256": "e04be6b417e8bdc86d146a3a03e6364bcb1736993b7f3fce0e0927c37c85f059",
+    "revision": "f380ae58-08cc-42df-ac74-3c6890a62463",
+    "rulings_uri": "https://api.scryfall.com/cards/f380ae58-08cc-42df-ac74-3c6890a62463/rulings"
+   },
+   {
+    "name": "Culling Drone",
+    "oracle_id": "bda0ca68-78a6-4b32-842f-0bee9a9c84ef",
+    "oracle_text_sha256": "96216a1a182c2ca52ff7525c21c1aff3c642973001385ac4d29f1d0c74ce3c36",
+    "revision": "1a623415-46c0-45aa-ab75-1e2d9708013a",
+    "rulings_uri": "https://api.scryfall.com/cards/1a623415-46c0-45aa-ab75-1e2d9708013a/rulings"
+   },
+   {
+    "name": "Sludge Crawler",
+    "oracle_id": "dd05294b-2c5b-48c2-a9f6-8a528baa3dff",
+    "oracle_text_sha256": "5ac5168cd1a0442703b1eb5b4f1d87a14d6b9c267efc169182b6249f02727dea",
+    "revision": "9782b463-0677-40f4-ab2c-4c3ff19f1168",
+    "rulings_uri": "https://api.scryfall.com/cards/9782b463-0677-40f4-ab2c-4c3ff19f1168/rulings"
+   },
+   {
+    "name": "Mist Intruder",
+    "oracle_id": "e4e9b48b-92f9-46ac-b55a-573bc328b11a",
+    "oracle_text_sha256": "fdbbdd5d62abf87508376d494efa37de141292ef03203941bd6d29e9aa64105c",
+    "revision": "f8c2e662-d8c3-44d4-b666-fe0d4a046271",
+    "rulings_uri": "https://api.scryfall.com/cards/f8c2e662-d8c3-44d4-b666-fe0d4a046271/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9572,6 +9607,24 @@
     "game.Damage"
    ],
    "review": "Capability-fit review only; no source or rules review claimed. References: mtg/cardprogram/README.md#capability-lookup (Surge); mtg/rules/jwar_isle_avenger_surge_test.go; mtg/game/cost/additional.go; mtg/game/dynamic_amount.go; mtg/game/primitive.go (Damage)."
+  },
+  {
+   "id": "ingest-20261120",
+   "family": "ingest",
+   "oracle_ids": [
+    "3394ce74-c352-4ae1-a7bb-f6ef8ac1c810",
+    "b2977807-5f46-424a-a6e9-14262f8a723a",
+    "bda0ca68-78a6-4b32-842f-0bee9a9c84ef",
+    "dd05294b-2c5b-48c2-a9f6-8a528baa3dff",
+    "e4e9b48b-92f9-46ac-b55a-573bc328b11a"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.EventDamageDealt with RequireCombatDamage and DamageRecipientPlayer",
+    "game.EventPlayerReference",
+    "Context.Execute(game.MoveTopOfLibrary)"
+   ],
+   "review": "Capability-fit reference: docs/card-authoring.md#reviewed-continuation-commands and mtg/cardprogram/README.md#capability-lookup; existing combat-damage trigger and MoveTopOfLibrary paths inspected. Card-specific primary-source and rules review remains required from the author."
   }
  ],
  "records": [
@@ -97767,8 +97820,10 @@
    "oracle_id": "3394ce74-c352-4ae1-a7bb-f6ef8ac1c810",
    "revision": "f0bdbe64-d985-4bc5-bb1d-4cbf12ef60b2",
    "name": "Ruination Guide",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "ingest",
+   "batch": "ingest-20261120",
+   "evidence": "mtg/rules/ingest_eldrazi_test.go: TestRuinationGuideIngestAndColorlessPump; printing f0bdbe64-d985-4bc5-bb1d-4cbf12ef60b2; CR 2026-09-25 401.2, 406.1, 406.3, 510.2, 603.1, 603.2c, 603.3a, 604.3, 611.3a, 613.1e, 613.4c, 702.114a"
   },
   {
    "oracle_id": "339a7418-9a29-4eae-a3c2-ea590d175936",
@@ -206118,8 +206173,10 @@
    "oracle_id": "b2977807-5f46-424a-a6e9-14262f8a723a",
    "revision": "f380ae58-08cc-42df-ac74-3c6890a62463",
    "name": "Benthic Infiltrator",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "ingest",
+   "batch": "ingest-20261120",
+   "evidence": "mtg/rules/ingest_eldrazi_test.go: TestBenthicInfiltratorCannotBeBlockedAndIngests; printing f380ae58-08cc-42df-ac74-3c6890a62463; CR 2026-09-25 113.12, 401.2, 406.1, 406.3, 509.1, 510.2, 603.1, 603.2c, 603.3a, 702.114a"
   },
   {
    "oracle_id": "b29a0686-2246-47a9-974d-4425e8a5546c",
@@ -215289,8 +215346,10 @@
    "oracle_id": "bda0ca68-78a6-4b32-842f-0bee9a9c84ef",
    "revision": "1a623415-46c0-45aa-ab75-1e2d9708013a",
    "name": "Culling Drone",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "ingest",
+   "batch": "ingest-20261120",
+   "evidence": "mtg/rules/ingest_eldrazi_test.go: TestCullingDroneIngestsOnCombatDamage; printing 1a623415-46c0-45aa-ab75-1e2d9708013a; CR 2026-09-25 401.2, 406.1, 406.3, 510.2, 603.1, 603.2c, 603.3a, 604.3, 702.114a"
   },
   {
    "oracle_id": "bda363b6-4be1-4415-8b3e-92882df1f630",
@@ -242188,8 +242247,10 @@
    "oracle_id": "dd05294b-2c5b-48c2-a9f6-8a528baa3dff",
    "revision": "9782b463-0677-40f4-ab2c-4c3ff19f1168",
    "name": "Sludge Crawler",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "ingest",
+   "batch": "ingest-20261120",
+   "evidence": "mtg/rules/ingest_eldrazi_test.go: TestSludgeCrawlerPaysAndResolvesPumpBeforeIngest; printing 9782b463-0677-40f4-ab2c-4c3ff19f1168; CR 2026-09-25 401.2, 406.1, 406.3, 510.2, 601.2f, 602.2a-b, 603.1, 603.2c, 603.3a, 604.3, 611.2a, 613.4c, 702.114a"
   },
   {
    "oracle_id": "dd05fd8e-f25e-4b9e-b162-afea1b248282",
@@ -248718,8 +248779,10 @@
    "oracle_id": "e4e9b48b-92f9-46ac-b55a-573bc328b11a",
    "revision": "f8c2e662-d8c3-44d4-b666-fe0d4a046271",
    "name": "Mist Intruder",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "ingest",
+   "batch": "ingest-20261120",
+   "evidence": "mtg/rules/ingest_eldrazi_test.go: TestMistIntruderFlyingAndIngest; printing f8c2e662-d8c3-44d4-b666-fe0d4a046271; CR 2026-09-25 401.2, 406.1, 406.3, 509.1, 510.2, 603.1, 603.2c, 603.3a, 604.3, 702.9a-b, 702.114a"
   },
   {
    "oracle_id": "e4ecd56c-216d-4c3a-9dfa-09ae1be03e4f",
