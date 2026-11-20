@@ -1960,6 +1960,13 @@
     "oracle_text_sha256": "cf1698eafd740fe58a1ffcf7942da688eb4ecb321d910445bb4473b3a3e535f0",
     "revision": "0e670f6b-d16e-47fc-a5b7-7ca0d8763644",
     "rulings_uri": "https://api.scryfall.com/cards/0e670f6b-d16e-47fc-a5b7-7ca0d8763644/rulings"
+   },
+   {
+    "name": "Krovikan Rot",
+    "oracle_id": "f9a272c5-6ebc-4d29-a47c-a2d570184196",
+    "oracle_text_sha256": "d8a1e16ced35fbff84de89f8c20c7364b0cb5986030bbd55412c1b0fc0d30edd",
+    "revision": "17597c66-0d9f-41af-9160-0d92be88f450",
+    "rulings_uri": "https://api.scryfall.com/cards/17597c66-0d9f-41af-9160-0d92be88f450/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9483,6 +9490,18 @@
     "Expected Controvert's Recover {2}{U}{U} trigger when a creature enters its owner's graveyard, then optional payment to return Controvert or decline and exile it. Actual: the trigger is not queued."
    ],
    "review": "Card Controvert, checked Engine result for #375 on a171412435c7346eb4c01cd451900a66363590a3: Implemented shared Recover support: the Engine captures the exact graveyard source before each qualifying death. Existing payment and movement operations return that incarnation on payment or exile it otherwise. No cards were registered.\nAll six retained probes reproduced the missing trigger on main baseline 74beb1ae5ec08efd3f6ef7a7c16223c4caf06a41.\nPassed: go test -overlay .cardwork/sources/recover-family/overlay.json ./mtg/game ./mtg/rules -tags cardwork_probe -run '^Test(ValidateGraveyardDiesTrigger|Recover.*)$' -count=1 -v. Executed all six named probes and shared payment, ownership, simultaneous-death, replacement, clone, and copy scenarios. Oracle and rules evidence is retained alongside the overlay.\nPassed: go test ./mtg/game ./mtg/cardprogram ./mtg/rules -count=1; go test ./mtg/cards -count=1; git diff --check."
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-43",
+   "family": "card-followup",
+   "oracle_ids": [
+    "f9a272c5-6ebc-4d29-a47c-a2d570184196"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected Krovikan Rot's Recover {1}{B}{B} trigger when a creature enters its owner's graveyard, then optional payment to return Krovikan Rot or decline and exile it. Actual: the trigger is not queued."
+   ],
+   "review": "Card Krovikan Rot, checked Engine result for #375 on a171412435c7346eb4c01cd451900a66363590a3: Implemented shared Recover support: the Engine captures the exact graveyard source before each qualifying death. Existing payment and movement operations return that incarnation on payment or exile it otherwise. No cards were registered.\nAll six retained probes reproduced the missing trigger on main baseline 74beb1ae5ec08efd3f6ef7a7c16223c4caf06a41.\nPassed: go test -overlay .cardwork/sources/recover-family/overlay.json ./mtg/game ./mtg/rules -tags cardwork_probe -run '^Test(ValidateGraveyardDiesTrigger|Recover.*)$' -count=1 -v. Executed all six named probes and shared payment, ownership, simultaneous-death, replacement, clone, and copy scenarios. Oracle and rules evidence is retained alongside the overlay.\nPassed: go test ./mtg/game ./mtg/cardprogram ./mtg/rules -count=1; go test ./mtg/cards -count=1; git diff --check."
   }
  ],
  "records": [
@@ -266421,8 +266440,10 @@
    "oracle_id": "f9a272c5-6ebc-4d29-a47c-a2d570184196",
    "revision": "17597c66-0d9f-41af-9160-0d92be88f450",
    "name": "Krovikan Rot",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-43",
+   "evidence": "mtg/rules/krovikan_rot_test.go: TestKrovikanRotDestroysSmallCreatureAndRecovers (cast cost, target condition, spell result, optional Recover payment choices)"
   },
   {
    "oracle_id": "f9af02f3-6ab1-469c-9d37-e8f6fa9608c4",
