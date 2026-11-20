@@ -1953,6 +1953,13 @@
     "oracle_text_sha256": "0c0ac37c7160a326af77c72c55e93f5d6c71b3660e8bb81e980aebbdd412b5da",
     "revision": "bde59b0e-c75e-455b-b375-e0dac430a6d1",
     "rulings_uri": "https://api.scryfall.com/cards/bde59b0e-c75e-455b-b375-e0dac430a6d1/rulings"
+   },
+   {
+    "name": "Controvert",
+    "oracle_id": "f7ad79e3-d128-4aee-8542-99fd3527f9d3",
+    "oracle_text_sha256": "cf1698eafd740fe58a1ffcf7942da688eb4ecb321d910445bb4473b3a3e535f0",
+    "revision": "0e670f6b-d16e-47fc-a5b7-7ca0d8763644",
+    "rulings_uri": "https://api.scryfall.com/cards/0e670f6b-d16e-47fc-a5b7-7ca0d8763644/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9464,6 +9471,18 @@
     "Expected Sun's Bounty's Recover {1}{W} trigger when a creature enters its owner's graveyard, then optional payment to return Sun's Bounty or decline and exile it. Actual: the trigger is not queued."
    ],
    "review": "Card Sun's Bounty, checked Engine result for #375 on a171412435c7346eb4c01cd451900a66363590a3: Implemented shared Recover support: the Engine captures the exact graveyard source before each qualifying death. Existing payment and movement operations return that incarnation on payment or exile it otherwise. No cards were registered.\nAll six retained probes reproduced the missing trigger on main baseline 74beb1ae5ec08efd3f6ef7a7c16223c4caf06a41.\nPassed: go test -overlay .cardwork/sources/recover-family/overlay.json ./mtg/game ./mtg/rules -tags cardwork_probe -run '^Test(ValidateGraveyardDiesTrigger|Recover.*)$' -count=1 -v. Executed all six named probes and shared payment, ownership, simultaneous-death, replacement, clone, and copy scenarios. Oracle and rules evidence is retained alongside the overlay.\nPassed: go test ./mtg/game ./mtg/cardprogram ./mtg/rules -count=1; go test ./mtg/cards -count=1; git diff --check."
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-42",
+   "family": "card-followup",
+   "oracle_ids": [
+    "f7ad79e3-d128-4aee-8542-99fd3527f9d3"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected Controvert's Recover {2}{U}{U} trigger when a creature enters its owner's graveyard, then optional payment to return Controvert or decline and exile it. Actual: the trigger is not queued."
+   ],
+   "review": "Card Controvert, checked Engine result for #375 on a171412435c7346eb4c01cd451900a66363590a3: Implemented shared Recover support: the Engine captures the exact graveyard source before each qualifying death. Existing payment and movement operations return that incarnation on payment or exile it otherwise. No cards were registered.\nAll six retained probes reproduced the missing trigger on main baseline 74beb1ae5ec08efd3f6ef7a7c16223c4caf06a41.\nPassed: go test -overlay .cardwork/sources/recover-family/overlay.json ./mtg/game ./mtg/rules -tags cardwork_probe -run '^Test(ValidateGraveyardDiesTrigger|Recover.*)$' -count=1 -v. Executed all six named probes and shared payment, ownership, simultaneous-death, replacement, clone, and copy scenarios. Oracle and rules evidence is retained alongside the overlay.\nPassed: go test ./mtg/game ./mtg/cardprogram ./mtg/rules -count=1; go test ./mtg/cards -count=1; git diff --check."
   }
  ],
  "records": [
@@ -264752,8 +264771,10 @@
    "oracle_id": "f7ad79e3-d128-4aee-8542-99fd3527f9d3",
    "revision": "0e670f6b-d16e-47fc-a5b7-7ca0d8763644",
    "name": "Controvert",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-42",
+   "evidence": "mtg/rules/controvert_test.go: TestControvertCountersSpellAndRecovers (counter spell, cast cost, Recover payment and exile choices)"
   },
   {
    "oracle_id": "f7ae67c7-9005-4806-8130-5895dcd9879a",
