@@ -2051,6 +2051,13 @@
     "oracle_text_sha256": "2136fcd1b4c1e10f1037c1830257776b051e942f4063b14c143cb267512a43b0",
     "revision": "49dd3963-a4d7-4992-b6f8-753996390bbf",
     "rulings_uri": "https://api.scryfall.com/cards/49dd3963-a4d7-4992-b6f8-753996390bbf/rulings"
+   },
+   {
+    "name": "Teferi's Isle",
+    "oracle_id": "ce55657d-d82f-4528-a83e-5cad7de111fd",
+    "oracle_text_sha256": "325d4aaaaaaa760dde053030a46eedd47ce59beed774f51692f96335922bc3ef",
+    "revision": "b6ed7ca8-fd91-46e3-9149-a3de23c7078e",
+    "rulings_uri": "https://api.scryfall.com/cards/b6ed7ca8-fd91-46e3-9149-a3de23c7078e/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9687,6 +9694,20 @@
     "Static untap prohibition applied to the enchanted creature"
    ],
    "review": "Capability review: docs/card-authoring.md (Reviewed continuation commands) and mtg/cardprogram/README.md (Surge, alternative-cost targets, Aura admission/attachment); verify attached-creature untap behavior during authoring."
+  },
+  {
+   "id": "teferis-isle-phasing-20261120",
+   "family": "phasing-land",
+   "oracle_ids": [
+    "ce55657d-d82f-4528-a83e-5cad7de111fd"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.PhasingStaticBody",
+    "game.EntersTappedReplacement",
+    "game.TapManaChoiceCountAbility"
+   ],
+   "review": "Capability-fit references: mtg/cardprogram/README.md#capability-lookup; mtg/game/ability.go:409-410; mtg/rules/phasing_creatures_test.go; mtg/game/ability_body.go:266; mtg/game/mechanic_template.go:1294. Card-specific source and rules review remains for the author; none is claimed here."
   }
  ],
  "records": [
@@ -229401,8 +229422,10 @@
    "oracle_id": "ce55657d-d82f-4528-a83e-5cad7de111fd",
    "revision": "b6ed7ca8-fd91-46e3-9149-a3de23c7078e",
    "name": "Teferi's Isle",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "phasing-land",
+   "batch": "teferis-isle-phasing-20261120",
+   "evidence": "mtg/rules/teferis_isle_test.go: TestTeferisIsleEntersTappedPhasesAndAddsTwoBlue"
   },
   {
    "oracle_id": "ce55c0a9-3334-440e-ae1b-c04a9e1c3d87",
