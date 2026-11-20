@@ -1918,6 +1918,13 @@
     "oracle_text_sha256": "7e92d3954a445e5b1c7ddc7cda3956d7a02a7c702e3d3ee29d0eef9949e07da4",
     "revision": "4f9a8e87-3b8b-4dbf-9c1e-0a3290a33a0b",
     "rulings_uri": "https://api.scryfall.com/cards/4f9a8e87-3b8b-4dbf-9c1e-0a3290a33a0b/rulings"
+   },
+   {
+    "name": "Rain of Rust",
+    "oracle_id": "074e467e-f574-4b44-b5a3-798b592a5a87",
+    "oracle_text_sha256": "ce4631fb19e74ea4a9e175ea9bbb168f96c2471e614d74dc4037d9740ce3e8ec",
+    "revision": "13a6ecc6-83c8-408b-8600-687cdb383ca9",
+    "rulings_uri": "https://api.scryfall.com/cards/13a6ecc6-83c8-408b-8600-687cdb383ca9/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9366,6 +9373,21 @@
     "game.ContinuousEffect"
    ],
    "review": "Selection-only capability fit: existing Awaken declarations in mtg/cards/authored/boiling_earth.go and mtg/cards/authored/roil_spout.go; branch-target evidence in mtg/rules/cast_branch_target_gate_test.go; global -2/-2 precedent in mtg/cards/authored/massacre.go. The author must complete source and rules review."
+  },
+  {
+   "id": "rain-of-rust-entwine-20261120",
+   "family": "entwined-artifact-land-destruction",
+   "oracle_ids": [
+    "074e467e-f574-4b44-b5a3-798b592a5a87"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.AbilityContent.Modes",
+    "game.AbilityContent.EscalateCost",
+    "game.TargetSpec",
+    "cardprogram.Context.Destroy"
+   ],
+   "review": "Capability-fit references only; no source or rules review claimed: mtg/cards/authored/one_dozen_eyes.go and mtg/rules/one_dozen_eyes_test.go (mode choice/additional cost); mtg/cards/authored/production_destruction.go and mtg/rules/production_destruction_test.go (typed target and shared Destroy)."
   }
  ],
  "records": [
@@ -60383,8 +60405,10 @@
    "oracle_id": "074e467e-f574-4b44-b5a3-798b592a5a87",
    "revision": "13a6ecc6-83c8-408b-8600-687cdb383ca9",
    "name": "Rain of Rust",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "entwined-artifact-land-destruction",
+   "batch": "rain-of-rust-entwine-20261120",
+   "evidence": "mtg/rules/rain_of_rust_test.go: TestRainOfRustEntwineDestroysArtifactAndLand"
   },
   {
    "oracle_id": "0752fe67-9b8a-42c0-90e3-087d426b2f3b",

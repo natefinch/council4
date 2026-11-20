@@ -76,6 +76,7 @@ func verifiedEntries() []cardset.Entry {
 		DeftbladeElite, KrosanVorine, LowlandTracker)
 	entries = append(entries, SkyshroudRidgeback, Cloudskate, SkyshroudBehemoth,
 		RejuvenationChamber, Blastoderm)
+	entries = append(entries, RainOfRust)
 	for i := range entries {
 		entries[i].ReplaceLegacy = replacesCompiledEntry(entries[i].Name)
 	}
