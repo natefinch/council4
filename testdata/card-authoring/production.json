@@ -1813,6 +1813,13 @@
     "oracle_text_sha256": "1022e0bd3843c69b863ee0b248e1630036af93609c43ae3af5bf01993feffabc",
     "revision": "f9ae6f63-d1b2-4bf9-a423-ed6fbb540d4b",
     "rulings_uri": "https://api.scryfall.com/cards/f9ae6f63-d1b2-4bf9-a423-ed6fbb540d4b/rulings"
+   },
+   {
+    "name": "Lose Focus",
+    "oracle_id": "1cea6439-7ae5-4887-8c33-7da9fb36e2d4",
+    "oracle_text_sha256": "634ba32326425f6b22559f8214a8249d7a0a9f544253afb947efcf7d11b22ffd",
+    "revision": "985bdb0c-ce6c-4506-8163-76f3b2fdf5fb",
+    "rulings_uri": "https://api.scryfall.com/cards/985bdb0c-ce6c-4506-8163-76f3b2fdf5fb/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9116,6 +9123,18 @@
     "ApplyContinuous"
    ],
    "review": "Capability-fit only: existing tap/freeze implementation in mtg/cards/t/take_into_custody.go and mtg/rules/skip_next_untap_test.go; Awaken examples in mtg/cards/authored/boiling_earth.go, roil_spout.go, coastal_discovery.go and mtg/rules/cast_branch_target_gate_test.go. Worker must perform and record the required primary-source review."
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-24",
+   "family": "card-followup",
+   "oracle_ids": [
+    "1cea6439-7ae5-4887-8c33-7da9fb36e2d4"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected: Lose Focus can be cast while paying its Replicate cost twice. Actual: its ordinary cast is legal, but the Engine rejects the two-payment attempt because the available repeatable-cost path requires KickerKeyword; using it would misdeclare Replicate as Multikicker."
+   ],
+   "review": "Card Lose Focus, checked Engine result for #4028 on 75c015389d956b9342f3a9748b92afb58fcc8bd4: Implemented Replicate for #4028 in the isolated worktree. Each paid instance triggers separately and creates one retargetable, non-cast copy per payment, even if the original was countered. No cards were registered or changes merged.\nOn current main (3d5e7fff6bc5ded499df9c2967d3510ac16fbc4c), `go test ./mtg/rules -run '^TestLoseFocusReplicateCostProbe$' -count=1 -v` reproduced the two-payment cast rejection.\nPassed `go test ./mtg/rules ./mtg/sim -run '^(TestLoseFocusReplicateEngine|TestReplicate.*)$' -count=1 -v`. Lose Focus made two independently retargeted copies after the original was countered; one target survived by paying {2}, and the other was countered. Shared scenarios covered combined and declined costs, unaffordable payments, paid and free exile casts, cast card copies, Flashback, Storm, Cascade, cloning, and JSON replay.\nPassed `go test ./mtg/rules ./mtg/game ./mtg/game/action ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1` and `git diff --check`.\nSource review is in `mtg/rules/replicate_test.go`; the baseline probe, Oracle responses, rulings, and verified CR are retained in `.cardwork/source/`. None of the eight named plays requires a Mutate or prepared-cast combination."
   }
  ],
  "records": [
@@ -78877,8 +78896,10 @@
    "oracle_id": "1cea6439-7ae5-4887-8c33-7da9fb36e2d4",
    "revision": "985bdb0c-ce6c-4506-8163-76f3b2fdf5fb",
    "name": "Lose Focus",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-24",
+   "evidence": "mtg/rules/lose_focus_test.go: TestLoseFocusReplicateScenario; printing 985bdb0c-ce6c-4506-8163-76f3b2fdf5fb; Scryfall WotC rulings 2021-06-18; CR 2026-11-06 601.2b/c/f-i, 603.2-3, 608.2b/g/h, 702.56a-b, 707.10/.10c"
   },
   {
    "oracle_id": "1cea9b82-d2e9-4758-8ec8-729fcf4bb7d7",
