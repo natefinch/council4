@@ -1785,6 +1785,13 @@
     "oracle_text_sha256": "9a5052b19fd233eefa58e1f1a721bf5129581db1ac97fb1454b11b81de39034d",
     "revision": "c1df2411-0b0d-4b93-bf30-a22487b3c6ef",
     "rulings_uri": "https://api.scryfall.com/cards/c1df2411-0b0d-4b93-bf30-a22487b3c6ef/rulings"
+   },
+   {
+    "name": "Massacre",
+    "oracle_id": "ce1866e9-28de-4bcc-9999-11958e6c13a6",
+    "oracle_text_sha256": "e4e8491ed4abb1b43c8e7d95223d65aa35f66bb18db78331fafd3ea62d1aecb3",
+    "revision": "f05f5d93-50d1-4aa6-af05-383a6808345b",
+    "rulings_uri": "https://api.scryfall.com/cards/f05f5d93-50d1-4aa6-af05-383a6808345b/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9030,6 +9037,19 @@
     "Expected the {3}{U} cast to have no target and the {5}{U} Awaken cast to require a land you control. Actual: the available TargetGateAlways probe permits targeting a land even when only the base cost is payable; TargetGate/CastBranch have no generic alternative-cost branch."
    ],
    "review": "Card Coastal Discovery, checked Engine result for #4020 on 9b6736edc4959e421c5624c56a32f4547f306103: Implemented #4020 locally. `TargetSpec.AlternativeCost` binds a target to a specific declared cost, and `ctx.View().Source().AlternativeCost` exposes that choice during resolution. Coastal Discovery remains unregistered.\nReproduced on main f381c2b67aabda16f877006fad884ba5bf96cfac: `go test -vet=off -overlay \"$PWD/.cardwork/4020-main-overlay.json\" -tags cardwork ./mtg/rules -run '^TestCoastalDiscoveryAwakenAlternativeCostTargetGateProbe$' -count=1 -v` failed because the base-cost cast could target a land.\n`go test ./mtg/rules -run '^TestAlternativeCostTarget' -count=1 -v` passed: base and alternative casts, illegal targets, countering, combined mana and life costs, clone/replay, direct and storm copies, paid exile, prepared copies, and free casts.\n`go test ./mtg/game/... ./mtg/cardprogram ./mtg/rules/... -count=1` and `git diff --check` passed.\nVerified Oracle and rulings, and the 2026-11-06 Comprehensive Rules. Source record is in `mtg/rules/cast_branch_target_gate_test.go`; raw responses are retained under `.cardwork/`. Face-down and mutate casts use their own costs and cannot select the declared alternative."
+  },
+  {
+   "id": "massacre-conditional-sweep-20261119",
+   "family": "massacre-single-card",
+   "oracle_ids": [
+    "ce1866e9-28de-4bcc-9999-11958e6c13a6"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "cost.Alternative.Conditions",
+    "game.ApplyContinuous (LayerPowerToughnessModify, DurationUntilEndOfTurn)"
+   ],
+   "review": "Capability-fit packet: docs/card-authoring.md (Reviewed continuation commands); mtg/cardprogram/README.md (conditional alternative-cost entry); mtg/cards/authored/night_clubber.go; mtg/rules/conditional_alternative_cost_test.go. Oracle and rules source review is not claimed and remains required during implementation."
   }
  ],
  "records": [
@@ -228572,8 +228592,10 @@
    "oracle_id": "ce1866e9-28de-4bcc-9999-11958e6c13a6",
    "revision": "f05f5d93-50d1-4aa6-af05-383a6808345b",
    "name": "Massacre",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "massacre-single-card",
+   "batch": "massacre-conditional-sweep-20261119",
+   "evidence": "mtg/rules/massacre_test.go: TestAuthoredMassacreScenario"
   },
   {
    "oracle_id": "ce19962d-94f9-4b2b-b668-963c0acce308",
