@@ -1834,6 +1834,13 @@
     "oracle_text_sha256": "6acd3f4e7904dde2dcafaf7d0cebf74830868f807e725d32b195c2b92dfc3c09",
     "revision": "a9c1c674-0742-45be-afd5-2dbcd6b499ae",
     "rulings_uri": "https://api.scryfall.com/cards/a9c1c674-0742-45be-afd5-2dbcd6b499ae/rulings"
+   },
+   {
+    "name": "Pyromatics",
+    "oracle_id": "9c01e2a6-61e7-455c-b09f-8c0de2266782",
+    "oracle_text_sha256": "f3c5ec56242165d34271e083980826ff44f81c20dac617562a3b0d77e9290685",
+    "revision": "795a7929-2c32-4006-bdf1-def0a4400f59",
+    "rulings_uri": "https://api.scryfall.com/cards/795a7929-2c32-4006-bdf1-def0a4400f59/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9173,6 +9180,18 @@
     "Expected Train of Thought to accept its {1}{U} Replicate cost and copy once per payment; actual ordinary casting works, but the only current repeatable-cost route is Multikicker-specific and rejects the requested payment."
    ],
    "review": "Card Train of Thought, checked Engine result for #4028 on 75c015389d956b9342f3a9748b92afb58fcc8bd4: Implemented Replicate for #4028 in the isolated worktree. Each paid instance triggers separately and creates one retargetable, non-cast copy per payment, even if the original was countered. No cards were registered or changes merged.\nOn current main (3d5e7fff6bc5ded499df9c2967d3510ac16fbc4c), `go test ./mtg/rules -run '^TestLoseFocusReplicateCostProbe$' -count=1 -v` reproduced the two-payment cast rejection.\nPassed `go test ./mtg/rules ./mtg/sim -run '^(TestLoseFocusReplicateEngine|TestReplicate.*)$' -count=1 -v`. Lose Focus made two independently retargeted copies after the original was countered; one target survived by paying {2}, and the other was countered. Shared scenarios covered combined and declined costs, unaffordable payments, paid and free exile casts, cast card copies, Flashback, Storm, Cascade, cloning, and JSON replay.\nPassed `go test ./mtg/rules ./mtg/game ./mtg/game/action ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1` and `git diff --check`.\nSource review is in `mtg/rules/replicate_test.go`; the baseline probe, Oracle responses, rulings, and verified CR are retained in `.cardwork/source/`. None of the eight named plays requires a Mutate or prepared-cast combination."
+  },
+  {
+   "id": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-27",
+   "family": "card-followup",
+   "oracle_ids": [
+    "9c01e2a6-61e7-455c-b09f-8c0de2266782"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected a legal Pyromatics cast paying Replicate twice and producing two copies; the ordinary cast is legal, but the current repeated-cost path rejects the two-payment attempt because Pyromatics has no Kicker declaration."
+   ],
+   "review": "Card Pyromatics, checked Engine result for #4028 on 75c015389d956b9342f3a9748b92afb58fcc8bd4: Implemented Replicate for #4028 in the isolated worktree. Each paid instance triggers separately and creates one retargetable, non-cast copy per payment, even if the original was countered. No cards were registered or changes merged.\nOn current main (3d5e7fff6bc5ded499df9c2967d3510ac16fbc4c), `go test ./mtg/rules -run '^TestLoseFocusReplicateCostProbe$' -count=1 -v` reproduced the two-payment cast rejection.\nPassed `go test ./mtg/rules ./mtg/sim -run '^(TestLoseFocusReplicateEngine|TestReplicate.*)$' -count=1 -v`. Lose Focus made two independently retargeted copies after the original was countered; one target survived by paying {2}, and the other was countered. Shared scenarios covered combined and declined costs, unaffordable payments, paid and free exile casts, cast card copies, Flashback, Storm, Cascade, cloning, and JSON replay.\nPassed `go test ./mtg/rules ./mtg/game ./mtg/game/action ./mtg/rules/payment ./mtg/cardprogram ./mtg/sim -count=1` and `git diff --check`.\nSource review is in `mtg/rules/replicate_test.go`; the baseline probe, Oracle responses, rulings, and verified CR are retained in `.cardwork/source/`. None of the eight named plays requires a Mutate or prepared-cast combination."
   }
  ],
  "records": [
@@ -186736,8 +186755,10 @@
    "oracle_id": "9c01e2a6-61e7-455c-b09f-8c0de2266782",
    "revision": "795a7929-2c32-4006-bdf1-def0a4400f59",
    "name": "Pyromatics",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-9c1d87cc-689f-4b0a-a5a4-ff26ee3af870-27",
+   "evidence": "mtg/rules/pyromatics_test.go: TestPyromaticsReplicateDealsDamage; CR 115.4, 120.1, 120.2b, 120.3a, 601.2a-i, 603.2-4, 608.2b, 702.56a-b, 707.10/.10c"
   },
   {
    "oracle_id": "9c021685-4017-49c7-9f58-2ae0243361a0",
