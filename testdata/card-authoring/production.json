@@ -1904,6 +1904,13 @@
     "oracle_text_sha256": "b931194a3a43394180d175ecc7b63ee95ca8a0d46fe464bdb9f67f96b90cbaf9",
     "revision": "1aeb6b3a-1e84-4181-9e7f-d5a88ebf08b1",
     "rulings_uri": "https://api.scryfall.com/cards/1aeb6b3a-1e84-4181-9e7f-d5a88ebf08b1/rulings"
+   },
+   {
+    "name": "One Dozen Eyes",
+    "oracle_id": "b1fbf818-6699-4f05-9a91-19aa296526bf",
+    "oracle_text_sha256": "d578f7bb3b9fbe1c28dc4723f27a208560b08ec92d3c65f917c2cc5391895ebd",
+    "revision": "451f317f-f587-4187-9e02-6ac5d7ae9cd8",
+    "rulings_uri": "https://api.scryfall.com/cards/451f317f-f587-4187-9e02-6ac5d7ae9cd8/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9322,6 +9329,19 @@
     "CardPlacement.EntryCounters"
    ],
    "review": "Capability selection only: existing upkeep-trigger, counter-removal, and sacrifice operations; mtg/rules/suspend_upkeep_trigger_test.go at origin/main 6eed1741e05cbbfacf99bcc8b5758781428e110c. Primary-source and rules review remains for the author."
+  },
+  {
+   "id": "dozen-eyes-entwine-20261120",
+   "family": "entwine",
+   "oracle_ids": [
+    "b1fbf818-6699-4f05-9a91-19aa296526bf"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "AbilityContent.Modes",
+    "CreateTokens"
+   ],
+   "review": "Capability-fit only: docs/card-authoring.md#reviewed-continuation-commands and mtg/cardprogram/README.md#capability-lookup. Assigned author must complete source and rules review."
   }
  ],
  "records": [
@@ -205327,8 +205347,10 @@
    "oracle_id": "b1fbf818-6699-4f05-9a91-19aa296526bf",
    "revision": "451f317f-f587-4187-9e02-6ac5d7ae9cd8",
    "name": "One Dozen Eyes",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "entwine",
+   "batch": "dozen-eyes-entwine-20261120",
+   "evidence": "mtg/rules/one_dozen_eyes_test.go: TestOneDozenEyesModesAndEntwine"
   },
   {
    "oracle_id": "b1fbfcf3-6921-4417-a58e-0f5e5d34a105",
