@@ -93,12 +93,16 @@ func (e *Engine) chooseChoiceWithFallback(g *game.Game, agents [game.NumPlayers]
 // entirely, without consuming a logged choice ID. Seat replay records the
 // agent's answer itself, not the log.
 func (e *Engine) chooseUnloggedChoice(g *game.Game, agents [game.NumPlayers]PlayerAgent, request game.ChoiceRequest, log *TurnLog) []int {
+	selected, _ := e.chooseUnloggedChoiceWithFallback(g, agents, request, log)
+	return selected
+}
+
+func (e *Engine) chooseUnloggedChoiceWithFallback(g *game.Game, agents [game.NumPlayers]PlayerAgent, request game.ChoiceRequest, log *TurnLog) ([]int, bool) {
 	if request.ID == 0 {
 		request.ID = nextChoiceID(log)
 	}
 	request = withPublicClashReveals(g, request)
-	selected, _ := e.decideChoice(g, agents, request)
-	return selected
+	return e.decideChoice(g, agents, request)
 }
 
 // withPublicClashReveals shows every player deciding during the rest of a

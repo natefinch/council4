@@ -74,6 +74,7 @@ type manaSourceRestrictions struct {
 	nonSacrificingOnly       map[id.ID]bool
 	reservedGraveyardCardIDs map[id.ID]bool
 	reserved                 *additionalCostPlan
+	allowResourceActivation  func(ManaActivationCandidate) bool
 	resourceCompletion       func(State, []ManaActivation, game.ResourceProjection) (paymentPlan, bool)
 	resourceValid            func(State) bool
 }
