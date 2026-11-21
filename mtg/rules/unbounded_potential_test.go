@@ -1,6 +1,8 @@
 package rules
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/natefinch/council4/mtg/cards"
@@ -22,7 +24,58 @@ import (
 // mode choice, the extra entwine payment, and printed resolution order;
 // 608.2b-d governs target revalidation and resolution choices; 701.34a and
 // 115.10a make proliferate an optional, nontargeted choice of recipients.
-// 101.4 and 616.1 order replacement choices in a simultaneous event.
+// 101.4/101.4c and 616.1 let each affected player order their own replacement
+// choices within a simultaneous event, in active-player then turn order.
+func TestTargetedCounterBatchLetsAffectedPlayerOrderReplacements(t *testing.T) {
+	registry := cards.NewDefaultRegistry()
+	def, err := registry.LookupOracleID("d9ae08cf-eef0-407a-ad2c-08b4c89f99f0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
+	first := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	second := addCombatCreaturePermanentWithPower(g, game.Player2, 2)
+	addReplacementPermanent(t, g, game.Player2, hardenedScalesReplacementCardDef())
+	addReplacementPermanent(t, g, game.Player2, counterDoublingReplacementCardDef())
+	spell := addCardToHand(g, game.Player1, def)
+	setMainPhasePriority(g, game.Player1)
+	g.Players[game.Player1].ManaPool.Add(mana.C, 1)
+	g.Players[game.Player1].ManaPool.Add(mana.W, 1)
+	e := NewEngineWithPrograms(nil, registry.Programs())
+	if !e.applyAction(g, game.Player1, action.CastSpell(spell,
+		[]game.Target{game.PermanentTarget(second.ObjectID), game.PermanentTarget(first.ObjectID)}, 0, []int{0})) {
+		t.Fatal("could not cast Unbounded Potential")
+	}
+
+	var choices int
+	e.resolveTopOfStackWithChoices(g, [game.NumPlayers]PlayerAgent{
+		game.Player2: crimeChoiceAgent(func(request game.ChoiceRequest) ([]int, bool) {
+			choices++
+			if request.Kind != game.ChoiceReplacement || !first.Counters.IsEmpty() || !second.Counters.IsEmpty() {
+				t.Fatal("expected a replacement choice before either counter placement")
+			}
+			recipient, effect, optionCount := first, "plus one", 4
+			if choices == 2 {
+				recipient, effect, optionCount = second, "twice", 2
+			}
+			if len(request.Options) != optionCount {
+				t.Fatalf("options = %+v, want %d labeled recipient/effect pairs", request.Options, optionCount)
+			}
+			for _, option := range request.Options {
+				if strings.Contains(option.Label, fmt.Sprintf("(%d):", recipient.ObjectID)) && strings.Contains(option.Label, effect) {
+					return []int{option.Index}, true
+				}
+			}
+			t.Fatalf("options = %+v, cannot choose %s for permanent %d", request.Options, effect, recipient.ObjectID)
+			return nil, false
+		}),
+	}, &TurnLog{})
+	if choices != 2 || first.Counters.Get(counter.PlusOnePlusOne) != 4 || second.Counters.Get(counter.PlusOnePlusOne) != 3 {
+		t.Fatalf("choices: %d; counters: %d and %d, want 2 choices and 4/3 counters",
+			choices, first.Counters.Get(counter.PlusOnePlusOne), second.Counters.Get(counter.PlusOnePlusOne))
+	}
+}
+
 func TestUnboundedPotentialModesAndEntwine(t *testing.T) {
 	registry := cards.NewDefaultRegistry()
 	def, err := registry.LookupOracleID("d9ae08cf-eef0-407a-ad2c-08b4c89f99f0")

@@ -369,33 +369,31 @@ func addCountersToTargetPermanents(g *game.Game, controller game.PlayerID, targe
 	if len(targets) == 1 {
 		return addCountersToPermanentControlledBy(g, controller, targets[0], kind, amount)
 	}
-	type placement struct {
-		permanent *game.Permanent
-		amount    int
-	}
-	var placements []placement
+	var placements []permanentCounterPlacement
 	for _, player := range triggerAPNAPPlayers(g) {
+		start := len(placements)
 		for _, target := range targets {
-			if effectiveController(g, target) != player {
-				continue
-			}
-			if n := replacementPermanentCounterPlacementAmount(g, controller, target, kind, amount); n > 0 {
-				placements = append(placements, placement{target, n})
+			if effectiveController(g, target) == player {
+				placements = append(placements, newPermanentCounterPlacement(controller, target, kind, amount))
 			}
 		}
+		choosePermanentCounterBatchReplacements(g, player, placements[start:])
 	}
-	if len(placements) == 0 {
-		return false
-	}
-	batchID := g.IDGen.Next()
+	var batchID id.ID
 	events := make([]game.Event, 0, len(placements))
 	for _, p := range placements {
-		events = append(events, placePermanentCounters(g, p.permanent, controller, kind, p.amount, batchID))
+		if p.event.Amount <= 0 {
+			continue
+		}
+		if batchID == 0 {
+			batchID = g.IDGen.Next()
+		}
+		events = append(events, placePermanentCounters(g, p.permanent, controller, kind, p.event.Amount, batchID))
 	}
 	for _, event := range events {
 		emitEvent(g, event)
 	}
-	return true
+	return len(events) > 0
 }
 
 // addCountersDistributed splits a fixed total of counters among the permanents
