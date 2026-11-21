@@ -316,6 +316,11 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 	if prim.Distribute {
 		return r.addCountersDistributed(prim, res.amount)
 	}
+	if prim.Object.Kind() == game.ObjectReferenceAllTargetPermanents {
+		targets := r.targetSpecPermanents(prim.Object.TargetIndex())
+		res.succeeded = addCountersToTargetPermanents(r.game, placementController, targets, prim.CounterKind, res.amount)
+		return res
+	}
 	if prim.Group.Valid() {
 		if prim.ChooseOne {
 			if permanent, ok := r.chooseOneGroupPermanent(prim.Group); ok {
@@ -358,6 +363,37 @@ func handleAddCounter(r *effectResolver, prim game.AddCounter) effectResolved {
 		}
 	}
 	return res
+}
+
+func addCountersToTargetPermanents(g *game.Game, controller game.PlayerID, targets []*game.Permanent, kind counter.Kind, amount int) bool {
+	if len(targets) == 1 {
+		return addCountersToPermanentControlledBy(g, controller, targets[0], kind, amount)
+	}
+	var placements []permanentCounterPlacement
+	for _, player := range triggerAPNAPPlayers(g) {
+		start := len(placements)
+		for _, target := range targets {
+			if effectiveController(g, target) == player {
+				placements = append(placements, newPermanentCounterPlacement(controller, target, kind, amount))
+			}
+		}
+		choosePermanentCounterBatchReplacements(g, player, placements[start:])
+	}
+	var batchID id.ID
+	events := make([]game.Event, 0, len(placements))
+	for _, p := range placements {
+		if p.event.Amount <= 0 {
+			continue
+		}
+		if batchID == 0 {
+			batchID = g.IDGen.Next()
+		}
+		events = append(events, placePermanentCounters(g, p.permanent, controller, kind, p.event.Amount, batchID))
+	}
+	for _, event := range events {
+		emitEvent(g, event)
+	}
+	return len(events) > 0
 }
 
 // addCountersDistributed splits a fixed total of counters among the permanents

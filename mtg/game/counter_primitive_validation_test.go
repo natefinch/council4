@@ -42,6 +42,11 @@ func TestCounterPlacementPrimitiveValidation(t *testing.T) {
 			permanentTargets,
 		},
 		{
+			"all permanents in the second target spec, not the second target slot",
+			AddCounter{Amount: Fixed(1), Object: AllTargetPermanentsReference(1), CounterKind: counter.Charge},
+			[]TargetSpec{{MinTargets: 1, MaxTargets: 2, Allow: TargetAllowPlayer}, {MaxTargets: 2, Allow: TargetAllowPermanent}},
+		},
+		{
 			"player",
 			AddPlayerCounter{Amount: Fixed(1), Player: TargetPlayerReference(0), CounterKind: counter.Poison},
 			playerTargets,
@@ -139,6 +144,11 @@ func TestCounterPlacementPrimitiveValidation(t *testing.T) {
 		{
 			"permanent reference to player target",
 			AddCounter{Amount: Fixed(1), Object: TargetPermanentReference(0), CounterKind: counter.Charge},
+			playerTargets,
+		},
+		{
+			"all permanents reference to player spec",
+			AddCounter{Amount: Fixed(1), Object: AllTargetPermanentsReference(0), CounterKind: counter.Charge},
 			playerTargets,
 		},
 		{

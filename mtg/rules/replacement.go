@@ -494,29 +494,84 @@ func replacementPermanentCounterPlacementAmount(g *game.Game, placementControlle
 	if permanent == nil || amount <= 0 {
 		return amount
 	}
-	event := game.Event{
+	placement := newPermanentCounterPlacement(placementController, permanent, kind, amount)
+	for {
+		matches := placement.nextReplacementChoices(g)
+		if len(matches) == 0 {
+			return placement.event.Amount
+		}
+		decision := chooseReplacementDecision(g, effectiveController(g, permanent), replacementEffectLabels(matches))
+		placement.apply(selectedReplacementEffect(matches, decision))
+	}
+}
+
+type permanentCounterPlacement struct {
+	permanent *game.Permanent
+	event     game.Event
+	applied   map[id.ID]bool
+}
+
+func newPermanentCounterPlacement(controller game.PlayerID, permanent *game.Permanent, kind counter.Kind, amount int) permanentCounterPlacement {
+	return permanentCounterPlacement{permanent: permanent, event: game.Event{
 		Kind:        game.EventCountersAdded,
-		Controller:  placementController,
+		Controller:  controller,
 		Player:      permanent.Owner,
 		CardID:      permanent.CardInstanceID,
 		PermanentID: permanent.ObjectID,
 		CounterKind: kind,
 		Amount:      amount,
-	}
-	applied := make(map[id.ID]bool)
+	}}
+}
+
+func (p *permanentCounterPlacement) nextReplacementChoices(g *game.Game) []game.ReplacementEffect {
 	for {
-		event.Amount = amount
-		matches := matchingCounterPlacementReplacementEffects(g, event, permanent, applied)
-		if len(matches) == 0 {
-			return amount
+		matches := matchingCounterPlacementReplacementEffects(g, p.event, p.permanent, p.applied)
+		if len(matches) != 1 {
+			return matches
 		}
-		replacement := matches[0]
-		if len(matches) > 1 {
-			decision := chooseReplacementDecision(g, effectiveController(g, permanent), replacementEffectLabels(matches))
-			replacement = selectedReplacementEffect(matches, decision)
+		p.apply(matches[0])
+	}
+}
+
+func (p *permanentCounterPlacement) apply(replacement game.ReplacementEffect) {
+	if p.applied == nil {
+		p.applied = make(map[id.ID]bool)
+	}
+	p.applied[replacement.ID] = true
+	p.event.Amount = counterReplacementAmount(replacement, p.event.Amount)
+}
+
+// Keep all of one player's pending recipient/effect pairs available so they
+// can make their simultaneous replacement choices in any order (CR 101.4c).
+func choosePermanentCounterBatchReplacements(g *game.Game, chooser game.PlayerID, placements []permanentCounterPlacement) {
+	type option struct {
+		placement *permanentCounterPlacement
+		effect    game.ReplacementEffect
+	}
+	for {
+		var options []option
+		var labels []string
+		for i := range placements {
+			p := &placements[i]
+			matches := p.nextReplacementChoices(g)
+			if len(matches) == 0 {
+				continue
+			}
+			name := "Permanent"
+			if info := permanentChoiceInfo(g, p.permanent); info.Exists && info.Val.Name != "" {
+				name = info.Val.Name
+			}
+			for j, label := range replacementEffectLabels(matches) {
+				options = append(options, option{p, matches[j]})
+				labels = append(labels, fmt.Sprintf("%s (%d): %s", name, p.permanent.ObjectID, label))
+			}
 		}
-		applied[replacement.ID] = true
-		amount = counterReplacementAmount(replacement, amount)
+		if len(options) == 0 {
+			return
+		}
+		decision := chooseReplacementDecision(g, chooser, labels)
+		selected := options[decision.Selected[0]]
+		selected.placement.apply(selected.effect)
 	}
 }
 

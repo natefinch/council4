@@ -79,7 +79,7 @@ func verifiedEntries() []cardset.Entry {
 		DeftbladeElite, KrosanVorine, LowlandTracker)
 	entries = append(entries, SkyshroudRidgeback, Cloudskate, SkyshroudBehemoth,
 		RejuvenationChamber, Blastoderm)
-	entries = append(entries, RainOfRust)
+	entries = append(entries, RainOfRust, UnboundedPotential)
 	entries = append(entries, Controvert, GrimHarvest, Icefall, KrovikanRot, Resize, SunsBounty)
 	entries = append(entries, RuinationGuide, BenthicInfiltrator, CullingDrone, SludgeCrawler, MistIntruder)
 	for i := range entries {

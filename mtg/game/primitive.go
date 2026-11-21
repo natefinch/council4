@@ -674,9 +674,10 @@ type AddMana struct {
 	PersistUntilEndOfTurn bool
 }
 
-// AddCounter places counters on a referenced permanent. A target Object whose
-// slot holds an exiled card target ("target permanent or suspended card") puts
-// the counters on that card in exile instead.
+// AddCounter places counters on a referenced permanent. An all-target-permanents
+// Object places the stated amount on each legal target simultaneously unless
+// Distribute is set. A target Object whose slot holds a targeted exiled card
+// ("target permanent or suspended card") puts the counters on that card instead.
 type AddCounter struct {
 	Amount      Quantity
 	Object      ObjectReference // single permanent or targeted exiled card; zero if Group is set
