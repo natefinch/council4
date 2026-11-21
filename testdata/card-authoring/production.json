@@ -2233,6 +2233,13 @@
     "oracle_text_sha256": "d3307014165e89e1b0e4bb807f35514f5afe20dbf6cb154ec6cfdb6582da8e95",
     "revision": "a81f7a0f-183f-438b-b252-738d8d30c245",
     "rulings_uri": "https://api.scryfall.com/cards/a81f7a0f-183f-438b-b252-738d8d30c245/rulings"
+   },
+   {
+    "name": "Skycloud Egg",
+    "oracle_id": "1c4b6543-777e-4c3b-a9fb-5b7210d458d5",
+    "oracle_text_sha256": "e81b8b663a473ed7596ac2670973d3afcfb041aad5814651a39ed10a135d1f73",
+    "revision": "e588cc41-4b86-4e93-94e8-dd765b27ab63",
+    "rulings_uri": "https://api.scryfall.com/cards/e588cc41-4b86-4e93-94e8-dd765b27ab63/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -10085,6 +10092,23 @@
     "game.AddMana"
    ],
    "review": "Capability-fit packet: pinned corpus entries for the four selected identities; origin/main@98fef583 mtg/cards/authored/blue_mana_battery.go and mtg/rules/blue_mana_battery_test.go; origin/main@98fef583 mtg/game/cost/README.md. The selected cards are mana-color variants of the registered Blue Mana Battery and reuse its demonstrated Engine path. This packet establishes capability fit only; card authors must perform and record the required source and rules review."
+  },
+  {
+   "id": "skycloud-egg-investigation-20261121",
+   "family": "skycloud-egg-investigation",
+   "oracle_ids": [
+    "1c4b6543-777e-4c3b-a9fb-5b7210d458d5"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.ManaAbility",
+    "cost.Mana",
+    "cost.AdditionalTap",
+    "cost.AdditionalSacrificeSource",
+    "game.AddMana",
+    "game.Draw"
+   ],
+   "review": "Capability review: mtg/game/ability_body.go (ManaAbility), mtg/game/cost/additional.go (activation costs), mtg/game/primitive.go (AddMana and Draw), and mtg/game/mana_ability.go (ManaAbilityLibraryMovement and primitiveLeavesLibraries). Draw is not among the primitives currently classified as library-safe for mana abilities, so investigate this boundary using the existing Engine only. Source and rules review remain for the author."
   }
  ],
  "records": [
@@ -79367,8 +79391,10 @@
    "oracle_id": "1c4b6543-777e-4c3b-a9fb-5b7210d458d5",
    "revision": "e588cc41-4b86-4e93-94e8-dd765b27ab63",
    "name": "Skycloud Egg",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "skycloud-egg-investigation",
+   "batch": "skycloud-egg-investigation-20261121",
+   "evidence": "mtg/rules/skycloud_egg_test.go: TestSkycloudEggPaysCostsThenAddsManaAndDraws; Odyssey printing e588cc41-4b86-4e93-94e8-dd765b27ab63; Scryfall ruling 2008-08-01; CR 2026-11-06 113.3b, 118.1, 121.1, 602.1b, 602.2a-b, 602.5e, 605.1a, 605.3b, 608.2c"
   },
   {
    "oracle_id": "1c4bd85b-03c2-4235-aea1-76c48520adf3",
