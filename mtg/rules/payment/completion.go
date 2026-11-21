@@ -404,6 +404,10 @@ func (p Planner) complete(request Request, partial Partial) (Plan, completion, b
 			currentCtx = option.spendContext()
 			spell = &option
 		}
+		fixed, compatible := option.fixedComponents(partial.Components)
+		if !compatible {
+			continue
+		}
 		var witness additionalWitness
 		sawAdditional := false
 		tryResources := func(state State, prefix []ManaActivation, projection game.ResourceProjection) (paymentPlan, bool) {
@@ -447,7 +451,7 @@ func (p Planner) complete(request Request, partial Partial) (Plan, completion, b
 				tail.ManaChoices = remainingManaOccurrences(partial.ManaChoices, counts)
 				tail.ManaOccurrences = remainingManaOccurrences(partial.ManaOccurrences, counts)
 			}
-			selected, ok := completeAdditional(state, player, option.additionalCosts, x, prefs, currentSource, cardID, sourceZone, castingID, partial.Components, partial.Groups, nil, func(witness additionalWitness) bool {
+			selected, ok := completeAdditional(state, player, option.additionalCosts, x, prefs, currentSource, cardID, sourceZone, castingID, fixed, partial.Groups, nil, func(witness additionalWitness) bool {
 				sawAdditional = true
 				for index := range partial.Components {
 					if _, selected := witness.components[index]; !selected {
@@ -514,7 +518,7 @@ func (p Planner) complete(request Request, partial Partial) (Plan, completion, b
 		if request.kind == spellPayment {
 			option.manaCost = copyManaCost(option.manaCost)
 			option.additionalCosts = slices.Clone(option.additionalCosts)
-			request.spell.PreparedCost = &PreparedSpellCost{option: option}
+			request.spell.PreparedCost = &PreparedSpellCost{Summary: option.summary(), option: option}
 		} else if request.kind == abilityPayment {
 			request.ability.AdditionalCosts = slices.Clone(option.additionalCosts)
 			request.ability.ManaCost = opt.V[cost.Mana]{}
@@ -647,6 +651,7 @@ func (p Planner) Apply(plan Plan) (ApplyResult, bool, string) {
 		AdditionalCostsPaid: slices.Clone(current.additional.paid), PaidCostSubjects: subjects,
 		SacrificedIDs: sacrificedPermanentIDs(current.additional), ReturnedAttackerIDs: returnedAttackerIDs(current.additional),
 		PoolSpend: clonePoolSpend(current.mana.poolSpend), CastPermission: current.option.castPermission, Sneaked: current.option.sneak,
+		HarmonizeCreature: current.option.harmonizeCreature,
 	}
 	ability := AbilityCostPayment{
 		PoolSpend: clonePoolSpend(current.mana.poolSpend), PaidCostSubjects: subjects,

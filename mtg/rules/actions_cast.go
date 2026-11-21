@@ -271,6 +271,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 			obj.BuybackPaid = paymentResult.BuybackPaid
 			obj.ConspirePaid = paymentResult.ConspirePaid
 			obj.Flashback = paymentResult.CastPermission == payment.SpellCastPermissionFlashback
+			obj.HarmonizeCreature = paymentResult.HarmonizeCreature
 			obj.CastPermissionEntryCounters = castRoutes[route].castPermissionEntryCounters(paymentResult.CastPermission)
 			obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 			obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
@@ -1215,8 +1216,7 @@ func (route castRoute) castPermissions(base []payment.SpellCastPermission) []pay
 
 // castPermissionEntryCounters returns the entry-counter rider a spell cast
 // through route under castPermission takes (CR 601.2b): its rule-effect
-// permission's rider, unless the spell was cast with flashback, escape or
-// aftermath, which no rule-effect permission authorizes.
+// permission's rider, not a separate graveyard keyword's permission.
 func (route castRoute) castPermissionEntryCounters(castPermission payment.SpellCastPermission) []game.CounterPlacement {
 	if isGraveyardKeywordPermission(castPermission) {
 		return nil
@@ -1225,13 +1225,11 @@ func (route castRoute) castPermissionEntryCounters(castPermission payment.SpellC
 }
 
 // isGraveyardKeywordPermission reports whether permission is one a card's own
-// graveyard-cast keyword supplies: flashback (and jump-start), escape or
-// aftermath (CR 702.34a, 702.138a, 702.127a), or a graveyard cast limited to
-// the card's sneak costs (CR 702.190a).
+// graveyard-cast keyword supplies (including a cast limited to Sneak).
 func isGraveyardKeywordPermission(permission payment.SpellCastPermission) bool {
 	switch permission {
 	case payment.SpellCastPermissionFlashback, payment.SpellCastPermissionEscape, payment.SpellCastPermissionAftermath,
-		payment.SpellCastPermissionSneak:
+		payment.SpellCastPermissionSneak, payment.SpellCastPermissionHarmonize:
 		return true
 	default:
 		return false
@@ -1630,18 +1628,14 @@ func buildSpellCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, so
 
 // graveyardPermissionCastRoutes returns the routes through which playerID may
 // cast the face of cardID from a graveyard in mode. A cast authorized only by
-// the card's own graveyard cast permissions (flashback, escape, aftermath) or
-// by rule-effect permissions that carry no rider or usage of their own has the
-// single zero route. When a matching rule-effect permission carries an entry-counter rider
-// ("If you cast a spell this way, it enters with a finality counter on it.")
-// or is a group RuleEffectCastSpellsFromZone permission with its own usage,
-// each rule-effect permission is a separate route the caster may choose
-// (CR 118.14, 601.2b), and the card's flashback, escape and aftermath casts,
-// which no rule-effect permission authorizes, are one more route without any
-// rider.
+// its own keywords has a single route. When permissions need to be separated
+// (e.g. an entry-counter rider, limited uses, or a rule-effect cast competing
+// with Harmonize), each rule-effect permission is its own route (CR 118.14,
+// 601.2b) and the card's graveyard keywords share a separate route.
 func graveyardPermissionCastRoutes(g *game.Game, playerID game.PlayerID, cardID id.ID, face game.FaceIndex, mode castCostMode) []castRoute {
 	routes, _ := castFromZonePermissionRoutes(g, playerID, cardID, zone.Graveyard, face, mode.bestowed, !mode.otherAlternative())
-	keywordCast := slices.ContainsFunc(independentCastPermissionsForZone(g, playerID, cardID, zone.Graveyard, face), isGraveyardKeywordPermission)
+	permissions := independentCastPermissionsForZone(g, playerID, cardID, zone.Graveyard, face)
+	keywordCast := slices.ContainsFunc(permissions, isGraveyardKeywordPermission)
 	if len(routes) == 0 && groupGraveyardPermissionOnlyOtherMode(g, playerID, cardID, face) {
 		// A group permission that matches only the card's other cast mode (a
 		// creature-spell permission and a bestowed cast, CR 702.103b)
@@ -1651,7 +1645,10 @@ func graveyardPermissionCastRoutes(g *game.Game, playerID game.PlayerID, cardID 
 		}
 		return nil
 	}
-	if !slices.ContainsFunc(routes, func(route castRoute) bool {
+	// Harmonize is its own permission even when a competing rule-effect route
+	// has no entry rider (for example an independent free cast).
+	harmonizeCast := slices.Contains(permissions, payment.SpellCastPermissionHarmonize)
+	if !(harmonizeCast && len(routes) != 0) && !slices.ContainsFunc(routes, func(route castRoute) bool {
 		return len(route.permission.CastEntryCounters) > 0 || route.permission.Kind == game.RuleEffectCastSpellsFromZone
 	}) {
 		return []castRoute{{}}

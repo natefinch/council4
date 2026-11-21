@@ -1213,10 +1213,14 @@ func stackObjectMoveReplacements(obj *game.StackObject, card *game.CardInstance)
 		return nil
 	}
 	var replacements []game.ReplacementEffect
-	if obj.Flashback {
+	if obj.Flashback || obj.HarmonizeCreature.Exists {
+		description := "Flashback (CR 702.34a)"
+		if obj.HarmonizeCreature.Exists {
+			description = "Harmonize (CR 702.180a)"
+		}
 		replacements = append(replacements, game.ReplacementEffect{
 			ID: obj.ID, Controller: obj.Controller, SourceCardID: card.ID,
-			Description: "Flashback (CR 702.34a)", MatchEvent: game.EventZoneChanged,
+			Description: description, MatchEvent: game.EventZoneChanged,
 			MatchFromZone: true, FromZone: zone.Stack, ReplaceToZone: zone.Exile,
 		})
 	} else if obj.SourceZone == zone.Graveyard && card.Def.FaceHasAftermath(obj.Face) {

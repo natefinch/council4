@@ -1,6 +1,8 @@
 package payment
 
 import (
+	"slices"
+
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
@@ -54,8 +56,19 @@ func resolveManaCostX(manaCost *cost.Mana, xValue int) (*cost.Mana, bool) {
 
 func applyCostModifiers(s State, ctx costModificationContext) spellCostOption {
 	modifiers := s.CostModifiersForSpell(ctx.player, ctx.card, ctx.cardID, ctx.sourceZone, ctx.targets, ctx.bargained, ctx.bestowed)
+	if creature := ctx.option.harmonizeCreature.Val; creature != 0 {
+		// These options are built from the current battlefield before the
+		// total is locked, never from a payment-time mana projection.
+		if permanent, ok := s.PermanentByObjectID(creature); ok {
+			power := max(0, s.PermanentPower(permanent))
+			modifiers = append(slices.Clone(modifiers), game.CostModifier{GenericReduction: power})
+		}
+	}
 	ctx.option.manaCost = applyManaCostModifiers(ctx.option.manaCost, modifiers)
 	ctx.option.additionalCosts = appendLifeCostModifiers(ctx.option.additionalCosts, modifiers)
+	if ctx.option.harmonizeCreature.Val != 0 {
+		ctx.option.additionalCosts = append(slices.Clone(ctx.option.additionalCosts), harmonizeTapCost)
+	}
 	return ctx.option
 }
 

@@ -1692,6 +1692,11 @@ func independentCastPermissions(g *game.Game, playerID game.PlayerID, cardID id.
 	if face == game.FaceFront && cardOK && cardHasEscapeAlternative(card) {
 		permissions = append(permissions, payment.SpellCastPermissionEscape)
 	}
+	if cardOK && card.Owner == playerID && slices.ContainsFunc(cardFaceOrDefault(card, face).AlternativeCosts, func(alternative cost.Alternative) bool {
+		return alternative.Mechanic == cost.AlternativeMechanicHarmonize && alternative.ManaCost.Exists
+	}) {
+		permissions = append(permissions, payment.SpellCastPermissionHarmonize)
+	}
 	if face == game.FaceFront && cardOK &&
 		!slices.Contains(permissions, payment.SpellCastPermissionEscape) &&
 		slices.ContainsFunc(grantedGraveyardCastAlternatives(g, playerID, cardFaceOrDefault(card, game.FaceFront)), func(alternative cost.Alternative) bool {
