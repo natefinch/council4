@@ -2093,6 +2093,13 @@
     "oracle_text_sha256": "16e5a9470c7664d53a8f548dc3574e80c0c7d03a751a65bf371777eabb80ccbb",
     "revision": "24204881-690c-4043-8771-20cb93385072",
     "rulings_uri": "https://api.scryfall.com/cards/24204881-690c-4043-8771-20cb93385072/rulings"
+   },
+   {
+    "name": "Ureni's Rebuff",
+    "oracle_id": "c0b7e989-8194-484c-93aa-a44df0764a77",
+    "oracle_text_sha256": "db40329ea0ab1032d28ef661eeb95cc71672f49b3bc46d4c78e2122a3f177e3e",
+    "revision": "722716df-9cea-40a7-924b-c28497e227e6",
+    "rulings_uri": "https://api.scryfall.com/cards/722716df-9cea-40a7-924b-c28497e227e6/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9816,6 +9823,18 @@
     "Expected Harmonize casting from the graveyard with an optional chosen-creature tap and generic reduction equal to that creature’s power; current declarations cannot bind the reduction to the choice."
    ],
    "review": "Card Channeled Dragonfire, checked Engine result for #3896 on 65b8ac6c97633ae4658f9a12288927870fd4485a: Implemented cost.HarmonizeAlternative for #3896. The engine locks a generic-only discount from the exact creature announced, taps that creature during payment, and exiles the spell card when it leaves the stack. No cards were registered and no changes were committed or published.\nVerified live main at ca6839d0878b692f4632b14fe5151f7f2d81e922: DynamicReduction could not reference the subject selected for AdditionalTapPermanents.\ngo test ./mtg/rules ./mtg/rules/payment ./mtg/game ./mtg/game/cost -count=1 -v — passed all four packages. The Channeled Dragonfire fixture confirmed that with only {R}{R}, the 1-power choice is unaffordable and the 5-power choice succeeds.\nNamed scenarios also passed for declining the tap, combined costs, locked effective power, clone/replay, direct and storm copies, competing free casts, and exile on resolution, countering, or loss of all targets.\nVerified all six pinned Oracle records and rulings against the handoffs and read the official 2026-11-06 Comprehensive Rules. Source files and test output are retained under .cardwork/. git diff --check passed."
+  },
+  {
+   "id": "resume-ed59ed79-8f31-4531-a642-064c05096769-6",
+   "family": "card-followup",
+   "oracle_ids": [
+    "c0b7e989-8194-484c-93aa-a44df0764a77"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected Harmonize casting from the graveyard with an optional chosen-creature tap and generic reduction equal to that creature’s power; current declarations cannot bind the reduction to the choice."
+   ],
+   "review": "Card Ureni's Rebuff, checked Engine result for #3896 on 65b8ac6c97633ae4658f9a12288927870fd4485a: Implemented cost.HarmonizeAlternative for #3896. The engine locks a generic-only discount from the exact creature announced, taps that creature during payment, and exiles the spell card when it leaves the stack. No cards were registered and no changes were committed or published.\nVerified live main at ca6839d0878b692f4632b14fe5151f7f2d81e922: DynamicReduction could not reference the subject selected for AdditionalTapPermanents.\ngo test ./mtg/rules ./mtg/rules/payment ./mtg/game ./mtg/game/cost -count=1 -v — passed all four packages. The Channeled Dragonfire fixture confirmed that with only {R}{R}, the 1-power choice is unaffordable and the 5-power choice succeeds.\nNamed scenarios also passed for declining the tap, combined costs, locked effective power, clone/replay, direct and storm copies, competing free casts, and exile on resolution, countering, or loss of all targets.\nVerified all six pinned Oracle records and rulings against the handoffs and read the official 2026-11-06 Comprehensive Rules. Source files and test output are retained under .cardwork/. git diff --check passed."
   }
  ],
  "records": [
@@ -218164,8 +218183,10 @@
    "oracle_id": "c0b7e989-8194-484c-93aa-a44df0764a77",
    "revision": "722716df-9cea-40a7-924b-c28497e227e6",
    "name": "Ureni's Rebuff",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-ed59ed79-8f31-4531-a642-064c05096769-6",
+   "evidence": "mtg/rules/ureni_rebuff_test.go: TestUrenisRebuffHarmonizeReturnsTargetCreatureToOwnersHand; printing 722716df-9cea-40a7-924b-c28497e227e6; Scryfall rulings retrieved 2026-11-21: 0; CR 2026-11-06 115.1a, 118.7a, 307.1, 400.3, 601.2b,c,f-h, 608.2b, 702.180a-b"
   },
   {
    "oracle_id": "c0bc3704-9bf9-4039-b3f8-205c1e5eb6e9",
