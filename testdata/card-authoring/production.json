@@ -2107,6 +2107,13 @@
     "oracle_text_sha256": "34af7b0e4744921b723a0f3ab8cfdabe4b30e5620dd34296ad613dbe34d1ddc2",
     "revision": "fc48180a-ccac-469f-938d-c050821d0160",
     "rulings_uri": "https://api.scryfall.com/cards/fc48180a-ccac-469f-938d-c050821d0160/rulings"
+   },
+   {
+    "name": "Roamer's Routine",
+    "oracle_id": "cf2355f3-11d2-4b03-b663-9fad6b07e4b2",
+    "oracle_text_sha256": "67f822004c96840b5c864b5fb42eda02f522cdc2390513bd05065419bf072d09",
+    "revision": "fb8c2d5c-ba0c-4d50-8898-5c6574b1e974",
+    "rulings_uri": "https://api.scryfall.com/cards/fb8c2d5c-ba0c-4d50-8898-5c6574b1e974/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9854,6 +9861,18 @@
     "Expected Harmonize casting from the graveyard with an optional chosen-creature tap and generic reduction equal to that creature’s power; current declarations cannot bind the reduction to the choice."
    ],
    "review": "Card Unending Whisper, checked Engine result for #3896 on 65b8ac6c97633ae4658f9a12288927870fd4485a: Implemented cost.HarmonizeAlternative for #3896. The engine locks a generic-only discount from the exact creature announced, taps that creature during payment, and exiles the spell card when it leaves the stack. No cards were registered and no changes were committed or published.\nVerified live main at ca6839d0878b692f4632b14fe5151f7f2d81e922: DynamicReduction could not reference the subject selected for AdditionalTapPermanents.\ngo test ./mtg/rules ./mtg/rules/payment ./mtg/game ./mtg/game/cost -count=1 -v — passed all four packages. The Channeled Dragonfire fixture confirmed that with only {R}{R}, the 1-power choice is unaffordable and the 5-power choice succeeds.\nNamed scenarios also passed for declining the tap, combined costs, locked effective power, clone/replay, direct and storm copies, competing free casts, and exile on resolution, countering, or loss of all targets.\nVerified all six pinned Oracle records and rulings against the handoffs and read the official 2026-11-06 Comprehensive Rules. Source files and test output are retained under .cardwork/. git diff --check passed."
+  },
+  {
+   "id": "resume-ed59ed79-8f31-4531-a642-064c05096769-8",
+   "family": "card-followup",
+   "oracle_ids": [
+    "cf2355f3-11d2-4b03-b663-9fad6b07e4b2"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected Harmonize casting from the graveyard with an optional chosen-creature tap and generic reduction equal to that creature’s power; current declarations cannot bind the reduction to the choice."
+   ],
+   "review": "Card Roamer's Routine, checked Engine result for #3896 on 65b8ac6c97633ae4658f9a12288927870fd4485a: Implemented cost.HarmonizeAlternative for #3896. The engine locks a generic-only discount from the exact creature announced, taps that creature during payment, and exiles the spell card when it leaves the stack. No cards were registered and no changes were committed or published.\nVerified live main at ca6839d0878b692f4632b14fe5151f7f2d81e922: DynamicReduction could not reference the subject selected for AdditionalTapPermanents.\ngo test ./mtg/rules ./mtg/rules/payment ./mtg/game ./mtg/game/cost -count=1 -v — passed all four packages. The Channeled Dragonfire fixture confirmed that with only {R}{R}, the 1-power choice is unaffordable and the 5-power choice succeeds.\nNamed scenarios also passed for declining the tap, combined costs, locked effective power, clone/replay, direct and storm copies, competing free casts, and exile on resolution, countering, or loss of all targets.\nVerified all six pinned Oracle records and rulings against the handoffs and read the official 2026-11-06 Comprehensive Rules. Source files and test output are retained under .cardwork/. git diff --check passed."
   }
  ],
  "records": [
@@ -230272,8 +230291,10 @@
    "oracle_id": "cf2355f3-11d2-4b03-b663-9fad6b07e4b2",
    "revision": "fb8c2d5c-ba0c-4d50-8898-5c6574b1e974",
    "name": "Roamer's Routine",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-ed59ed79-8f31-4531-a642-064c05096769-8",
+   "evidence": "mtg/rules/roamers_routine_test.go: TestRoamersRoutineHarmonizeFindsBasicLandTapped; printing fb8c2d5c-ba0c-4d50-8898-5c6574b1e974; Scryfall rulings retrieved 2026-11-21: 0; CR 2026-11-06 110.5b, 118.7a, 601.2b, 601.2f-h, 701.23a-b, 701.24a, 701.26a, 702.180a-b"
   },
   {
    "oracle_id": "cf252d71-77e7-438f-b774-28e5ab2f09f6",
