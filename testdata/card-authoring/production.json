@@ -2198,6 +2198,13 @@
     "oracle_text_sha256": "8d48f9e18f167e5101fbd01818df0970bee712f0891b3a79e51f2ae88415ee62",
     "revision": "6cf33069-013f-43ab-9a31-e67bb6dc996d",
     "rulings_uri": "https://api.scryfall.com/cards/6cf33069-013f-43ab-9a31-e67bb6dc996d/rulings"
+   },
+   {
+    "name": "Blue Mana Battery",
+    "oracle_id": "79e91e8a-cee7-411b-b0a3-d3383c0d4a43",
+    "oracle_text_sha256": "31068fe09c8e30abaa6f64be1c80795ae9b334d39f901d9713abda0a4b22de9f",
+    "revision": "cd2cb84e-c079-486e-87ad-d188fe38bc76",
+    "rulings_uri": "https://api.scryfall.com/cards/cd2cb84e-c079-486e-87ad-d188fe38bc76/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -10019,6 +10026,18 @@
     "game.Draw"
    ],
    "review": "Capability packet at origin/main@015a557437d8e53494eda45a0ca0c991ed037b9a: existing Surge declaration in mtg/cards/authored/containment_membrane.go; Tap and SkipNextUntap resolution in mtg/cards/authored/rush_of_ice.go; source review remains for the author."
+  },
+  {
+   "id": "resume-ed59ed79-8f31-4531-a642-064c05096769-17",
+   "family": "card-followup",
+   "oracle_ids": [
+    "79e91e8a-cee7-411b-b0a3-d3383c0d4a43"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected choosing one of two charge counters to leave one counter and add two blue mana; the nearest existing RemoveAll declaration removes both and adds three blue mana, and no declaration can express the intended choice."
+   ],
+   "review": "Card Blue Mana Battery, checked Engine result for #4077 on 3c322997a39cab2c180586bfa46ea91ad89b7a20: Implemented `ChooseCounterCount` for kind-specific source-counter costs. Blue Mana Battery’s Engine fixture can remove zero through all available charge counters and immediately produce one blue mana plus the amount paid. Card registration remains untouched.\nOn current main, the retained RemoveAll probe left 0 of 2 counters and produced 3 blue mana instead of leaving 1 and producing 2. Reproduction: https://github.com/natefinch/council4/issues/4077#issuecomment-7070171363\nPassed `go test ./mtg/rules -run 'Test(BlueManaBattery|ChosenCounter)' -count=1 -v`, covering zero, partial, and full payment; stale and combined costs; alternate casts; copies; and replay.\nPassed `go test ./mtg/game/... ./mtg/rules/...` and `git diff --check`. Source review is in `mtg/rules/engine_counter_quantity_test.go`; raw sources are retained under `.cardwork/blue-mana-battery/`."
   }
  ],
  "records": [
@@ -158688,8 +158707,10 @@
    "oracle_id": "79e91e8a-cee7-411b-b0a3-d3383c0d4a43",
    "revision": "cd2cb84e-c079-486e-87ad-d188fe38bc76",
    "name": "Blue Mana Battery",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-ed59ed79-8f31-4531-a642-064c05096769-17",
+   "evidence": "mtg/rules/blue_mana_battery_test.go: TestBlueManaBatteryAddsChargeCounter, TestBlueManaBatteryProducesBlueManaFromChosenChargeCounters; printing cd2cb84e-c079-486e-87ad-d188fe38bc76; Scryfall ruling 2004-10-04; CR 2026-09-25 106.3-4, 107.1c, 118.1-3, 602.2a-b, 605.1a, 605.3a-b"
   },
   {
    "oracle_id": "79edf527-2de1-433a-9cac-c91f461b1ebf",
