@@ -85,6 +85,8 @@ func verifiedEntries() []cardset.Entry {
 	entries = append(entries, Controvert, GrimHarvest, Icefall, KrovikanRot, Resize, SunsBounty)
 	entries = append(entries, RuinationGuide, BenthicInfiltrator, CullingDrone, SludgeCrawler, MistIntruder)
 	entries = append(entries, Solarion, SkyreachManta, PentadPrism, SuntouchedMyr, EtchedOracle)
+	entries = append(entries, StaffOfTheMindMagus, StaffOfTheWildMagus, StaffOfTheSunMagus,
+		StaffOfTheDeathMagus, StaffOfTheFlameMagus)
 	for i := range entries {
 		entries[i].ReplaceLegacy = replacesCompiledEntry(entries[i].Name)
 	}

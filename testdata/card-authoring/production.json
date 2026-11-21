@@ -2149,6 +2149,41 @@
     "oracle_text_sha256": "74305372d9ad7f7f8da60586d450b02b70899c7ba6978cd263c5a609021a2390",
     "revision": "1b4e70c6-8f74-4b0b-9ad7-33fce05c401b",
     "rulings_uri": "https://api.scryfall.com/cards/1b4e70c6-8f74-4b0b-9ad7-33fce05c401b/rulings"
+   },
+   {
+    "name": "Staff of the Mind Magus",
+    "oracle_id": "1466687f-cfe1-4e6e-ad8e-dca5e8e4c06d",
+    "oracle_text_sha256": "7ac2986fa5b37e9f9be52c862fc2a4716dac72b88783edeb8aef7d603e580bfb",
+    "revision": "cf76bee3-2b69-4c7b-9b7c-1a9f4bbcfde0",
+    "rulings_uri": "https://api.scryfall.com/cards/cf76bee3-2b69-4c7b-9b7c-1a9f4bbcfde0/rulings"
+   },
+   {
+    "name": "Staff of the Wild Magus",
+    "oracle_id": "6bdff38d-0a52-42e5-86ea-edd7029b44f6",
+    "oracle_text_sha256": "5775fd7928b1e934a5fd3ad2985d41fcf1131931f47b7497bda13ce59f12a0a0",
+    "revision": "e64f31e8-0b49-4510-a4df-2e0bea793d3e",
+    "rulings_uri": "https://api.scryfall.com/cards/e64f31e8-0b49-4510-a4df-2e0bea793d3e/rulings"
+   },
+   {
+    "name": "Staff of the Sun Magus",
+    "oracle_id": "bd8bc927-e50a-4fab-9803-0602a841c7c2",
+    "oracle_text_sha256": "845fd367483bbc9133123aeb811a9722a2567df1bc63af571e3faae7d43ffecb",
+    "revision": "e1f51ff4-9b5c-4e26-b811-4000a4c8f965",
+    "rulings_uri": "https://api.scryfall.com/cards/e1f51ff4-9b5c-4e26-b811-4000a4c8f965/rulings"
+   },
+   {
+    "name": "Staff of the Death Magus",
+    "oracle_id": "c3fda16e-fd56-434e-91ac-561ae0482f43",
+    "oracle_text_sha256": "ce82dd6f34ee16cb47d803a3368edfd568790077f5690d5049e80f8f84b6c99a",
+    "revision": "84a341a4-8177-41cd-a3bc-eff5dee48c94",
+    "rulings_uri": "https://api.scryfall.com/cards/84a341a4-8177-41cd-a3bc-eff5dee48c94/rulings"
+   },
+   {
+    "name": "Staff of the Flame Magus",
+    "oracle_id": "fc71710a-8294-4370-89da-7ab1c2b38d19",
+    "oracle_text_sha256": "e8e97a7456eb8616afc37e06dedb0935d2225f17cb95c496b2ad16b7ac1abde5",
+    "revision": "0fd137db-296a-4c17-ba46-8b189d96c1f9",
+    "rulings_uri": "https://api.scryfall.com/cards/0fd137db-296a-4c17-ba46-8b189d96c1f9/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9925,6 +9960,24 @@
     "game.DynamicAmountColorsOfManaSpentToCast"
    ],
    "review": "mtg/cardprogram/README.md#capability-lookup; mtg/cards/s/skyrider_elf.go and mtg/cards/c/crystalline_crawler.go (existing Converge counter-replacement prior art)"
+  },
+  {
+   "id": "staff-magus-color-land-triggers-20261121",
+   "family": "staff-magus-color-land-triggers",
+   "oracle_ids": [
+    "1466687f-cfe1-4e6e-ad8e-dca5e8e4c06d",
+    "6bdff38d-0a52-42e5-86ea-edd7029b44f6",
+    "bd8bc927-e50a-4fab-9803-0602a841c7c2",
+    "c3fda16e-fd56-434e-91ac-561ae0482f43",
+    "fc71710a-8294-4370-89da-7ab1c2b38d19"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "TriggerPattern.EventSpellCast with CardSelection.ColorsAny",
+    "TriggerPattern.EventPermanentEnteredBattlefield with SubjectSelection.SubtypesAny",
+    "game.GainLife"
+   ],
+   "review": "Capability-fit packet: mtg/cardprogram/README.md#capability-lookup; mtg/cards/authored/quirion_dryad.go; mtg/game/ability.go (TriggerPattern); mtg/game/selection.go (Selection.SubtypesAny); mtg/game/primitive.go (GainLife). Required card-source and Comprehensive Rules review remains for the author; not performed for this selection."
   }
  ],
  "records": [
@@ -72293,8 +72346,10 @@
    "oracle_id": "1466687f-cfe1-4e6e-ad8e-dca5e8e4c06d",
    "revision": "cf76bee3-2b69-4c7b-9b7c-1a9f4bbcfde0",
    "name": "Staff of the Mind Magus",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "staff-magus-color-land-triggers",
+   "batch": "staff-magus-color-land-triggers-20261121",
+   "evidence": "mtg/rules/staff_of_the_magus_test.go: TestStaffOfTheMindMagusTriggersForBlueSpellsAndIslands"
   },
   {
    "oracle_id": "14691783-1246-45ed-a439-c86d7b5eef62",
@@ -146440,8 +146495,10 @@
    "oracle_id": "6bdff38d-0a52-42e5-86ea-edd7029b44f6",
    "revision": "e64f31e8-0b49-4510-a4df-2e0bea793d3e",
    "name": "Staff of the Wild Magus",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "staff-magus-color-land-triggers",
+   "batch": "staff-magus-color-land-triggers-20261121",
+   "evidence": "mtg/rules/staff_of_the_magus_test.go: TestStaffOfTheWildMagusTriggersForGreenSpellsAndForests"
   },
   {
    "oracle_id": "6be0bf15-fdcb-4425-9bd8-3c39039cab7d",
@@ -215556,8 +215613,10 @@
    "oracle_id": "bd8bc927-e50a-4fab-9803-0602a841c7c2",
    "revision": "e1f51ff4-9b5c-4e26-b811-4000a4c8f965",
    "name": "Staff of the Sun Magus",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "staff-magus-color-land-triggers",
+   "batch": "staff-magus-color-land-triggers-20261121",
+   "evidence": "mtg/rules/staff_of_the_magus_test.go: TestStaffOfTheSunMagusTriggersForWhiteSpellsAndPlains"
   },
   {
    "oracle_id": "bd8d0498-53f9-484c-a59a-78daca468859",
@@ -220922,8 +220981,10 @@
    "oracle_id": "c3fda16e-fd56-434e-91ac-561ae0482f43",
    "revision": "84a341a4-8177-41cd-a3bc-eff5dee48c94",
    "name": "Staff of the Death Magus",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "staff-magus-color-land-triggers",
+   "batch": "staff-magus-color-land-triggers-20261121",
+   "evidence": "mtg/rules/staff_of_the_magus_test.go: TestStaffOfTheDeathMagusTriggersForBlackSpellsAndSwamps"
   },
   {
    "oracle_id": "c3fdfb94-2d10-4743-864c-a59fdd57d8b7",
@@ -269434,8 +269495,10 @@
    "oracle_id": "fc71710a-8294-4370-89da-7ab1c2b38d19",
    "revision": "0fd137db-296a-4c17-ba46-8b189d96c1f9",
    "name": "Staff of the Flame Magus",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "staff-magus-color-land-triggers",
+   "batch": "staff-magus-color-land-triggers-20261121",
+   "evidence": "mtg/rules/staff_of_the_magus_test.go: TestStaffOfTheFlameMagusTriggersForRedSpellsAndMountains"
   },
   {
    "oracle_id": "fc734a75-93bf-448b-b347-810ae835fe49",
