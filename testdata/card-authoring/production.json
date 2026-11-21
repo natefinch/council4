@@ -2100,6 +2100,13 @@
     "oracle_text_sha256": "db40329ea0ab1032d28ef661eeb95cc71672f49b3bc46d4c78e2122a3f177e3e",
     "revision": "722716df-9cea-40a7-924b-c28497e227e6",
     "rulings_uri": "https://api.scryfall.com/cards/722716df-9cea-40a7-924b-c28497e227e6/rulings"
+   },
+   {
+    "name": "Unending Whisper",
+    "oracle_id": "c5da5c31-0cf1-4393-8701-eda7880ecebc",
+    "oracle_text_sha256": "34af7b0e4744921b723a0f3ab8cfdabe4b30e5620dd34296ad613dbe34d1ddc2",
+    "revision": "fc48180a-ccac-469f-938d-c050821d0160",
+    "rulings_uri": "https://api.scryfall.com/cards/fc48180a-ccac-469f-938d-c050821d0160/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9835,6 +9842,18 @@
     "Expected Harmonize casting from the graveyard with an optional chosen-creature tap and generic reduction equal to that creature’s power; current declarations cannot bind the reduction to the choice."
    ],
    "review": "Card Ureni's Rebuff, checked Engine result for #3896 on 65b8ac6c97633ae4658f9a12288927870fd4485a: Implemented cost.HarmonizeAlternative for #3896. The engine locks a generic-only discount from the exact creature announced, taps that creature during payment, and exiles the spell card when it leaves the stack. No cards were registered and no changes were committed or published.\nVerified live main at ca6839d0878b692f4632b14fe5151f7f2d81e922: DynamicReduction could not reference the subject selected for AdditionalTapPermanents.\ngo test ./mtg/rules ./mtg/rules/payment ./mtg/game ./mtg/game/cost -count=1 -v — passed all four packages. The Channeled Dragonfire fixture confirmed that with only {R}{R}, the 1-power choice is unaffordable and the 5-power choice succeeds.\nNamed scenarios also passed for declining the tap, combined costs, locked effective power, clone/replay, direct and storm copies, competing free casts, and exile on resolution, countering, or loss of all targets.\nVerified all six pinned Oracle records and rulings against the handoffs and read the official 2026-11-06 Comprehensive Rules. Source files and test output are retained under .cardwork/. git diff --check passed."
+  },
+  {
+   "id": "resume-ed59ed79-8f31-4531-a642-064c05096769-7",
+   "family": "card-followup",
+   "oracle_ids": [
+    "c5da5c31-0cf1-4393-8701-eda7880ecebc"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected Harmonize casting from the graveyard with an optional chosen-creature tap and generic reduction equal to that creature’s power; current declarations cannot bind the reduction to the choice."
+   ],
+   "review": "Card Unending Whisper, checked Engine result for #3896 on 65b8ac6c97633ae4658f9a12288927870fd4485a: Implemented cost.HarmonizeAlternative for #3896. The engine locks a generic-only discount from the exact creature announced, taps that creature during payment, and exiles the spell card when it leaves the stack. No cards were registered and no changes were committed or published.\nVerified live main at ca6839d0878b692f4632b14fe5151f7f2d81e922: DynamicReduction could not reference the subject selected for AdditionalTapPermanents.\ngo test ./mtg/rules ./mtg/rules/payment ./mtg/game ./mtg/game/cost -count=1 -v — passed all four packages. The Channeled Dragonfire fixture confirmed that with only {R}{R}, the 1-power choice is unaffordable and the 5-power choice succeeds.\nNamed scenarios also passed for declining the tap, combined costs, locked effective power, clone/replay, direct and storm copies, competing free casts, and exile on resolution, countering, or loss of all targets.\nVerified all six pinned Oracle records and rulings against the handoffs and read the official 2026-11-06 Comprehensive Rules. Source files and test output are retained under .cardwork/. git diff --check passed."
   }
  ],
  "records": [
@@ -222340,8 +222359,10 @@
    "oracle_id": "c5da5c31-0cf1-4393-8701-eda7880ecebc",
    "revision": "fc48180a-ccac-469f-938d-c050821d0160",
    "name": "Unending Whisper",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-ed59ed79-8f31-4531-a642-064c05096769-7",
+   "evidence": "mtg/rules/unending_whisper_test.go: TestUnendingWhisperHarmonizeDrawsAndExiles; printing fc48180a-ccac-469f-938d-c050821d0160; Scryfall rulings retrieved 2026-11-21: 7; CR 2026-11-06 118.7a, 121.1, 307.1, 601.2b/f-h, 601.3, 702.180a-b"
   },
   {
    "oracle_id": "c5dc5546-e9e5-4b5b-b812-5716d4bdee0e",
