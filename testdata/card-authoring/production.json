@@ -2114,6 +2114,41 @@
     "oracle_text_sha256": "67f822004c96840b5c864b5fb42eda02f522cdc2390513bd05065419bf072d09",
     "revision": "fb8c2d5c-ba0c-4d50-8898-5c6574b1e974",
     "rulings_uri": "https://api.scryfall.com/cards/fb8c2d5c-ba0c-4d50-8898-5c6574b1e974/rulings"
+   },
+   {
+    "name": "Solarion",
+    "oracle_id": "4022e540-8fa0-4eee-bcf1-df5046289f2b",
+    "oracle_text_sha256": "db0cfdb4906d0d97036b5e21ad4c7c6ad7bc8eca625430aed0230314cfb27198",
+    "revision": "9070dd3e-7600-493e-84b9-931ac92f44bc",
+    "rulings_uri": "https://api.scryfall.com/cards/9070dd3e-7600-493e-84b9-931ac92f44bc/rulings"
+   },
+   {
+    "name": "Skyreach Manta",
+    "oracle_id": "58eab745-9afa-4db7-9d8a-f5eb0b9dca6c",
+    "oracle_text_sha256": "ffaba7e6cc99dec95b8531ea83d6095b1bbf4adf10737e90c9ffb7657d1bf6bc",
+    "revision": "3df1e8a0-6a54-4be9-bd0c-ac70f0ae9aa6",
+    "rulings_uri": "https://api.scryfall.com/cards/3df1e8a0-6a54-4be9-bd0c-ac70f0ae9aa6/rulings"
+   },
+   {
+    "name": "Pentad Prism",
+    "oracle_id": "72e8d67a-41e6-4074-bcbd-b54ead995237",
+    "oracle_text_sha256": "f7ad4701d5a588f1bc8d9c6368e1bdcfc9b6d5d435ce78b71f336650717466ce",
+    "revision": "e4beb84e-9eb9-48a2-932a-91fbbf218b5b",
+    "rulings_uri": "https://api.scryfall.com/cards/e4beb84e-9eb9-48a2-932a-91fbbf218b5b/rulings"
+   },
+   {
+    "name": "Suntouched Myr",
+    "oracle_id": "75d4f61a-8276-43ad-99e6-0d756a597e4b",
+    "oracle_text_sha256": "281b1907b9edf556b4c1f4a4d94386f1b215ad24cecfa3f1978a49992124fddd",
+    "revision": "4c5d4ae3-bc7e-4e60-a5e6-c3ae349fe6fc",
+    "rulings_uri": "https://api.scryfall.com/cards/4c5d4ae3-bc7e-4e60-a5e6-c3ae349fe6fc/rulings"
+   },
+   {
+    "name": "Etched Oracle",
+    "oracle_id": "7ecfa47e-1165-46a6-884c-290b1c14d020",
+    "oracle_text_sha256": "74305372d9ad7f7f8da60586d450b02b70899c7ba6978cd263c5a609021a2390",
+    "revision": "1b4e70c6-8f74-4b0b-9ad7-33fce05c401b",
+    "rulings_uri": "https://api.scryfall.com/cards/1b4e70c6-8f74-4b0b-9ad7-33fce05c401b/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9873,6 +9908,23 @@
     "Expected Harmonize casting from the graveyard with an optional chosen-creature tap and generic reduction equal to that creature’s power; current declarations cannot bind the reduction to the choice."
    ],
    "review": "Card Roamer's Routine, checked Engine result for #3896 on 65b8ac6c97633ae4658f9a12288927870fd4485a: Implemented cost.HarmonizeAlternative for #3896. The engine locks a generic-only discount from the exact creature announced, taps that creature during payment, and exiles the spell card when it leaves the stack. No cards were registered and no changes were committed or published.\nVerified live main at ca6839d0878b692f4632b14fe5151f7f2d81e922: DynamicReduction could not reference the subject selected for AdditionalTapPermanents.\ngo test ./mtg/rules ./mtg/rules/payment ./mtg/game ./mtg/game/cost -count=1 -v — passed all four packages. The Channeled Dragonfire fixture confirmed that with only {R}{R}, the 1-power choice is unaffordable and the 5-power choice succeeds.\nNamed scenarios also passed for declining the tap, combined costs, locked effective power, clone/replay, direct and storm copies, competing free casts, and exile on resolution, countering, or loss of all targets.\nVerified all six pinned Oracle records and rulings against the handoffs and read the official 2026-11-06 Comprehensive Rules. Source files and test output are retained under .cardwork/. git diff --check passed."
+  },
+  {
+   "id": "sunburst-20261121",
+   "family": "sunburst",
+   "oracle_ids": [
+    "4022e540-8fa0-4eee-bcf1-df5046289f2b",
+    "58eab745-9afa-4db7-9d8a-f5eb0b9dca6c",
+    "72e8d67a-41e6-4074-bcbd-b54ead995237",
+    "75d4f61a-8276-43ad-99e6-0d756a597e4b",
+    "7ecfa47e-1165-46a6-884c-290b1c14d020"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.EntersWithCountersReplacement",
+    "game.DynamicAmountColorsOfManaSpentToCast"
+   ],
+   "review": "mtg/cardprogram/README.md#capability-lookup; mtg/cards/s/skyrider_elf.go and mtg/cards/c/crystalline_crawler.go (existing Converge counter-replacement prior art)"
   }
  ],
  "records": [
@@ -109083,8 +109135,10 @@
    "oracle_id": "4022e540-8fa0-4eee-bcf1-df5046289f2b",
    "revision": "9070dd3e-7600-493e-84b9-931ac92f44bc",
    "name": "Solarion",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "sunburst",
+   "batch": "sunburst-20261121",
+   "evidence": "mtg/rules/sunburst_family_test.go: TestSolarionSunburstCountersAndActivationDoubleThem; printing 9070dd3e-7600-493e-84b9-931ac92f44bc"
   },
   {
    "oracle_id": "402506fa-6bd5-4814-8353-90c148dd576c",
@@ -129835,8 +129889,10 @@
    "oracle_id": "58eab745-9afa-4db7-9d8a-f5eb0b9dca6c",
    "revision": "3df1e8a0-6a54-4be9-bd0c-ac70f0ae9aa6",
    "name": "Skyreach Manta",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "sunburst",
+   "batch": "sunburst-20261121",
+   "evidence": "mtg/rules/sunburst_family_test.go: TestSkyreachMantaSunburstAndFlying; printing 3df1e8a0-6a54-4be9-bd0c-ac70f0ae9aa6"
   },
   {
    "oracle_id": "58ebaaba-7e35-4588-9679-23b22e39789b",
@@ -152385,8 +152441,10 @@
    "oracle_id": "72e8d67a-41e6-4074-bcbd-b54ead995237",
    "revision": "e4beb84e-9eb9-48a2-932a-91fbbf218b5b",
    "name": "Pentad Prism",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "sunburst",
+   "batch": "sunburst-20261121",
+   "evidence": "mtg/rules/sunburst_family_test.go: TestPentadPrismSunburstAndChosenColorMana; printing e4beb84e-9eb9-48a2-932a-91fbbf218b5b"
   },
   {
    "oracle_id": "72e9a207-dad9-4c51-8040-e90a36bd35e6",
@@ -154722,8 +154780,10 @@
    "oracle_id": "75d4f61a-8276-43ad-99e6-0d756a597e4b",
    "revision": "4c5d4ae3-bc7e-4e60-a5e6-c3ae349fe6fc",
    "name": "Suntouched Myr",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "sunburst",
+   "batch": "sunburst-20261121",
+   "evidence": "mtg/rules/sunburst_family_test.go: TestSuntouchedMyrSunburstCounters; printing 4c5d4ae3-bc7e-4e60-a5e6-c3ae349fe6fc"
   },
   {
    "oracle_id": "75d56a0a-2f64-4e80-b83e-85942d3e6dd7",
@@ -162698,8 +162758,10 @@
    "oracle_id": "7ecfa47e-1165-46a6-884c-290b1c14d020",
    "revision": "1b4e70c6-8f74-4b0b-9ad7-33fce05c401b",
    "name": "Etched Oracle",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "sunburst",
+   "batch": "sunburst-20261121",
+   "evidence": "mtg/rules/sunburst_family_test.go: TestEtchedOracleSunburstAndTargetedDrawActivation; printing 1b4e70c6-8f74-4b0b-9ad7-33fce05c401b"
   },
   {
    "oracle_id": "7ed3918d-509a-4fe6-a32d-5899df8f9046",
