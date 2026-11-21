@@ -2184,6 +2184,13 @@
     "oracle_text_sha256": "e8e97a7456eb8616afc37e06dedb0935d2225f17cb95c496b2ad16b7ac1abde5",
     "revision": "0fd137db-296a-4c17-ba46-8b189d96c1f9",
     "rulings_uri": "https://api.scryfall.com/cards/0fd137db-296a-4c17-ba46-8b189d96c1f9/rulings"
+   },
+   {
+    "name": "Bring Down",
+    "oracle_id": "05d2b89b-acc4-4289-95a3-a09ebb23a5d6",
+    "oracle_text_sha256": "1ac8335b45cda99a2a1df753319a0cd52c19517aa950f9b928929c53a1fc93fa",
+    "revision": "e18146f9-369c-41c8-8a1d-7737edd2c18e",
+    "rulings_uri": "https://api.scryfall.com/cards/e18146f9-369c-41c8-8a1d-7737edd2c18e/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9978,6 +9985,18 @@
     "game.GainLife"
    ],
    "review": "Capability-fit packet: mtg/cardprogram/README.md#capability-lookup; mtg/cards/authored/quirion_dryad.go; mtg/game/ability.go (TriggerPattern); mtg/game/selection.go (Selection.SubtypesAny); mtg/game/primitive.go (GainLife). Required card-source and Comprehensive Rules review remains for the author; not performed for this selection."
+  },
+  {
+   "id": "resume-ed59ed79-8f31-4531-a642-064c05096769-13",
+   "family": "card-followup",
+   "oracle_ids": [
+    "05d2b89b-acc4-4289-95a3-a09ebb23a5d6"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected the other player to pay up to three generic mana after target selection while the caster pays {W}; actual casting is rejected."
+   ],
+   "review": "Card Bring Down, checked Engine result for #192 on 975c8ca4c22aab6b4fcdd01c95ee7bda88e87bce: Assist fallback now uses the full witnessed mana activation for either payer, preserving costs and output choices without overriding valid agent decisions. Bring Down with Plateau and Mana Vault passes and remains unregistered. The broader #192 remains open; no new gaps were found in this repair.\ngo test -overlay .cardwork/review-plateau-overlay.json ./mtg/rules -run '^TestReviewAssistCasterPlateau' -count=1 -v — reproduced the fallback failure before the repair; both fallback and explicit white passed afterward.\ngo test -overlay .cardwork/review-overlay.json ./mtg/rules -run '^(TestAssist.*|TestBringDownAssist.*|TestReviewAssistWith.*)$' -count=1 -v — passed the chained-activation regression, invalid-choice fallback, explicit-choice rollback, prior Sol Ring probe, and cast-route scenarios.\ngo test ./mtg/game ./mtg/rules ./mtg/rules/payment -count=1 — passed.\ngit diff --check — passed."
   }
  ],
  "records": [
@@ -59718,8 +59737,10 @@
    "oracle_id": "05d2b89b-acc4-4289-95a3-a09ebb23a5d6",
    "revision": "e18146f9-369c-41c8-8a1d-7737edd2c18e",
    "name": "Bring Down",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-ed59ed79-8f31-4531-a642-064c05096769-13",
+   "evidence": "mtg/rules/bring_down_assist_test.go: TestBringDownAssistCastAndResolves; CR 2026-09-25 115.1a, 208.1, 601.2c/f-h, 605.3a, 608.2b, 613.1g/4c, 701.8a-c, 702.132a"
   },
   {
    "oracle_id": "05d7222b-cc08-4f1f-8e35-6058599572ba",
