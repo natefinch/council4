@@ -2629,8 +2629,9 @@ type Investigate struct {
 	Recipient opt.V[PlayerReference]
 }
 
-// Proliferate lets the controller add a counter of an existing kind to each
-// chosen permanent or player.
+// Proliferate lets the resolving controller choose any number of permanents
+// and/or players with counters and add one counter of each existing kind to
+// every chosen recipient (CR 701.34a).
 type Proliferate struct {
 	Amount Quantity
 }

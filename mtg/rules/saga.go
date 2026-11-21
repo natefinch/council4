@@ -59,10 +59,14 @@ func addCountersToPermanentControlledByAmount(g *game.Game, placementController 
 	if amount <= 0 {
 		return 0
 	}
+	emitEvent(g, placePermanentCounters(g, permanent, placementController, kind, amount, 0))
+	return amount
+}
+
+func placePermanentCounters(g *game.Game, permanent *game.Permanent, controller game.PlayerID, kind counter.Kind, amount int, simultaneousID id.ID) game.Event {
 	previous := permanent.Counters.Get(kind)
 	permanent.Counters.Add(kind, amount)
-	emitCounterAddedEvent(g, permanent, placementController, kind, previous, amount)
-	return amount
+	return counterAddedEvent(g, permanent, controller, kind, previous, amount, simultaneousID)
 }
 
 func emitCounterAddedEvent(g *game.Game, permanent *game.Permanent, controller game.PlayerID, kind counter.Kind, previous, amount int) {

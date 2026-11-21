@@ -24,6 +24,9 @@ const (
 	ChoiceSearch
 	ChoiceModal
 	ChoiceResolution
+	// ChoiceProliferate lets the resolving controller select any number of
+	// permanents and/or players that already have counters. Options are
+	// recipients, not targets or counter kinds; the default is to choose none.
 	ChoiceProliferate
 	ChoicePlayer
 	ChoiceExplore
