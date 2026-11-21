@@ -53,4 +53,6 @@ type ManaActivationCandidate struct {
 	Sacrifice    bool
 	Body         *game.ManaAbility
 	CardID       id.ID
+	// PaidCostSubjects is filled for the forecast of a specific payment witness.
+	PaidCostSubjects []game.PaidCostSubject
 }

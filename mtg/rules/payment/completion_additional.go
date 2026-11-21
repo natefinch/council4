@@ -7,6 +7,7 @@ import (
 	"github.com/natefinch/council4/mtg/game/cost"
 	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/zone"
+	"github.com/natefinch/council4/opt"
 )
 
 // ComponentChoice fixes all or a prefix of one additional cost's selections.
@@ -14,9 +15,10 @@ import (
 // Counters identify individual counters; repeated entries remove several.
 // Finished distinguishes a completed variable-size selection from a prefix.
 type ComponentChoice struct {
-	Objects  []id.ID
-	Counters []CounterRemovalChoice
-	Finished bool
+	Objects      []id.ID
+	Counters     []CounterRemovalChoice
+	CounterCount opt.V[int] // exact amount for a kind-specific chosen-count removal
+	Finished     bool
 }
 
 func cloneComponent(c ComponentChoice) ComponentChoice {
@@ -89,7 +91,7 @@ func completeAdditional(s State, playerID game.PlayerID, costs []cost.Additional
 				if selectComponent(s, playerID, candidate, xValue, source, sourceCardID, castingCardID, selection, func(choice ComponentChoice) bool {
 					components[member] = cloneComponent(choice)
 					nextPrefs := appendComponentPreferences(prefs, candidate, choice)
-					return visit(index+1, append(slices.Clone(concrete), candidate), nextPrefs)
+					return visit(index+1, append(slices.Clone(concrete), selectedComponentCost(candidate, choice)), nextPrefs)
 				}, reserved) {
 					return true
 				}
@@ -105,7 +107,7 @@ func completeAdditional(s State, playerID game.PlayerID, costs []cost.Additional
 		}
 		return selectComponent(s, playerID, additional, xValue, source, sourceCardID, castingCardID, selection, func(choice ComponentChoice) bool {
 			components[index] = cloneComponent(choice)
-			next := append(slices.Clone(concrete), additional)
+			next := append(slices.Clone(concrete), selectedComponentCost(additional, choice))
 			nextPrefs := appendComponentPreferences(prefs, additional, choice)
 			// Legacy preferences remain hints unless StrictReplay was requested.
 			// The new Partial API always fixes choices exactly.
@@ -131,6 +133,13 @@ func completeAdditional(s State, playerID game.PlayerID, costs []cost.Additional
 		return completeAdditional(s, playerID, costs, xValue, nil, source, sourceCardID, sourceZone, castingCardID, fixed, groups, tapReservations, accept)
 	}
 	return result, ok
+}
+
+func selectedComponentCost(additional cost.Additional, choice ComponentChoice) cost.Additional {
+	if additional.ChooseCounterCount {
+		additional.Amount = choice.CounterCount.Val
+	}
+	return additional
 }
 
 // Reject fixed-count contradictions with shared matching before enumerating any
@@ -463,6 +472,35 @@ func legacyComponentMatches(legacy, before *Preferences, additional cost.Additio
 }
 
 func selectComponent(s State, player game.PlayerID, additional cost.Additional, x int, source *game.Permanent, sourceCardID, castingCardID id.ID, fixed ComponentChoice, accept func(ComponentChoice) bool, reservations ...componentReservations) bool {
+	if additional.ChooseCounterCount {
+		if additional.Kind != cost.AdditionalRemoveCounter || source == nil || additional.AnyCounterKind ||
+			additional.RemoveAll || additional.Amount != 0 || additional.AmountFromX || additional.AmountAtLeastOne ||
+			additional.AmountDynamic != cost.AdditionalDynamicAmountNone || !additional.CounterKind.Valid() ||
+			additional.CounterKind.PlayerOnly() || len(fixed.Objects) != 0 || len(fixed.Counters) != 0 {
+			return false
+		}
+		key := CounterRemovalChoice{Permanent: source.ObjectID, Kind: additional.CounterKind}
+		maximum := source.Counters.Get(additional.CounterKind)
+		for _, reserved := range reservations {
+			maximum -= reserved.counters[key]
+		}
+		if fixed.CounterCount.Exists {
+			return fixed.CounterCount.Val >= 0 && fixed.CounterCount.Val <= maximum &&
+				accept(ComponentChoice{CounterCount: fixed.CounterCount, Finished: true})
+		}
+		if fixed.Finished {
+			return false
+		}
+		for count := 0; count <= maximum; count++ {
+			if accept(ComponentChoice{CounterCount: opt.Val(count), Finished: true}) {
+				return true
+			}
+		}
+		return false
+	}
+	if fixed.CounterCount.Exists {
+		return false
+	}
 	amount := additionalCostAmountIn(s, player, additional, x)
 	if amount < 0 {
 		return false

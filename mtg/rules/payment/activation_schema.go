@@ -69,6 +69,7 @@ func ClassifyManaAbility(body *game.ManaAbility) (ActivationSchema, ManaAbilityC
 		return ActivationSchema{}, OpaqueManaAbility
 	}
 	schema := ActivationSchema{body: body}
+	chosenCounterCost := false
 	for _, additional := range body.AdditionalCosts {
 		if additional.Random || additional.ChoiceGroup != 0 || additional.AmountFromX || additional.AmountDynamic != cost.AdditionalDynamicAmountNone {
 			return ActivationSchema{}, OpaqueManaAbility
@@ -89,6 +90,7 @@ func ClassifyManaAbility(body *game.ManaAbility) (ActivationSchema, ManaAbilityC
 		case cost.AdditionalExileSource:
 			schema.exile = true
 		case cost.AdditionalPayLife, cost.AdditionalEnergy, cost.AdditionalRemoveCounter, cost.AdditionalPutCounter, cost.AdditionalSacrifice:
+			chosenCounterCost = chosenCounterCost || additional.ChooseCounterCount
 		case cost.AdditionalDiscard:
 			if additional.Amount != 1 {
 				return ActivationSchema{}, OpaqueManaAbility
@@ -101,7 +103,9 @@ func ClassifyManaAbility(body *game.ManaAbility) (ActivationSchema, ManaAbilityC
 			return ActivationSchema{}, OpaqueManaAbility
 		}
 	}
-	if schema.tap && schema.untap {
+	// A chosen count can be zero, so the removal itself does not bound the
+	// number of activations. Model the tap-to-produce route, not free loops.
+	if schema.tap && schema.untap || chosenCounterCost && !schema.tap {
 		return ActivationSchema{}, OpaqueManaAbility
 	}
 	keys := make(map[game.ChoiceKey]bool)
@@ -131,7 +135,13 @@ func ClassifyManaAbility(body *game.ManaAbility) (ActivationSchema, ManaAbilityC
 			continue
 		}
 		if add, ok := instruction.Primitive.(game.AddMana); ok {
-			if !ResourceManaAmount(add.Amount) || len(add.CombinationColors) != 0 ||
+			validAmount := ResourceManaAmount(add.Amount) || add.Amount.IsDynamic() &&
+				add.Amount.DynamicAmount().Val.Kind == game.DynamicAmountPaidCostCounters &&
+				slices.ContainsFunc(body.AdditionalCosts, func(c cost.Additional) bool {
+					return c.Kind == cost.AdditionalRemoveCounter && c.ChooseCounterCount &&
+						c.SubjectKey != "" && c.SubjectKey == add.Amount.DynamicAmount().Val.CostKey
+				})
+			if !validAmount || len(add.CombinationColors) != 0 ||
 				add.Player.Exists && add.Player.Val.Kind() != game.PlayerReferenceController || add.EachControlledColor != nil ||
 				add.ChoiceFrom != "" && !keys[add.ChoiceFrom] {
 				return ActivationSchema{}, OpaqueManaAbility

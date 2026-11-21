@@ -143,9 +143,7 @@ func applyAdditionalCostPlan(s State, plan additionalCostPlan) []game.PaidCostSu
 			panic("additional cost plan became invalid while removing counters")
 		}
 		if removal.key != "" {
-			subjects = append(subjects, game.PaidCostSubject{
-				Key: removal.key, Kind: game.PaidCostCounterRemoval, Amount: amount,
-			})
+			subjects = append(subjects, removal.subject(amount))
 		}
 	}
 	// Pay reserved counter removals before stun can replace the untap (CR 601.2h).
