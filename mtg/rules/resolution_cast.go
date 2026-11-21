@@ -139,6 +139,7 @@ func (e *Engine) resolutionSpell(g *game.Game, source *game.Player, card *game.C
 		lock: func(*game.Game) payment.Request { return payment.ForSpell(request) },
 		commit: func(g *game.Game, paid payment.ApplyResult, _ [game.NumPlayers]PlayerAgent, _ *TurnLog, _ int) {
 			result := paid.Spell
+			totalSpend := paid.TotalSpellPoolSpend()
 			object.Casting = false
 			object.Blitzed = blitzAlternativeChosen(def, result.AlternativeIndex)
 			object.BuybackPaid = result.BuybackPaid
@@ -147,10 +148,10 @@ func (e *Engine) resolutionSpell(g *game.Game, source *game.Player, card *game.C
 			object.AdditionalCostsPaid = result.AdditionalCostsPaid
 			object.SacrificedAsCostIDs = result.SacrificedIDs
 			object.PaidCostSubjects = result.PaidCostSubjects
-			object.ColorsOfManaSpentToCast = distinctManaColorsSpent(result.PoolSpend)
-			object.ManaSpentByColorToCast = manaSpentByColor(result.PoolSpend)
-			object.ManaSpentToCast = totalManaSpent(result.PoolSpend)
-			object.ManaFromCreaturesSpentToCast = creatureManaSpent(result.PoolSpend)
+			object.ColorsOfManaSpentToCast = distinctManaColorsSpent(totalSpend)
+			object.ManaSpentByColorToCast = manaSpentByColor(totalSpend)
+			object.ManaSpentToCast = totalManaSpent(totalSpend)
+			object.ManaFromCreaturesSpentToCast = creatureManaSpent(totalSpend)
 			typeLine := stackSpellTypeLine(g, object, def)
 			emitSpellCastEventsWithTargets(g, object, game.Event{
 				SourceID: card.ID, StackObjectID: object.ID, Controller: player,

@@ -346,6 +346,8 @@ const (
 	Phasing
 	// Replicate is a repeatable additional casting cost and a cast trigger (CR 702.56).
 	Replicate
+	// Assist lets another player pay part of the spell's generic cost (CR 702.132).
+	Assist
 	// KeywordCount is one greater than the largest real keyword value. It sizes
 	// compact keyword sets; it is not itself a keyword.
 	KeywordCount
@@ -435,6 +437,9 @@ var (
 
 	// ConspireStaticBody declares a printed instance of Conspire.
 	ConspireStaticBody = simpleKeywordStaticBody("Conspire", Conspire)
+
+	// AssistStaticBody declares the spell's shared mana payment procedure.
+	AssistStaticBody = simpleKeywordStaticBody("Assist", Assist)
 
 	// CascadeStaticBody is the reusable StaticAbilityBody for cascade.
 	CascadeStaticBody = simpleKeywordStaticBody("Cascade", Cascade)

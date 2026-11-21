@@ -312,6 +312,13 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 	depth := 0
 	var guide []ManaActivation
 	reachedDepth := false
+	activationCandidates := func(state ManaState) []ManaActivationCandidate {
+		candidates := state.ManaActivationCandidates(playerID)
+		if allow := restrictions.allowResourceActivation; restrictions.resourceCompletion != nil && allow != nil {
+			candidates = slices.DeleteFunc(slices.Clone(candidates), func(candidate ManaActivationCandidate) bool { return !allow(candidate) })
+		}
+		return candidates
+	}
 	var search func(game.ResourceProjection, []ManaActivation) bool
 	search = func(projection game.ResourceProjection, activations []ManaActivation) bool {
 		current := s
@@ -391,7 +398,7 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 		if len(activations) == depth {
 			return false
 		}
-		candidates := current.ManaActivationCandidates(playerID)
+		candidates := activationCandidates(current)
 		type paidManaCost struct {
 			delta game.ResourceProjection
 			state ManaState
@@ -563,7 +570,7 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 		}
 		return result, false
 	}
-	candidates := s.ManaActivationCandidates(playerID)
+	candidates := activationCandidates(s)
 	required := requiredManaOccurrences(partial)
 	if state, ok := s.(interface{ ResourceSelectionStable(cost.Additional) bool }); ok {
 		checked := make(map[ManaAbilityKey]bool)

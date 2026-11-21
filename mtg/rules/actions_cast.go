@@ -252,6 +252,7 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 		},
 		commit: func(g *game.Game, paid payment.ApplyResult, _ [game.NumPlayers]PlayerAgent, _ *TurnLog, _ int) {
 			paymentResult := paid.Spell
+			totalSpend := paid.TotalSpellPoolSpend()
 			obj.Casting = false
 			if sourceZone == zone.Command {
 				recordCommanderCast(g, playerID, cast.CardID)
@@ -276,10 +277,10 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 			obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 			obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
 			obj.PaidCostSubjects = paymentResult.PaidCostSubjects
-			obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
-			obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
-			obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
-			obj.ManaFromCreaturesSpentToCast = creatureManaSpent(paymentResult.PoolSpend)
+			obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(totalSpend)
+			obj.ManaSpentByColorToCast = manaSpentByColor(totalSpend)
+			obj.ManaSpentToCast = totalManaSpent(totalSpend)
+			obj.ManaFromCreaturesSpentToCast = creatureManaSpent(totalSpend)
 
 			// CR 601.2i: the costs are paid, so the spell becomes cast. The card is
 			// already on the stack; emit its zone-change and spell-cast events now so
@@ -296,8 +297,8 @@ func (e *Engine) attemptCastSpellWithChoices(g *game.Game, playerID game.PlayerI
 				CardSubtypes:                 typeLine.subtypes,
 				Colors:                       spellColors(spellDef),
 				ManaValue:                    stackObjectKnownManaValue(g, obj),
-				ManaSpentToCast:              opt.Val(totalManaSpent(paymentResult.PoolSpend)),
-				ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(paymentResult.PoolSpend)),
+				ManaSpentToCast:              opt.Val(obj.ManaSpentToCast),
+				ManaFromCreaturesSpentToCast: opt.Val(obj.ManaFromCreaturesSpentToCast),
 				KickerPaid:                   cast.KickerPaid,
 				FromZone:                     sourceZone,
 				ToZone:                       zone.Stack,
@@ -810,6 +811,11 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 			obj.AdditionalCostsPaid = paymentResult.AdditionalCostsPaid
 			obj.SacrificedAsCostIDs = paymentResult.SacrificedIDs
 			obj.PaidCostSubjects = paymentResult.PaidCostSubjects
+			totalSpend := paid.TotalSpellPoolSpend()
+			obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(totalSpend)
+			obj.ManaSpentByColorToCast = manaSpentByColor(totalSpend)
+			obj.ManaSpentToCast = totalManaSpent(totalSpend)
+			obj.ManaFromCreaturesSpentToCast = creatureManaSpent(totalSpend)
 			emitCastTargetEvents(g, obj, targetEvents)
 			typeLine := stackSpellTypeLine(g, obj, spellDef)
 			emitEvent(g, game.Event{
@@ -828,17 +834,13 @@ func (e *Engine) attemptPreparedCopyWithChoices(g *game.Game, playerID game.Play
 				Colors:                       spellColors(spellDef),
 				CardCharacteristicsKnown:     true,
 				ManaValue:                    stackObjectKnownManaValue(g, obj),
-				ManaSpentToCast:              opt.Val(totalManaSpent(paymentResult.PoolSpend)),
-				ManaFromCreaturesSpentToCast: opt.Val(creatureManaSpent(paymentResult.PoolSpend)),
+				ManaSpentToCast:              opt.Val(obj.ManaSpentToCast),
+				ManaFromCreaturesSpentToCast: opt.Val(obj.ManaFromCreaturesSpentToCast),
 				FromZone:                     preparedCopyCastZone,
 				ToZone:                       zone.Stack,
 
 				PlayerEventOrdinalThisTurn: nextSpellCastOrdinalThisTurn(g, playerID),
 			})
-			obj.ColorsOfManaSpentToCast = distinctManaColorsSpent(paymentResult.PoolSpend)
-			obj.ManaSpentByColorToCast = manaSpentByColor(paymentResult.PoolSpend)
-			obj.ManaSpentToCast = totalManaSpent(paymentResult.PoolSpend)
-			obj.ManaFromCreaturesSpentToCast = creatureManaSpent(paymentResult.PoolSpend)
 			resolveSpellCastManaSpendRiders(g, playerID, paid.ManaBefore, paymentResult.PoolSpend, spellDef, obj)
 		},
 	}

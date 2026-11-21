@@ -132,6 +132,7 @@ type Partial struct {
 	ManaOccurrences map[ManaActivationKey]bool
 	ManaPayments    map[ManaActivationKey]Partial
 	ManaChoices     map[ManaActivationKey]map[game.ChoiceKey]game.ResolutionChoiceResult
+	Assist          AssistSelection
 	joint           bool
 	poolOnly        bool
 }
@@ -192,6 +193,7 @@ type Plan struct {
 	valid        bool
 	phyrexian    map[int]bool
 	colorLife    map[int]bool
+	assist       *assistPlan
 }
 
 // CostOption returns the selected cost option's stable index.
@@ -248,6 +250,7 @@ type ApplyResult struct {
 	// including planned production. Rider consumers must use this receipt
 	// rather than a snapshot taken before mana abilities were activated.
 	ManaBefore map[mana.Unit]int
+	Assist     opt.V[AssistReceipt]
 }
 
 type completion struct {
@@ -258,6 +261,7 @@ type completion struct {
 	tapSource  bool
 	forMana    bool
 	player     game.PlayerID
+	assist     *assistPlan
 }
 
 // Complete returns a deterministic witness when at least one joint payment
@@ -279,7 +283,7 @@ func (p Planner) CanForecastMana(player game.PlayerID, key ManaAbilityKey) bool 
 	return ok
 }
 
-func (p Planner) complete(request Request, partial Partial) (Plan, completion, bool) {
+func (p Planner) completeSinglePayer(request Request, partial Partial) (Plan, completion, bool) {
 	if state, ok := p.s.(interface{ BeginPaymentRead() func() }); ok {
 		defer state.BeginPaymentRead()()
 	}
@@ -426,7 +430,7 @@ func (p Planner) complete(request Request, partial Partial) (Plan, completion, b
 				}
 			}
 			tail := partial
-			tail.poolOnly = !request.forecastOnly && !costAllowsManaActivation(option.manaCost, x, partial)
+			tail.poolOnly = partial.poolOnly || !request.forecastOnly && !costAllowsManaActivation(option.manaCost, x, partial)
 			if partial.Allocation != nil {
 				allocation := cloneAllocation(*partial.Allocation)
 				if len(prefix) > len(allocation.Activations) {
@@ -505,7 +509,7 @@ func (p Planner) complete(request Request, partial Partial) (Plan, completion, b
 			return result.mana, ok
 		}
 		_, ok := tryResources(p.s, nil, game.ResourceProjection{})
-		if !ok && !sawAdditional && (request.forecastOnly || costAllowsManaActivation(option.manaCost, x, partial)) {
+		if !ok && !partial.poolOnly && !sawAdditional && (request.forecastOnly || costAllowsManaActivation(option.manaCost, x, partial)) {
 			if state, supported := p.s.(ManaState); supported {
 				restrictions := manaSourceRestrictions{resourceCompletion: tryResources}
 				_, ok = completeManaActivations(state, player, nil, 0, restrictions, spendContext{}, nil, 0, nil, 0, zone.None, partial)
@@ -602,9 +606,26 @@ func (p Planner) Apply(plan Plan) (ApplyResult, bool, string) {
 	allocation := plan.Mana()
 	partial := Partial{Option: opt.Val(plan.option), X: opt.Val(plan.x), Components: plan.Components(), Groups: cloneGroups(plan.groups), Allocation: &allocation}
 	partial.Phyrexian, partial.ColorLife = maps.Clone(plan.phyrexian), maps.Clone(plan.colorLife)
+	partial = partial.WithAssistPlayer(opt.V[game.PlayerID]{})
+	if plan.assist != nil {
+		if !plan.assist.committed {
+			return ApplyResult{}, false, "Assist requires an announced contribution after mana abilities"
+		}
+		partial = partial.WithAssistContribution(plan.assist.player, plan.assist.amount)
+		partial.poolOnly = true
+	}
 	_, current, ok := p.complete(plan.request, partial)
 	if !ok {
 		return ApplyResult{}, false, "payment plan is stale"
+	}
+	if plan.assist != nil && (current.assist == nil || !maps.Equal(plan.assist.spent, current.assist.spent)) {
+		return ApplyResult{}, false, "Assist contribution is stale"
+	}
+	var assist opt.V[AssistReceipt]
+	if current.assist != nil {
+		helper, _ := p.s.Player(current.assist.player)
+		assist = opt.Val(AssistReceipt{Player: helper.ID, Before: helper.ManaPool.Units(), Spent: clonePoolSpend(current.assist.spent)})
+		applyPaymentPlan(p.s, helper.ID, paymentPlan{poolSpend: current.assist.spent})
 	}
 	var before map[mana.Unit]int
 	if len(current.mana.activations) > 0 {
@@ -657,7 +678,7 @@ func (p Planner) Apply(plan Plan) (ApplyResult, bool, string) {
 		PoolSpend: clonePoolSpend(current.mana.poolSpend), PaidCostSubjects: subjects,
 		SacrificedIDs: sacrificedPermanentIDs(current.additional), TappedIDs: tappedPermanentIDs(current.additional), ExiledIDs: exiledCardIDs(current.additional),
 	}
-	return ApplyResult{Spell: spell, Ability: ability, ManaBefore: before}, true, ""
+	return ApplyResult{Spell: spell, Ability: ability, ManaBefore: before, Assist: assist}, true, ""
 }
 
 func freezeMana(plan paymentPlan) ManaAllocation {

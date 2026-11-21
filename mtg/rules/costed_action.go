@@ -169,11 +169,22 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 	}
 	announcementEnd := len(g.Events)
 	inheritedOpaque := g.OpaquePaymentActive()
-	opaqueSelected := false
+	liveManaSelected := false
 	var checkpoint *opaquePaymentCheckpoint
 	var randomFinish func(bool)
 	var keptLog TurnLog
 	keepingLogs := false
+	startLiveMana := func() {
+		liveManaSelected = true
+		if log != nil && !keepingLogs {
+			keptLog = cloneOpaqueLog(savedLog)
+			keepingLogs = true
+		}
+		if checkpoint == nil && !inheritedOpaque {
+			checkpoint = newOpaquePaymentCheckpoint(g)
+			randomFinish = g.BookmarkRandom()
+		}
+	}
 	endRandom := func(restore bool) {
 		if randomFinish != nil {
 			randomFinish(restore)
@@ -183,7 +194,7 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 	defer func() { endRandom(false) }()
 	reverse := func() actionOutcome {
 		if checkpoint == nil {
-			if inheritedOpaque && opaqueSelected {
+			if inheritedOpaque && liveManaSelected {
 				if log != nil {
 					*log = keptLog
 				}
@@ -226,7 +237,55 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 	}
 	closeManaWindow := func() {}
 	defer func() { closeManaWindow() }()
-	if manaCostIncludesManaPayment(costs.ManaCost, announcedLife) {
+	var helper opt.V[game.PlayerID]
+	if plan.AssistLimit() > 0 {
+		helper = e.chooseAssistPlayer(g, player, plan, agents, log)
+		partial = partial.WithAssistPlayer(helper)
+		if helper.Exists {
+			activate := func(payer game.PlayerID, act action.Action, witness opt.V[payment.ManaActivation]) bool {
+				startLiveMana()
+				// On fallback, follow the payer's whole witness.
+				// Defaulting only the source could choose an output color or
+				// sacrifice that makes the next witnessed activation impossible.
+				if witness.Exists {
+					return e.activateAssistWitness(g, payer, witness.Val, log, &keptLog)
+				}
+				return e.activateLivePaymentMana(g, payer, act, agents, log, &keptLog)
+			}
+			helperSource := func() opt.V[payment.ManaActivation] {
+				planner := e.PaymentPlanner(g)
+				if _, ok, _ := planner.Complete(request, partial); !ok {
+					if forecast, ok, _ := planner.Complete(request, partial.ForecastAssistPlayer(helper.Val)); ok {
+						return forecast.SuggestedAssistActivation()
+					}
+				}
+				return opt.V[payment.ManaActivation]{}
+			}
+			casterSource := func() opt.V[payment.ManaActivation] {
+				planner := e.PaymentPlanner(g)
+				if _, ok, _ := planner.Complete(request, partial.AfterAssistManaWindow()); !ok {
+					if forecast, ok, _ := planner.Complete(request, partial); ok {
+						if sources := forecast.Mana().Activations; len(sources) > 0 {
+							return opt.Val(sources[0])
+						}
+					}
+				}
+				return opt.V[payment.ManaActivation]{}
+			}
+			if !e.assistManaWindow(g, helper.Val, assistManaPrompt, helperSource, activate, agents, log) ||
+				!e.assistManaWindow(g, player, assistCasterManaPrompt, casterSource, activate, agents, log) {
+				return reverse()
+			}
+			partial = partial.AfterAssistManaWindow()
+		}
+		if _, valid, _ := e.PaymentPlanner(g).Complete(request, partial); !valid {
+			if liveManaSelected {
+				return reverse()
+			}
+			return failProposal()
+		}
+	}
+	if !helper.Exists && manaCostIncludesManaPayment(costs.ManaCost, announcedLife) {
 		g.ManaPaymentScopes = append(g.ManaPaymentScopes, player)
 		closeManaWindow = func() {
 			g.ManaPaymentScopes = g.ManaPaymentScopes[:len(g.ManaPaymentScopes)-1]
@@ -298,40 +357,18 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 				break
 			}
 			if opaque[selected].Kind == action.ActionActivateAbility {
-				opaqueSelected = true
-				if log != nil && !keepingLogs {
-					keptLog = cloneOpaqueLog(savedLog)
-					keepingLogs = true
-				}
 				// CR 734.1–2: only a selected opaque activation can invalidate
 				// a witnessed payment. Normal choices never snapshot the game.
-				if checkpoint == nil && !inheritedOpaque {
-					checkpoint = newOpaquePaymentCheckpoint(g)
-					randomFinish = g.BookmarkRandom()
-				}
-				activation, _ := opaque[selected].ActivateAbilityPayload()
-				start, entry := len(g.Events), -1
-				var beforeLog TurnLog
-				if log != nil {
-					beforeLog = *log
-					recorded := &ActionLog{Player: player, Action: opaque[selected]}
-					recordActionSource(g, player, recorded, opaque[selected])
-					entry = log.addPaymentManaActivation(recorded)
-				}
-				applied := e.applyActivateAbilityWithChoices(g, player, activation, agents, log)
-				if log != nil {
-					appendOpaqueLog(&keptLog, beforeLog, *log, !applied)
-				}
-				if !applied {
+				startLiveMana()
+				if !e.activateLivePaymentMana(g, player, opaque[selected], agents, log, &keptLog) {
 					return reverse()
 				}
-				recordActionManaTaps(g, log, entry, start)
 				continue
 			}
 			partial = partial.With(steps[selected], choices[selected])
 			partial, ok = e.choosePlannedManaPayment(g, player, request, partial, steps[selected], agents, log)
 			if !ok {
-				if checkpoint != nil || inheritedOpaque && opaqueSelected {
+				if checkpoint != nil || inheritedOpaque && liveManaSelected {
 					return reverse()
 				}
 				panic("selected mana source lost its completion")
@@ -348,7 +385,7 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 			step := payment.Step{Kind: payment.StepManaLife, Index: index}
 			choice, valid := e.choosePaymentStep(g, player, planner, request, partial, step, "Pay "+(cost.Mana{symbol}).String(), agents, log)
 			if !valid {
-				if checkpoint != nil || inheritedOpaque && opaqueSelected {
+				if checkpoint != nil || inheritedOpaque && liveManaSelected {
 					return reverse()
 				}
 				panic("color-life payment lost its witness")
@@ -360,13 +397,24 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 	if !ok || !descriptor.cost.present(g) {
 		return reverse()
 	}
+	if helper.Exists {
+		amount := e.chooseAssistContribution(g, plan, helper.Val, agents, log)
+		partial = partial.WithAssistContribution(helper.Val, amount)
+		plan, ok, _ = planner.Complete(request, partial)
+		if !ok || !descriptor.cost.present(g) {
+			if liveManaSelected {
+				return reverse()
+			}
+			return failProposal()
+		}
+	}
 	if descriptor.beforePayment != nil {
 		descriptor.beforePayment(g, plan)
 	}
 	paymentStart := len(g.Events)
 	paid, applied, reason := planner.Apply(plan)
 	if !applied {
-		if checkpoint != nil || inheritedOpaque && opaqueSelected {
+		if checkpoint != nil || inheritedOpaque && liveManaSelected {
 			return reverse()
 		}
 		panic("prevalidated costed action failed: " + reason)
@@ -375,6 +423,11 @@ func (e *Engine) costedAction(g *game.Game, player game.PlayerID, descriptor cos
 	closeManaWindow()
 	if descriptor.commit != nil {
 		descriptor.commit(g, paid, agents, log, paymentStart)
+	}
+	if paid.Assist.Exists {
+		receipt := paid.Assist.Val
+		def, _ := stackObjectSourceDef(g, descriptor.object)
+		resolveSpellCastManaSpendRiders(g, receipt.Player, receipt.Before, receipt.Spent, def, descriptor.object)
 	}
 	return actionApplied
 }
