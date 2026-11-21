@@ -36,6 +36,9 @@ const (
 	// Teen). Like flashback and escape it authorizes only that alternative
 	// cost; sneak's timing and returned attacker still apply (CR 702.190a).
 	SpellCastPermissionSneak
+	// SpellCastPermissionHarmonize authorizes only the Harmonize alternative
+	// cost from the caster's graveyard (CR 702.180a).
+	SpellCastPermissionHarmonize
 )
 
 // SpellRequest bundles all parameters needed to check or pay spell costs.
@@ -267,6 +270,8 @@ type SpellOptionSummary struct {
 	ManaCost            *cost.Mana
 	AdditionalCosts     []cost.Additional
 	CastPermission      SpellCastPermission
+	// HarmonizeCreature is present for a Harmonize option; zero means decline.
+	HarmonizeCreature opt.V[id.ID]
 }
 
 // PreparedSpellCost is an invocation-local immutable total, not a payment plan.
@@ -299,6 +304,7 @@ type SpellPaymentResult struct {
 	ReturnedAttackerIDs []id.ID
 	PoolSpend           map[mana.Unit]int
 	CastPermission      SpellCastPermission
+	HarmonizeCreature   opt.V[id.ID]
 	// Sneaked reports that the paid option was a Sneak alternative cost,
 	// printed or granted (CR 702.190a).
 	Sneaked bool

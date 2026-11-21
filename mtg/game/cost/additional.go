@@ -385,7 +385,16 @@ const (
 	AlternativeMechanicSneak
 	// AlternativeMechanicBlitz marks the Blitz alternative cost (CR 702.152).
 	AlternativeMechanicBlitz
+	// AlternativeMechanicHarmonize grants a graveyard cast with an optional
+	// creature tap and a generic reduction based on that creature (CR 702.180).
+	AlternativeMechanicHarmonize
 )
+
+// HarmonizeAlternative declares the graveyard alternative cost (CR 702.180).
+// The caster chooses whether and which creature to tap when announcing it.
+func HarmonizeAlternative(manaCost Mana) Alternative {
+	return Alternative{Label: "Harmonize", ManaCost: opt.Val(manaCost), Mechanic: AlternativeMechanicHarmonize}
+}
 
 // BlitzAlternative is the alternative cost for a card with Blitz. Pair it
 // with game.BlitzStaticAbility on the same face.

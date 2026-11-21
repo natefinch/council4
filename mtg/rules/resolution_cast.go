@@ -143,6 +143,7 @@ func (e *Engine) resolutionSpell(g *game.Game, source *game.Player, card *game.C
 			object.Blitzed = blitzAlternativeChosen(def, result.AlternativeIndex)
 			object.BuybackPaid = result.BuybackPaid
 			object.ConspirePaid = result.ConspirePaid
+			object.HarmonizeCreature = result.HarmonizeCreature
 			object.AdditionalCostsPaid = result.AdditionalCostsPaid
 			object.SacrificedAsCostIDs = result.SacrificedIDs
 			object.PaidCostSubjects = result.PaidCostSubjects

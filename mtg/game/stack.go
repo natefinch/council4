@@ -299,6 +299,11 @@ type StackObject struct {
 	// flashback; it is exiled if it would leave the stack (CR 702.34).
 	Flashback bool
 
+	// HarmonizeCreature records the announced Harmonize choice (CR 702.180).
+	// Present with a zero ID means Harmonize without tapping a creature.
+	// Presence also marks the replacement that exiles the card on leaving the stack.
+	HarmonizeCreature opt.V[id.ID]
+
 	// CastPermissionEntryCounters snapshots the entry-counter rider
 	// (RuleEffect.CastEntryCounters) of the cast permission this spell was cast
 	// through, chosen as it was cast (CR 601.2b) ("If you cast a spell this way,

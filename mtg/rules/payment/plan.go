@@ -119,6 +119,7 @@ func paySpellCosts(s State, req SpellRequest) (SpellPaymentResult, bool) {
 		ReturnedAttackerIDs: returnedAttackerIDs(plan.additional),
 		PoolSpend:           clonePoolSpend(plan.mana.poolSpend),
 		CastPermission:      plan.option.castPermission,
+		HarmonizeCreature:   plan.option.harmonizeCreature,
 		Sneaked:             plan.option.sneak,
 	}, true
 }
@@ -435,7 +436,8 @@ func buildSpellCostPlanForOption(s State, playerID game.PlayerID, cardID id.ID, 
 		option = applyCostModifiers(s, costModificationContext{player: playerID, card: option.card, cardID: cardID, sourceZone: sourceZone, targets: targets, bargained: option.bargained, bestowed: bestowed, option: option})
 	}
 	plan.option = option
-	witness, ok := completeAdditional(s, playerID, option.additionalCosts, xValue, prefs, nil, cardID, sourceZone, cardID, nil, nil, nil, func(witness additionalWitness) bool {
+	fixed, _ := option.fixedComponents(nil)
+	witness, ok := completeAdditional(s, playerID, option.additionalCosts, xValue, prefs, nil, cardID, sourceZone, cardID, fixed, nil, nil, func(witness additionalWitness) bool {
 		manaPlan, ok := completeMana(s, playerID, option.manaCost, xValue, additionalManaRestrictions(nil, witness.plan, true), option.spendContext(), clonePreferences(prefs), witness.plan.lifePaid, &option, cardID, sourceZone, Partial{})
 		if ok {
 			plan.mana = manaPlan

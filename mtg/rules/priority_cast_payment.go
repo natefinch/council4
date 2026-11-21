@@ -248,6 +248,15 @@ func (e *Engine) choosePrioritySpellPayment(g *game.Game, routes []castRoute, re
 				label += " (" + sources[choice.route].label + ")"
 			}
 			options[index] = spellCostChoiceOption(index, label, choice.summary)
+			subject := choice.summary.HarmonizeCreature
+			if subject.Exists {
+				if subject.Val == 0 {
+					options[index].Label += " — tap no creature"
+				} else if permanent, ok := permanentByObjectID(g, subject.Val); ok {
+					options[index].Label += fmt.Sprintf(" — tap %s [%d]", permanentChoiceLabel(g, permanent), subject.Val)
+					options[index].Card = permanentChoiceInfo(g, permanent)
+				}
+			}
 			if len(routes) > 1 {
 				options[index].SourcePermanent = sources[choice.route].permanent
 			}

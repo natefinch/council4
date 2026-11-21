@@ -8,6 +8,7 @@ import (
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
+	"github.com/natefinch/council4/mtg/game/id"
 	"github.com/natefinch/council4/mtg/game/types"
 	"github.com/natefinch/council4/opt"
 )
@@ -20,17 +21,18 @@ const escapeAlternativeLabel = "Escape"
 
 // spellCostOption describes one payable cost option for a spell.
 type spellCostOption struct {
-	index            int
-	alternativeIndex int
-	label            string
-	card             *game.CardDef
-	manaCost         *cost.Mana
-	additionalCosts  []cost.Additional
-	castPermission   SpellCastPermission
-	bargained        bool
-	buybackPaid      bool
-	conspirePaid     int
-	locked           bool
+	index             int
+	alternativeIndex  int
+	label             string
+	card              *game.CardDef
+	manaCost          *cost.Mana
+	additionalCosts   []cost.Additional
+	castPermission    SpellCastPermission
+	bargained         bool
+	buybackPaid       bool
+	conspirePaid      int
+	locked            bool
+	harmonizeCreature opt.V[id.ID]
 	// sneak marks the Sneak alternative cost (CR 702.190a).
 	sneak bool
 	// spendAs is the request's spending permission (CR 609.4b). It travels with
@@ -64,6 +66,7 @@ func (o spellCostOption) summary() SpellOptionSummary {
 	return SpellOptionSummary{
 		Index: o.index, DeclaredAlternative: declared, Label: o.label,
 		ManaCost: o.manaCost, AdditionalCosts: o.additionalCosts, CastPermission: o.castPermission,
+		HarmonizeCreature: o.harmonizeCreature,
 	}
 }
 
@@ -101,9 +104,16 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 		}
 	}
 	if len(permissions) == 0 {
-		permissions = []SpellCastPermission{SpellCastPermissionDefault}
-		if sourceZone == zone.Graveyard && hasFlashbackAlternative {
-			permissions[0] = SpellCastPermissionFlashback
+		if sourceZone == zone.Graveyard {
+			if hasFlashbackAlternative {
+				permissions = append(permissions, SpellCastPermissionFlashback)
+			}
+			if slices.ContainsFunc(card.AlternativeCosts, isHarmonizeAlternative) {
+				permissions = append(permissions, SpellCastPermissionHarmonize)
+			}
+		}
+		if len(permissions) == 0 {
+			permissions = []SpellCastPermission{SpellCastPermissionDefault}
 		}
 	}
 	normalPermission, canCastNormally := firstNormalPermission(permissions)
@@ -148,6 +158,12 @@ func spellCostOptionsForZoneAndKicker(s State, playerID game.PlayerID, card *gam
 				continue
 			}
 			permission = SpellCastPermissionEscape
+		case isHarmonizeAlternative(alternative):
+			if sourceZone != zone.Graveyard || !alternative.ManaCost.Exists ||
+				!slices.Contains(permissions, SpellCastPermissionHarmonize) {
+				continue
+			}
+			permission = SpellCastPermissionHarmonize
 		case canCastWithSneak && alternative.Mechanic == cost.AlternativeMechanicSneak:
 			permission = SpellCastPermissionSneak
 		default:
@@ -211,12 +227,17 @@ func spellCostOptionsForRequest(s State, req SpellRequest) []spellCostOption {
 	if len(req.ReplicateCounts) != 0 {
 		options = applyReplicateCosts(options, req)
 	}
+	options = expandHarmonizeOptions(s, req.PlayerID, options)
 	for i := range options {
 		options[i].spendAs = req.SpendAnyMana
 		options[i].spendSpell = spendSpell
 		options[i].faceDown = req.FaceDown
 	}
 	return options
+}
+
+func isHarmonizeAlternative(alternative cost.Alternative) bool {
+	return alternative.Mechanic == cost.AlternativeMechanicHarmonize
 }
 
 // Replicate adds mana to every otherwise available cost option, not another
@@ -485,6 +506,9 @@ func spellCostOptionsForRequestWithoutModes(s State, req SpellRequest) []spellCo
 		return nil
 	}
 	alternative := req.Alternative.Val
+	if isHarmonizeAlternative(alternative) {
+		return nil // Only the card's own graveyard route supplies Harmonize.
+	}
 	sneak := alternative.Mechanic == cost.AlternativeMechanicSneak
 	if !alternativeCostConditionSatisfied(s, req.PlayerID, alternative) || !req.Sneak.allows(sneak) {
 		return nil
@@ -593,13 +617,12 @@ func escalateModeManaCost(card *game.CardDef, chosenModes []int) cost.Mana {
 }
 
 // firstNormalPermission returns the first permission that authorizes paying a
-// spell's ordinary (non-graveyard-alternative) cost. Flashback, Escape and
-// Sneak permissions authorize only their graveyard alternative cost, so they
-// are skipped here.
+// spell's ordinary (non-graveyard-alternative) cost.
 func firstNormalPermission(permissions []SpellCastPermission) (SpellCastPermission, bool) {
 	for _, permission := range permissions {
-		if permission != SpellCastPermissionFlashback && permission != SpellCastPermissionEscape &&
-			permission != SpellCastPermissionSneak {
+		switch permission {
+		case SpellCastPermissionFlashback, SpellCastPermissionEscape, SpellCastPermissionSneak, SpellCastPermissionHarmonize:
+		default:
 			return permission, true
 		}
 	}
