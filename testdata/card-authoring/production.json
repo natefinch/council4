@@ -2205,6 +2205,34 @@
     "oracle_text_sha256": "31068fe09c8e30abaa6f64be1c80795ae9b334d39f901d9713abda0a4b22de9f",
     "revision": "cd2cb84e-c079-486e-87ad-d188fe38bc76",
     "rulings_uri": "https://api.scryfall.com/cards/cd2cb84e-c079-486e-87ad-d188fe38bc76/rulings"
+   },
+   {
+    "name": "Red Mana Battery",
+    "oracle_id": "8ceb295c-a611-4ac7-940b-557bf60f8a8b",
+    "oracle_text_sha256": "cc4474bfdc5efb5f7490a28e9910fc30a4a67a420e39c2cbb0f19a87ccbd5da0",
+    "revision": "e4e507bc-441d-4f44-85d4-cf93ca199d2e",
+    "rulings_uri": "https://api.scryfall.com/cards/e4e507bc-441d-4f44-85d4-cf93ca199d2e/rulings"
+   },
+   {
+    "name": "Green Mana Battery",
+    "oracle_id": "b953d19f-6ba7-4aee-b353-c60dc9572610",
+    "oracle_text_sha256": "dcc525aeea9c2adfd20b64068374ca8e5317e8638cc23f422c15120d8c21eae7",
+    "revision": "d0a6e224-72df-4f1f-93d1-5114779aed2c",
+    "rulings_uri": "https://api.scryfall.com/cards/d0a6e224-72df-4f1f-93d1-5114779aed2c/rulings"
+   },
+   {
+    "name": "White Mana Battery",
+    "oracle_id": "cf58682f-c305-4803-b54b-37f0841788e9",
+    "oracle_text_sha256": "4554a907cbde7abbdc30e78eb4fbedc4f682951c0171023211ed625f9b54a5cc",
+    "revision": "b622e694-858d-482f-a67d-0e52d268708c",
+    "rulings_uri": "https://api.scryfall.com/cards/b622e694-858d-482f-a67d-0e52d268708c/rulings"
+   },
+   {
+    "name": "Black Mana Battery",
+    "oracle_id": "dc3b2bab-755d-4b2f-97c0-70a74d721a79",
+    "oracle_text_sha256": "d3307014165e89e1b0e4bb807f35514f5afe20dbf6cb154ec6cfdb6582da8e95",
+    "revision": "a81f7a0f-183f-438b-b252-738d8d30c245",
+    "rulings_uri": "https://api.scryfall.com/cards/a81f7a0f-183f-438b-b252-738d8d30c245/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -10038,6 +10066,25 @@
     "Expected choosing one of two charge counters to leave one counter and add two blue mana; the nearest existing RemoveAll declaration removes both and adds three blue mana, and no declaration can express the intended choice."
    ],
    "review": "Card Blue Mana Battery, checked Engine result for #4077 on 3c322997a39cab2c180586bfa46ea91ad89b7a20: Implemented `ChooseCounterCount` for kind-specific source-counter costs. Blue Mana Battery’s Engine fixture can remove zero through all available charge counters and immediately produce one blue mana plus the amount paid. Card registration remains untouched.\nOn current main, the retained RemoveAll probe left 0 of 2 counters and produced 3 blue mana instead of leaving 1 and producing 2. Reproduction: https://github.com/natefinch/council4/issues/4077#issuecomment-7070171363\nPassed `go test ./mtg/rules -run 'Test(BlueManaBattery|ChosenCounter)' -count=1 -v`, covering zero, partial, and full payment; stale and combined costs; alternate casts; copies; and replay.\nPassed `go test ./mtg/game/... ./mtg/rules/...` and `git diff --check`. Source review is in `mtg/rules/engine_counter_quantity_test.go`; raw sources are retained under `.cardwork/blue-mana-battery/`."
+  },
+  {
+   "id": "mana-battery-colors-20261121-ed59ed79",
+   "family": "colored-mana-batteries",
+   "oracle_ids": [
+    "8ceb295c-a611-4ac7-940b-557bf60f8a8b",
+    "b953d19f-6ba7-4aee-b353-c60dc9572610",
+    "cf58682f-c305-4803-b54b-37f0841788e9",
+    "dc3b2bab-755d-4b2f-97c0-70a74d721a79"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.AddCounter",
+    "cost.AdditionalTap",
+    "cost.AdditionalRemoveCounter{ChooseCounterCount}",
+    "game.DynamicAmountPaidCostCounters",
+    "game.AddMana"
+   ],
+   "review": "Capability-fit packet: pinned corpus entries for the four selected identities; origin/main@98fef583 mtg/cards/authored/blue_mana_battery.go and mtg/rules/blue_mana_battery_test.go; origin/main@98fef583 mtg/game/cost/README.md. The selected cards are mana-color variants of the registered Blue Mana Battery and reuse its demonstrated Engine path. This packet establishes capability fit only; card authors must perform and record the required source and rules review."
   }
  ],
  "records": [
@@ -174856,8 +174903,10 @@
    "oracle_id": "8ceb295c-a611-4ac7-940b-557bf60f8a8b",
    "revision": "e4e507bc-441d-4f44-85d4-cf93ca199d2e",
    "name": "Red Mana Battery",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "colored-mana-batteries",
+   "batch": "mana-battery-colors-20261121-ed59ed79",
+   "evidence": "mtg/rules/colored_mana_batteries_test.go: TestRedManaBatteryStoresAndConvertsChargeCounters; 4ED printing e4e507bc-441d-4f44-85d4-cf93ca199d2e; Scryfall ruling 2004-10-04; CR 2026-09-25 106.3-4, 107.1c, 118.1-3, 122.1, 602.2a-b, 605.1a, 605.3a-b"
   },
   {
    "oracle_id": "8cef3ce7-8fbc-4e68-93f9-d6adfc2c2cbf",
@@ -212286,8 +212335,10 @@
    "oracle_id": "b953d19f-6ba7-4aee-b353-c60dc9572610",
    "revision": "d0a6e224-72df-4f1f-93d1-5114779aed2c",
    "name": "Green Mana Battery",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "colored-mana-batteries",
+   "batch": "mana-battery-colors-20261121-ed59ed79",
+   "evidence": "mtg/rules/colored_mana_batteries_test.go: TestGreenManaBatteryStoresAndConvertsChargeCounters; 4ED printing d0a6e224-72df-4f1f-93d1-5114779aed2c; Scryfall ruling 2004-10-04; CR 2026-09-25 106.3-4, 107.1c, 118.1-3, 122.1, 602.2a-b, 605.1a, 605.3a-b"
   },
   {
    "oracle_id": "b95f704d-96b9-437e-8c49-aba874139e12",
@@ -230731,8 +230782,10 @@
    "oracle_id": "cf58682f-c305-4803-b54b-37f0841788e9",
    "revision": "b622e694-858d-482f-a67d-0e52d268708c",
    "name": "White Mana Battery",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "colored-mana-batteries",
+   "batch": "mana-battery-colors-20261121-ed59ed79",
+   "evidence": "mtg/rules/colored_mana_batteries_test.go: TestWhiteManaBatteryStoresAndConvertsChargeCounters; 4ED printing b622e694-858d-482f-a67d-0e52d268708c; Scryfall ruling 2004-10-04; CR 2026-09-25 106.3-4, 107.1c, 118.1-3, 122.1, 602.2a-b, 605.1a, 605.3a-b"
   },
   {
    "oracle_id": "cf58e309-00e8-438e-813e-2e1c1002db23",
@@ -242002,8 +242055,10 @@
    "oracle_id": "dc3b2bab-755d-4b2f-97c0-70a74d721a79",
    "revision": "a81f7a0f-183f-438b-b252-738d8d30c245",
    "name": "Black Mana Battery",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "colored-mana-batteries",
+   "batch": "mana-battery-colors-20261121-ed59ed79",
+   "evidence": "mtg/rules/colored_mana_batteries_test.go: TestBlackManaBatteryStoresAndConvertsChargeCounters; 4ED printing a81f7a0f-183f-438b-b252-738d8d30c245; Scryfall ruling 2004-10-04; CR 2026-09-25 106.3-4, 107.1c, 118.1-3, 122.1, 602.2a-b, 605.1a, 605.3a-b"
   },
   {
    "oracle_id": "dc430e1b-d57f-4035-b518-9bc2e26a6c04",
