@@ -2072,6 +2072,13 @@
     "oracle_text_sha256": "4e1fbdc621ae6fb13bd77b30249e44f0bdb037014e57abd2f84c4d4baa87bdd0",
     "revision": "009a2276-0014-45c2-90b7-064594009780",
     "rulings_uri": "https://api.scryfall.com/cards/009a2276-0014-45c2-90b7-064594009780/rulings"
+   },
+   {
+    "name": "Wild Ride",
+    "oracle_id": "61978202-538b-4f92-acfc-e95f4a6ce466",
+    "oracle_text_sha256": "5cd8712fdee69a521efeafd032f9b6bc2f1202599ec268933aa26f10486078e5",
+    "revision": "abc8c6f5-6135-428e-8476-1751f82623f9",
+    "rulings_uri": "https://api.scryfall.com/cards/abc8c6f5-6135-428e-8476-1751f82623f9/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9759,6 +9766,18 @@
     "game.TokenCopyOf"
    ],
    "review": "Source review pending; capability reference: mtg/cardprogram/README.md#capability-lookup (Conspire and token-copy operations)."
+  },
+  {
+   "id": "resume-ed59ed79-8f31-4531-a642-064c05096769-3",
+   "family": "card-followup",
+   "oracle_ids": [
+    "61978202-538b-4f92-acfc-e95f4a6ce466"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected Harmonize casting from the graveyard with an optional chosen-creature tap and generic reduction equal to that creature’s power; current declarations cannot bind the reduction to the choice."
+   ],
+   "review": "Card Wild Ride, checked Engine result for #3896 on 65b8ac6c97633ae4658f9a12288927870fd4485a: Implemented cost.HarmonizeAlternative for #3896. The engine locks a generic-only discount from the exact creature announced, taps that creature during payment, and exiles the spell card when it leaves the stack. No cards were registered and no changes were committed or published.\nVerified live main at ca6839d0878b692f4632b14fe5151f7f2d81e922: DynamicReduction could not reference the subject selected for AdditionalTapPermanents.\ngo test ./mtg/rules ./mtg/rules/payment ./mtg/game ./mtg/game/cost -count=1 -v — passed all four packages. The Channeled Dragonfire fixture confirmed that with only {R}{R}, the 1-power choice is unaffordable and the 5-power choice succeeds.\nNamed scenarios also passed for declining the tap, combined costs, locked effective power, clone/replay, direct and storm copies, competing free casts, and exile on resolution, countering, or loss of all targets.\nVerified all six pinned Oracle records and rulings against the handoffs and read the official 2026-11-06 Comprehensive Rules. Source files and test output are retained under .cardwork/. git diff --check passed."
   }
  ],
  "records": [
@@ -137140,8 +137159,10 @@
    "oracle_id": "61978202-538b-4f92-acfc-e95f4a6ce466",
    "revision": "abc8c6f5-6135-428e-8476-1751f82623f9",
    "name": "Wild Ride",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-ed59ed79-8f31-4531-a642-064c05096769-3",
+   "evidence": "mtg/rules/wild_ride_test.go: TestWildRideHarmonizeTargetsCreatureAndGrantsHaste; printing abc8c6f5-6135-428e-8476-1751f82623f9; Scryfall rulings retrieved 2026-11-21: 7; CR 2026-11-06 115.1a, 601.2a-i, 601.3, 307.1, 608.2b, 611.2a/c, 613.1f-g, 702.10b, 702.180a-b"
   },
   {
    "oracle_id": "619c7d51-51d1-4467-a58b-4f275ff9df0f",
