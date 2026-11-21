@@ -2058,6 +2058,13 @@
     "oracle_text_sha256": "325d4aaaaaaa760dde053030a46eedd47ce59beed774f51692f96335922bc3ef",
     "revision": "b6ed7ca8-fd91-46e3-9149-a3de23c7078e",
     "rulings_uri": "https://api.scryfall.com/cards/b6ed7ca8-fd91-46e3-9149-a3de23c7078e/rulings"
+   },
+   {
+    "name": "Unbounded Potential",
+    "oracle_id": "d9ae08cf-eef0-407a-ad2c-08b4c89f99f0",
+    "oracle_text_sha256": "948373bb6908017066635d01e476e62dd5db4b03279f4599673fa2972a5f7273",
+    "revision": "732c3b63-5e15-4510-813c-58e20cd9833f",
+    "rulings_uri": "https://api.scryfall.com/cards/732c3b63-5e15-4510-813c-58e20cd9833f/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9708,6 +9715,29 @@
     "game.TapManaChoiceCountAbility"
    ],
    "review": "Capability-fit references: mtg/cardprogram/README.md#capability-lookup; mtg/game/ability.go:409-410; mtg/rules/phasing_creatures_test.go; mtg/game/ability_body.go:266; mtg/game/mechanic_template.go:1294. Card-specific source and rules review remains for the author; none is claimed here."
+  },
+  {
+   "id": "unbounded-potential-20261120",
+   "family": "entwine-proliferate",
+   "oracle_ids": [
+    "d9ae08cf-eef0-407a-ad2c-08b4c89f99f0"
+   ],
+   "prerequisites": [
+    4059
+   ],
+   "operations": [
+    "game.AddCounter",
+    "game.Proliferate",
+    "game.AbilityContent.EscalateCost"
+   ],
+   "review": "Pinned printing and six Scryfall rulings reviewed against the November 6, 2026 Comprehensive Rules; source review in mtg/rules/unbounded_potential_test.go.",
+   "prerequisite_evidence": [
+    {
+     "issue": 4059,
+     "runtime_revision": "b48a7a30af0d201846bdceb8a484073c7f4da92d",
+     "evidence": "mtg/rules/primitive_handlers.go dispatches to mtg/rules/proliferate.go. TestUnboundedPotentialProliferateRulesProbe and TestProliferateSeesCountersFromEarlierPaidMode passed on the landed Engine, covering zero and mixed-subset choices, all counter kinds, and counters placed by an earlier mode."
+    }
+   ]
   }
  ],
  "records": [
@@ -239455,8 +239485,10 @@
    "oracle_id": "d9ae08cf-eef0-407a-ad2c-08b4c89f99f0",
    "revision": "732c3b63-5e15-4510-813c-58e20cd9833f",
    "name": "Unbounded Potential",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "entwine-proliferate",
+   "batch": "unbounded-potential-20261120",
+   "evidence": "mtg/rules/unbounded_potential_test.go: TestUnboundedPotentialModesAndEntwine"
   },
   {
    "oracle_id": "d9af0da0-5e10-40c5-afb2-3f44c016b927",

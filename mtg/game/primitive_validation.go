@@ -1150,6 +1150,10 @@ func (p AddCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) e
 	if p.ChooseOne && p.Group.Domain() == groupDomainNone {
 		return errors.New("add counter choosing one recipient requires a group")
 	}
+	allTargets := p.Object.Kind() == ObjectReferenceAllTargetPermanents
+	if allTargets && (p.AllKinds || len(p.KindChoices) != 0 || p.PublishLinked != "") {
+		return errors.New("add counter on all targets requires one specified kind and no linked publication")
+	}
 	if p.AllKinds {
 		if p.Group.Domain() != groupDomainNone {
 			return errors.New("add counter doubling every kind requires a single object, not a group")
@@ -1210,6 +1214,9 @@ func (p AddCounter) validatePrimitive(targets []TargetSpec, checkTargets bool) e
 			return errors.New("add counter PublishLinked requires a single object, not a group")
 		}
 		return validateGroupReference(p.Group, targets, checkTargets)
+	}
+	if allTargets {
+		return validateTargetSpecAllows(p.Object.TargetIndex(), TargetAllowPermanent, targets, checkTargets)
 	}
 	if err := validateObjectReference(p.Object, targets, checkTargets); err != nil {
 		return err
