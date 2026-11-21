@@ -2191,6 +2191,13 @@
     "oracle_text_sha256": "1ac8335b45cda99a2a1df753319a0cd52c19517aa950f9b928929c53a1fc93fa",
     "revision": "e18146f9-369c-41c8-8a1d-7737edd2c18e",
     "rulings_uri": "https://api.scryfall.com/cards/e18146f9-369c-41c8-8a1d-7737edd2c18e/rulings"
+   },
+   {
+    "name": "Grip of the Roil",
+    "oracle_id": "c3c87292-2fc8-4759-b7b6-18a8b539b5d1",
+    "oracle_text_sha256": "8d48f9e18f167e5101fbd01818df0970bee712f0891b3a79e51f2ae88415ee62",
+    "revision": "6cf33069-013f-43ab-9a31-e67bb6dc996d",
+    "rulings_uri": "https://api.scryfall.com/cards/6cf33069-013f-43ab-9a31-e67bb6dc996d/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -9997,6 +10004,21 @@
     "Expected the other player to pay up to three generic mana after target selection while the caster pays {W}; actual casting is rejected."
    ],
    "review": "Card Bring Down, checked Engine result for #192 on 975c8ca4c22aab6b4fcdd01c95ee7bda88e87bce: Assist fallback now uses the full witnessed mana activation for either payer, preserving costs and output choices without overriding valid agent decisions. Bring Down with Plateau and Mana Vault passes and remains unregistered. The broader #192 remains open; no new gaps were found in this repair.\ngo test -overlay .cardwork/review-plateau-overlay.json ./mtg/rules -run '^TestReviewAssistCasterPlateau' -count=1 -v — reproduced the fallback failure before the repair; both fallback and explicit white passed afterward.\ngo test -overlay .cardwork/review-overlay.json ./mtg/rules -run '^(TestAssist.*|TestBringDownAssist.*|TestReviewAssistWith.*)$' -count=1 -v — passed the chained-activation regression, invalid-choice fallback, explicit-choice rollback, prior Sol Ring probe, and cast-route scenarios.\ngo test ./mtg/game ./mtg/rules ./mtg/rules/payment -count=1 — passed.\ngit diff --check — passed."
+  },
+  {
+   "id": "grip-of-the-roil-20261121-1651",
+   "family": "single-card-existing-operations",
+   "oracle_ids": [
+    "c3c87292-2fc8-4759-b7b6-18a8b539b5d1"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "cost.AlternativeConditionYourTeamCastSpellThisTurn",
+    "game.Tap",
+    "game.SkipNextUntap",
+    "game.Draw"
+   ],
+   "review": "Capability packet at origin/main@015a557437d8e53494eda45a0ca0c991ed037b9a: existing Surge declaration in mtg/cards/authored/containment_membrane.go; Tap and SkipNextUntap resolution in mtg/cards/authored/rush_of_ice.go; source review remains for the author."
   }
  ],
  "records": [
@@ -220858,8 +220880,10 @@
    "oracle_id": "c3c87292-2fc8-4759-b7b6-18a8b539b5d1",
    "revision": "6cf33069-013f-43ab-9a31-e67bb6dc996d",
    "name": "Grip of the Roil",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "single-card-existing-operations",
+   "batch": "grip-of-the-roil-20261121-1651",
+   "evidence": "mtg/rules/grip_of_the_roil_test.go: TestGripOfTheRoilScenario"
   },
   {
    "oracle_id": "c3c9da49-ef4f-48c7-99c8-0f226b485285",
