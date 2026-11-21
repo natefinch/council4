@@ -1,11 +1,6 @@
 package payment
 
-import (
-	"slices"
-
-	"github.com/natefinch/council4/mtg/game/cost"
-	"github.com/natefinch/council4/mtg/game/mana"
-)
+import "github.com/natefinch/council4/mtg/game/mana"
 
 // Planner is the payment planner. It exposes the public entry points for cost
 // checking and payment. Construction is via New; the zero value is not usable.
@@ -67,20 +62,7 @@ func (p Planner) PrepareSpellCosts(req SpellRequest) []PreparedSpellCost {
 			player: req.PlayerID, card: option.card, cardID: req.CardID, sourceZone: req.SourceZone,
 			targets: req.Targets, bargained: option.bargained, bestowed: req.Bestowed, option: option,
 		})
-		option.additionalCosts = slices.Clone(option.additionalCosts)
-		lockedCosts := option.additionalCosts[:0]
-		for _, additional := range option.additionalCosts {
-			if additional.AmountDynamic != cost.AdditionalDynamicAmountNone {
-				additional.Amount = p.s.AdditionalDynamicAmountValue(req.PlayerID, additional.AmountDynamic)
-				additional.AmountDynamic = cost.AdditionalDynamicAmountNone
-				additional.AmountFromX = false
-				if additional.Amount == 0 {
-					continue
-				}
-			}
-			lockedCosts = append(lockedCosts, additional)
-		}
-		option.additionalCosts = lockedCosts
+		option.additionalCosts = lockAdditionalAmounts(p.s, req.PlayerID, option.additionalCosts)
 		option.locked = true
 		result = append(result, PreparedSpellCost{
 			Summary: option.summary(),

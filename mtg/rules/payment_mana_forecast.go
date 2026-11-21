@@ -414,13 +414,15 @@ func (s *rulesPaymentState) ForecastMana(playerID game.PlayerID, candidate payme
 	if s.publicZoneOpaque {
 		for _, mode := range candidate.Body.Content.Modes {
 			for _, instruction := range mode.Sequence {
-				if add, ok := instruction.Primitive.(game.AddMana); ok && add.Amount.IsDynamic() {
+				if add, ok := instruction.Primitive.(game.AddMana); ok && add.Amount.IsDynamic() &&
+					add.Amount.DynamicAmount().Val.Kind != game.DynamicAmountPaidCostCounters {
 					return nil, game.ResourceProjection{}, false
 				}
 			}
 		}
 	}
-	obj := &game.StackObject{Kind: game.StackActivatedAbility, SourceID: candidate.Source, Controller: playerID, AbilityIndex: candidate.AbilityIndex}
+	obj := &game.StackObject{Kind: game.StackActivatedAbility, SourceID: candidate.Source, Controller: playerID,
+		AbilityIndex: candidate.AbilityIndex, PaidCostSubjects: candidate.PaidCostSubjects}
 	if card, ok := s.g.GetCardInstance(candidate.Source); ok && candidate.SourceZone == zone.Hand {
 		obj.SourceCardID = card.ID
 	} else if permanent, ok := permanentByObjectID(s.g, candidate.Source); ok {
@@ -530,7 +532,12 @@ func forecastManaContent(g *game.Game, obj *game.StackObject, content game.Abili
 			}
 		case game.PrimitiveAddMana:
 			prim := instruction.Primitive.(game.AddMana)
-			if len(prim.CombinationColors) != 0 || prim.EachControlledColor != nil || !payment.ResourceManaAmount(prim.Amount) {
+			paidCounterAmount := prim.Amount.IsDynamic() && prim.Amount.DynamicAmount().Val.Kind == game.DynamicAmountPaidCostCounters &&
+				slices.ContainsFunc(obj.PaidCostSubjects, func(s game.PaidCostSubject) bool {
+					return s.Kind == game.PaidCostCounterRemoval && s.Key == prim.Amount.DynamicAmount().Val.CostKey
+				})
+			if len(prim.CombinationColors) != 0 || prim.EachControlledColor != nil ||
+				!paidCounterAmount && !payment.ResourceManaAmount(prim.Amount) {
 				return nil, game.ResourceProjection{}, false
 			}
 			_, recipient, units := evaluateAddMana(r, prim)
@@ -538,6 +545,9 @@ func forecastManaContent(g *game.Game, obj *game.StackObject, content game.Abili
 				return nil, game.ResourceProjection{}, false
 			}
 			for _, unit := range units {
+				if paidCounterAmount && unit.amount == 0 {
+					continue
+				}
 				production = append(production, payment.ManaProduction{Unit: unit.unit, Amount: unit.amount, Rider: unit.rider})
 			}
 		case game.PrimitiveGainLife:

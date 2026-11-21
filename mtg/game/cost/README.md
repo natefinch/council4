@@ -129,6 +129,12 @@ cost.Additional{
 }
 ```
 
+For “remove any number of charge counters from this permanent,” set
+`ChooseCounterCount: true` instead of `Amount`. The payer can choose zero
+and can only choose a count that leaves the whole payment legal. Set
+`SubjectKey` to let the effect read the paid count using
+`game.DynamicAmountPaidCostCounters`.
+
 ### Alternative
 
 `Alternative` replaces the normal mana cost when selected. It may contain a

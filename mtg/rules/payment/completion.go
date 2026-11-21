@@ -4,6 +4,7 @@ import (
 	"maps"
 	"reflect"
 	"slices"
+	"strconv"
 
 	"github.com/natefinch/council4/mtg/game"
 	"github.com/natefinch/council4/mtg/game/cost"
@@ -572,7 +573,9 @@ func (p Planner) completeSinglePayer(request Request, partial Partial) (Plan, co
 func lockAdditionalAmounts(s State, player game.PlayerID, costs []cost.Additional) []cost.Additional {
 	result := make([]cost.Additional, 0, len(costs))
 	for _, additional := range costs {
-		if additional.AmountDynamic != cost.AdditionalDynamicAmountNone {
+		// A chosen counter cost cannot combine amount rules; leave such a
+		// declaration intact so component validation rejects it.
+		if !additional.ChooseCounterCount && additional.AmountDynamic != cost.AdditionalDynamicAmountNone {
 			additional.Amount = s.AdditionalDynamicAmountValue(player, additional.AmountDynamic)
 			additional.AmountDynamic = cost.AdditionalDynamicAmountNone
 			additional.AmountFromX = false
@@ -1030,12 +1033,23 @@ func (p Planner) Options(request Request, partial Partial, step Step) []Choice {
 				}
 			}
 			var candidates []Choice
+			var counts map[int]bool
+			if costs[step.Index].ChooseCounterCount {
+				counts = make(map[int]bool)
+			}
 			collect := func(state State, _ []ManaActivation, _ game.ResourceProjection) (paymentPlan, bool) {
 				source := current.source
 				if source != nil {
 					source, _ = state.PermanentByObjectID(source.ObjectID)
 				}
 				New(state).nextComponentChoices(current.player, costs[step.Index], plan.x, source, cardID, castingID, partial.Components[step.Index], plan.components[step.Index], func(choice Choice) {
+					if count := choice.Component.CounterCount; count.Exists {
+						if !counts[count.Val] {
+							counts[count.Val] = true
+							candidates = append(candidates, choice)
+						}
+						return
+					}
 					if !slices.ContainsFunc(candidates, func(candidate Choice) bool { return reflect.DeepEqual(candidate.Component, choice.Component) }) {
 						candidates = append(candidates, choice)
 					}
@@ -1102,6 +1116,16 @@ func costAllowsManaActivation(manaCost *cost.Mana, x int, partial Partial) bool 
 // subset. Threshold payments can finish once sufficient or select more.
 func (p Planner) nextComponentChoices(player game.PlayerID, additional cost.Additional, x int, source *game.Permanent, sourceCardID, castingCardID id.ID, prefix, witness ComponentChoice, add func(Choice)) {
 	if prefix.Finished {
+		return
+	}
+	if additional.ChooseCounterCount {
+		if source != nil {
+			for count := 0; count <= source.Counters.Get(additional.CounterKind); count++ {
+				add(Choice{Value: count, Label: strconv.Itoa(count), Component: ComponentChoice{
+					CounterCount: opt.Val(count), Finished: true,
+				}})
+			}
+		}
 		return
 	}
 	amount := additionalCostAmountIn(p.s, player, additional, x)

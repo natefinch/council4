@@ -178,6 +178,12 @@ type Additional struct {
 	// DynamicAmountPaidCostCounters ("the number of counters removed this way").
 	RemoveAll bool
 
+	// ChooseCounterCount lets the payer choose how many CounterKind counters
+	// to remove from the source permanent, including zero. Use it only with
+	// kind-specific AdditionalRemoveCounter, without another amount rule.
+	// SubjectKey publishes the paid count just as for a fixed removal.
+	ChooseCounterCount bool `json:",omitempty"`
+
 	// RequireTapped constrains battlefield costs to tapped permanents.
 	RequireTapped bool
 

@@ -97,7 +97,22 @@ func projectActivationCosts(s ManaState, playerID game.PlayerID, witness additio
 		p.Events = append(p.Events, s.ProjectResources(p).(ManaState).PrepareManaEvent(game.Event{Kind: game.EventPermanentTapped, PermanentID: source, Player: playerID, TappedForMana: true}))
 	}
 	for _, removal := range witness.plan.counterRemovals {
-		edit(removal.source.ObjectID, func(r *game.PermanentResources) { r.Counters[removal.kind] -= removal.amount })
+		if removal.amount == 0 {
+			continue
+		}
+		object := removal.source.ObjectID
+		previous := 0
+		edit(object, func(r *game.PermanentResources) {
+			previous = r.Counters[removal.kind]
+			r.Counters[removal.kind] -= removal.amount
+		})
+		if removal.chosen {
+			p.Events = append(p.Events, s.ProjectResources(p).(ManaState).PrepareManaEvent(game.Event{
+				Kind: game.EventCountersRemoved, SourceID: removal.source.CardInstanceID, SourceObjectID: object,
+				Controller: playerID, CardID: removal.source.CardInstanceID, PermanentID: object,
+				CounterKind: removal.kind, PreviousCounterAmount: previous, Amount: removal.amount,
+			}))
+		}
 	}
 	if witness.plan.untapSource != nil {
 		object := witness.plan.untapSource.ObjectID
@@ -233,6 +248,7 @@ func bindManaCostOccurrence(partial Partial, plan Plan) (Partial, bool) {
 		if !exists || len(fixed.Objects) > len(component.Objects) || len(fixed.Counters) > len(component.Counters) ||
 			!slices.Equal(fixed.Objects, component.Objects[:len(fixed.Objects)]) ||
 			!slices.Equal(fixed.Counters, component.Counters[:len(fixed.Counters)]) ||
+			(fixed.CounterCount.Exists || fixed.Finished) && fixed.CounterCount != component.CounterCount ||
 			fixed.Finished && (len(fixed.Objects) != len(component.Objects) || len(fixed.Counters) != len(component.Counters)) {
 			return partial, false
 		}
@@ -511,7 +527,13 @@ func completeManaActivations(s ManaState, playerID game.PlayerID, manaCost *cost
 					}
 					paidCosts[costKey] = paid
 				}
-				production, effects, ok := paid.state.ForecastMana(playerID, candidate)
+				costPaidCandidate := candidate
+				for _, removal := range w.plan.counterRemovals {
+					if removal.key != "" {
+						costPaidCandidate.PaidCostSubjects = append(costPaidCandidate.PaidCostSubjects, removal.subject(removal.amount))
+					}
+				}
+				production, effects, ok := paid.state.ForecastMana(playerID, costPaidCandidate)
 				if !ok {
 					return false
 				}

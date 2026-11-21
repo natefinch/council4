@@ -53,8 +53,15 @@ type counterRemoval struct {
 	// all removes every counter of kind the source has as the cost is paid,
 	// which may differ from the planned amount and may be zero.
 	all bool
+	// chosen distinguishes a fixed payment selected by count from a printed
+	// fixed amount or remove-all.
+	chosen bool
 	// key publishes the actually removed count as a PaidCostCounterRemoval.
 	key string
+}
+
+func (r counterRemoval) subject(amount int) game.PaidCostSubject {
+	return game.PaidCostSubject{Key: r.key, Kind: game.PaidCostCounterRemoval, Amount: amount}
 }
 
 type counterPlacement struct {
@@ -205,8 +212,11 @@ func buildSelectedAdditionalCostPlan(s State, playerID game.PlayerID, costs []co
 			}
 			if additional.RemoveAll {
 				amount = max(source.Counters.Get(additional.CounterKind)-planned, 0)
+			} else if additional.ChooseCounterCount {
+				// The completion search already selected this concrete amount.
+				amount = additional.Amount
 			}
-			if source.Counters.Get(additional.CounterKind) < planned+amount {
+			if amount > source.Counters.Get(additional.CounterKind)-planned {
 				return plan, false
 			}
 			plan.counterRemovals = append(plan.counterRemovals, counterRemoval{
@@ -214,6 +224,7 @@ func buildSelectedAdditionalCostPlan(s State, playerID game.PlayerID, costs []co
 				kind:   additional.CounterKind,
 				amount: amount,
 				all:    additional.RemoveAll,
+				chosen: additional.ChooseCounterCount,
 				key:    additional.SubjectKey,
 			})
 			plan.paid = append(plan.paid, AdditionalCostText(additional))
@@ -702,6 +713,9 @@ func AdditionalCostAmount(additional cost.Additional) int {
 // AdditionalCostAmountFor returns the effective amount for an additional cost
 // using the announced X value when the cost is variable.
 func AdditionalCostAmountFor(additional cost.Additional, xValue int) int {
+	if additional.ChooseCounterCount {
+		return 0 // minimum until the payment component fixes the count
+	}
 	if additional.AmountFromX {
 		return xValue
 	}
@@ -758,6 +772,9 @@ func AdditionalCostText(additional cost.Additional) string {
 	case cost.AdditionalUntap:
 		return "{Q}"
 	case cost.AdditionalRemoveCounter:
+		if additional.ChooseCounterCount {
+			return fmt.Sprintf("Choose how many %s counters to remove from this permanent", additional.CounterKind)
+		}
 		if additional.RemoveAll && !additional.AnyCounterKind {
 			return fmt.Sprintf("Remove all %s counters", additional.CounterKind)
 		}
