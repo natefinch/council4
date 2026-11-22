@@ -13,4 +13,7 @@ type Unit struct {
 	// Persistent distinguishes mana produced with turn-long retention from
 	// ordinary mana of the same color/provenance. The pool owns its expiry.
 	Persistent bool
+	// UntilEndOfCombat distinguishes combat-retained mana from both ordinary
+	// and turn-retained mana of the same color/provenance.
+	UntilEndOfCombat bool
 }

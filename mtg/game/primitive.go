@@ -667,11 +667,16 @@ type AddMana struct {
 	CombinationColors []mana.Color
 	// PersistUntilEndOfTurn, when set, makes the mana produced by this
 	// instruction not empty as steps and phases end for the rest of the turn
-	// (the CR 500.4 exception used by "Until end of turn, you don't lose this
+	// (the CR 500.5 exception used by "Until end of turn, you don't lose this
 	// mana as steps and phases end", Grand Warlord Radha). The mana is added to
 	// the recipient's pool as persistent mana (Pool.AddPersistent); it is
 	// released at end-of-turn cleanup so it empties normally thereafter.
 	PersistUntilEndOfTurn bool
+	// PersistUntilEndOfCombat, when set, keeps mana produced during combat
+	// through its step boundaries, including end-of-combat priority (CR
+	// 500.5a, 511.2, 702.189a). Unspent mana empties as the combat phase
+	// ends. If both fields are set, the longer turn duration prevails.
+	PersistUntilEndOfCombat bool
 }
 
 // AddCounter places counters on a referenced permanent. An all-target-permanents

@@ -144,9 +144,12 @@ func handleAddMana(r *effectResolver, prim game.AddMana) effectResolved {
 		return res
 	}
 	for _, produced := range production {
-		if produced.unit.Persistent {
+		switch {
+		case produced.unit.Persistent:
 			player.ManaPool.AddPersistentUnit(produced.unit, produced.amount)
-		} else {
+		case produced.unit.UntilEndOfCombat:
+			player.ManaPool.AddUntilEndOfCombatUnit(produced.unit, produced.amount)
+		default:
 			player.ManaPool.AddUnit(produced.unit, produced.amount)
 		}
 		if produced.rider != nil {
@@ -185,8 +188,12 @@ func evaluateAddMana(r *effectResolver, prim game.AddMana) (effectResolved, game
 		return res, recipientID, nil
 	}
 	fromCreature := stackObjectSourceIsCreature(r.game, r.obj)
+	combatRetained := prim.PersistUntilEndOfCombat && !prim.PersistUntilEndOfTurn && r.game.Turn.Phase == game.PhaseCombat
 	addToPool := func(c mana.Color, amount int, snow bool) {
-		unit := mana.Unit{Color: c, Snow: snow, FromCreature: fromCreature, Persistent: prim.PersistUntilEndOfTurn}
+		unit := mana.Unit{
+			Color: c, Snow: snow, FromCreature: fromCreature,
+			Persistent: prim.PersistUntilEndOfTurn, UntilEndOfCombat: combatRetained,
+		}
 		production = append(production, manaProducedUnit{unit: unit, amount: amount})
 	}
 	if multiplier := tappedForManaProductionMultiplier(r.game, r.obj, recipientID); multiplier > 1 {
@@ -232,9 +239,9 @@ func evaluateAddMana(r *effectResolver, prim game.AddMana) (effectResolved, game
 	snow := stackObjectSourceIsSnow(r.game, r.obj)
 	addToPool(manaColor, res.amount, snow)
 	if prim.SpendRider.Exists {
-		unit := mana.Unit{Color: manaColor, Snow: snow, FromCreature: fromCreature, Persistent: prim.PersistUntilEndOfTurn}
-		production[len(production)-1].rider = &game.ManaRiderInstance{
-			Unit:           unit,
+		produced := &production[len(production)-1]
+		produced.rider = &game.ManaRiderInstance{
+			Unit:           produced.unit,
 			Controller:     r.obj.Controller,
 			SourceID:       r.obj.SourceCardID,
 			SourceObjectID: r.obj.SourceID,

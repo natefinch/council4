@@ -59,6 +59,9 @@ func (ce combatEngine) runPhase(g *game.Game, agents [game.NumPlayers]PlayerAgen
 
 func (combatEngine) completePhase(g *game.Game) {
 	expireEndOfCombatRuleEffects(g)
+	for _, player := range g.Players {
+		player.ManaPool.ClearUntilEndOfCombat()
+	}
 	completeTurnBoundary(g)
 	g.Combat = nil
 }
