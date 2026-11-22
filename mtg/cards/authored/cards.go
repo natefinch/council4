@@ -91,6 +91,7 @@ func verifiedEntries() []cardset.Entry {
 		StaffOfTheDeathMagus, StaffOfTheFlameMagus)
 	entries = append(entries, BlueManaBattery, RedManaBattery, GreenManaBattery, WhiteManaBattery, BlackManaBattery)
 	entries = append(entries, SkycloudEgg, MossfireEgg, SungrassEgg, ShadowbloodEgg, DarkwaterEgg)
+	entries = append(entries, WarriorEnKor)
 	for i := range entries {
 		entries[i].ReplaceLegacy = replacesCompiledEntry(entries[i].Name)
 	}
