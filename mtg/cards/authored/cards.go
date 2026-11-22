@@ -29,7 +29,7 @@ func verifiedEntries() []cardset.Entry {
 	entries = append(entries, MoggSalvage, RefreshingRain, Submerge, Massacre)
 	entries = append(entries, DeepwoodLegate, KyrenLegate, ChoArrimLegate, SaprazzanLegate, RushwoodLegate)
 	entries = append(entries, Reiterate, Allay, Capsize)
-	entries = append(entries, JwarIsleAvenger, BoulderSalvo, FallOfTheTitans, ComparativeAnalysis,
+	entries = append(entries, JwarIsleAvenger, GoblinFreerunner, BoulderSalvo, FallOfTheTitans, ComparativeAnalysis,
 		ContainmentMembrane, GripOfTheRoil)
 	entries = append(entries, SearingTouch, SeethingAnger, MindPeel, ElvishFury)
 	entries = append(entries, RecruitTheWorthy, MindGames, HazeOfRage)

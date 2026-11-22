@@ -2338,6 +2338,13 @@
     "oracle_text_sha256": "d8fdfed821a9c77eb3979d95e012abc1f3a0aae88b92a4a1e4d24464a3a71291",
     "revision": "20203edb-1363-4ed3-8c5b-b1d96ff2b7c0",
     "rulings_uri": "https://api.scryfall.com/cards/20203edb-1363-4ed3-8c5b-b1d96ff2b7c0/rulings"
+   },
+   {
+    "name": "Goblin Freerunner",
+    "oracle_id": "372094f8-86dc-4c78-a5d0-444ffbf02630",
+    "oracle_text_sha256": "0d6f29349d317fe7c974498814e9df21c2e339edfcbe60bf5715d2887b4f864a",
+    "revision": "5082e0a1-5c3e-4b8c-ba88-290151564133",
+    "rulings_uri": "https://api.scryfall.com/cards/5082e0a1-5c3e-4b8c-ba88-290151564133/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -10319,6 +10326,19 @@
     "rules.modesValidForContentRange"
    ],
    "review": "Capability-only check at origin/main 2056cc4286e441d55145b59e93619622bf125b24: mtg/cardprogram/README.md; mtg/game/ability_body.go; mtg/rules/targets_validation.go; mtg/rules/targets_modal_player_test.go (TestModeChoiceRangeWithDuplicateModes). Oracle/rulings and Comprehensive Rules review not performed."
+  },
+  {
+   "id": "goblin-freerunner-20261121",
+   "family": "surge-creature",
+   "oracle_ids": [
+    "372094f8-86dc-4c78-a5d0-444ffbf02630"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "cost.Alternative with cost.AlternativeConditionYourTeamCastSpellThisTurn",
+    "game.MenaceStaticBody"
+   ],
+   "review": "Capability-fit references: mtg/cardprogram/README.md (Surge); mtg/cards/authored/jwar_isle_avenger.go and mtg/rules/jwar_isle_avenger_surge_test.go (Surge); mtg/cards/authored/mayhem_patrol.go and mtg/rules/combat_blockers_test.go (Menace). Complete pinned source and official rules review during authoring."
   }
  ],
  "records": [
@@ -101529,8 +101549,10 @@
    "oracle_id": "372094f8-86dc-4c78-a5d0-444ffbf02630",
    "revision": "5082e0a1-5c3e-4b8c-ba88-290151564133",
    "name": "Goblin Freerunner",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "surge-creature",
+   "batch": "goblin-freerunner-20261121",
+   "evidence": "mtg/rules/goblin_freerunner_surge_test.go: TestGoblinFreerunnerSurgeCastHasMenace"
   },
   {
    "oracle_id": "372351fd-58f7-4cb8-8644-5fbc94ccb145",
