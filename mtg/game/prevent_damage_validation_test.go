@@ -35,8 +35,8 @@ func TestPreventDamageOneShotSourceFilterValidation(t *testing.T) {
 	}
 }
 
-// TestPreventDamageRedirectValidation proves chosen-source redirection is
-// declared only on an all-damage one-shot shield with a matching destination.
+// TestPreventDamageRedirectValidation distinguishes chosen-source redirects
+// from finite redirects between two permanents.
 func TestPreventDamageRedirectValidation(t *testing.T) {
 	t.Parallel()
 	valid := PreventDamage{
@@ -46,7 +46,25 @@ func TestPreventDamageRedirectValidation(t *testing.T) {
 	if err := valid.validatePrimitive(nil, false); err != nil {
 		t.Fatalf("validatePrimitive() = %v, want a redirect-to-this-creature shield accepted", err)
 	}
+	finite := PreventDamage{
+		Amount: Fixed(1), Object: SourcePermanentReference(),
+		Redirect: DamageRedirectToObject, RedirectObject: TargetPermanentReference(0),
+	}
+	if err := finite.validatePrimitive(nil, false); err != nil {
+		t.Fatalf("validatePrimitive() = %v, want a fixed-amount redirect between permanents accepted", err)
+	}
+	all := finite
+	all.All = true
+	noAmount := finite
+	noAmount.Amount = Fixed(0)
+	sourceFilter := finite
+	sourceFilter.SourceColors = []color.Color{color.Red}
 	for name, invalid := range map[string]PreventDamage{
+		"all without choosing a source": all,
+		"finite without an amount":      noAmount,
+		"finite with source filter":     sourceFilter,
+		"finite with player": {Player: ControllerReference(), Amount: Fixed(1),
+			Redirect: DamageRedirectToObject, RedirectObject: SourcePermanentReference()},
 		"redirect without one-shot": {Player: ControllerReference(), All: true, Redirect: DamageRedirectToController},
 		"object without destination": {Player: ControllerReference(), All: true, OneShot: true,
 			Redirect: DamageRedirectToObject},

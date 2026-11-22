@@ -84,9 +84,11 @@ type ConditionalCounterPlacement struct {
 // once it has left its zone; RiderPlayer is that source's controller as the
 // damage was prevented, used only when the source cannot be found.
 //
-// Redirect makes a one-shot shield a redirection replacement (CR 614.9) that
-// deals the chosen source's in-scope damage to another recipient instead of
-// preventing it: RedirectPlayer for DamageRedirectToController,
+// Redirect makes a shield a redirection replacement (CR 614.9) that deals
+// damage to another recipient instead of preventing it. A one-shot shield
+// redirects the chosen source's in-scope damage; a finite shield redirects
+// its remaining Amount without choosing a source as it is created.
+// The destination is RedirectPlayer for DamageRedirectToController,
 // RedirectPermanentID for DamageRedirectToObject, or the damage source's
 // controller. A permanent destination that has left the battlefield or is no
 // longer a creature, planeswalker or battle, or a player destination who has
