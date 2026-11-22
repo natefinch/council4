@@ -147,3 +147,28 @@ func TestPoolSpentPersistentManaDoesNotResurrectOnEmpty(t *testing.T) {
 		t.Fatalf("red mana after Empty = %d, want 1 (spent persistent mana must not resurrect)", got)
 	}
 }
+
+func TestPoolCombatRetentionSpendAndClone(t *testing.T) {
+	pool := NewPool()
+	pool.AddUntilEndOfCombatUnit(Unit{Color: R}, 2)
+	pool.AddPersistent(R, 1)
+
+	clone := pool.Clone()
+	if !clone.Spend(R, 1) {
+		t.Fatal("could not spend combat-retained mana")
+	}
+	clone.Empty()
+	combat := Unit{Color: R, UntilEndOfCombat: true}
+	if got := clone.Units()[combat]; got != 1 {
+		t.Fatalf("combat mana after spending one and crossing a boundary = %d, want 1", got)
+	}
+	clone.ClearUntilEndOfCombat()
+	clone.Empty()
+	if got := clone.Units()[Unit{Color: R, Persistent: true}]; got != 1 || clone.Total() != 1 {
+		t.Fatalf("pool after combat = %v, want only one turn-retained red", clone.Units())
+	}
+	pool.Empty()
+	if got := pool.Units()[combat]; got != 2 {
+		t.Fatalf("spending and expiring in clone changed original combat mana to %d, want 2", got)
+	}
+}

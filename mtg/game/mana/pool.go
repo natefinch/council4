@@ -9,14 +9,8 @@ import (
 // simple color-count APIs.
 type Pool struct {
 	mana map[Unit]int
-	// persist records the subset of mana that does not empty as steps and phases
-	// end (the CR 500.5 exception used by "Until end of turn, you don't lose this
-	// mana as steps and phases end", Grand Warlord Radha). Empty restores the
-	// pool to this reserved mana instead of clearing it; spending reconciles it so
-	// spent persistent mana does not reappear on the next Empty; ClearPersistent
-	// drops the reservation at end-of-turn cleanup so the following Empty removes
-	// it (CR 514.2). It is nil for pools that never received persistent mana, in
-	// which case Empty clears the pool exactly as before.
+	// persist tracks the unspent mana reserved across boundaries (CR 500.5).
+	// When a duration expires its reservation is dropped before the next Empty.
 	persist map[Unit]int
 	// spent is the running total of mana removed from this pool to pay costs.
 	// It is never reset by Empty (emptying discards unspent mana, which is not
@@ -79,10 +73,21 @@ func (p *Pool) AddPersistentSnow(c Color, amount int) {
 // The units are spendable like any other mana, but Empty preserves them until
 // ClearPersistent is called at end-of-turn cleanup. See Pool.persist.
 func (p *Pool) AddPersistentUnit(unit Unit, amount int) {
+	unit.Persistent, unit.UntilEndOfCombat = true, false
+	p.addRetainedUnit(unit, amount)
+}
+
+// AddUntilEndOfCombatUnit adds mana that survives Empty until released by
+// ClearUntilEndOfCombat at the end of the combat phase.
+func (p *Pool) AddUntilEndOfCombatUnit(unit Unit, amount int) {
+	unit.Persistent, unit.UntilEndOfCombat = false, true
+	p.addRetainedUnit(unit, amount)
+}
+
+func (p *Pool) addRetainedUnit(unit Unit, amount int) {
 	if amount <= 0 {
 		return
 	}
-	unit.Persistent = true
 	p.AddUnit(unit, amount)
 	if p.persist == nil {
 		p.persist = make(map[Unit]int)
@@ -224,16 +229,20 @@ func (p *Pool) Total() int {
 	return total
 }
 
-// Empty removes all mana from the pool, except mana reserved by AddPersistent
-// that has not yet been released by ClearPersistent (CR 500.4 exception). For a
-// pool that never received persistent mana this clears the pool entirely, as
-// before.
+// Empty removes all mana from the pool except mana whose retention has not
+// yet expired (CR 500.5).
 func (p *Pool) Empty() {
 	if len(p.persist) == 0 {
 		p.mana = make(map[Unit]int)
 		return
 	}
 	p.mana = maps.Clone(p.persist)
+}
+
+// ClearUntilEndOfCombat releases only combat-retained mana before the pool
+// empties at the end of combat (CR 500.5a, 511.2).
+func (p *Pool) ClearUntilEndOfCombat() {
+	maps.DeleteFunc(p.persist, func(unit Unit, _ int) bool { return unit.UntilEndOfCombat })
 }
 
 // ClearPersistent releases any mana reservation created by AddPersistent so the
@@ -250,18 +259,18 @@ func (p *Pool) IsEmpty() bool {
 }
 
 // orderedSpendUnits is the immutable deterministic order the pool uses.
-// Ordinary mana is spent before retained mana, then non-creature before creature,
-// and non-snow before snow, so simple payments preserve creature and snow
-// provenance when possible and pools that never received creature mana keep
-// their previous spend behavior byte-for-byte.
+// Prefer earlier expiry, then non-creature before creature, and non-snow
+// before snow, preserving provenance when possible.
 var orderedSpendUnits = func() []Unit {
 	colors := []Color{W, U, B, R, G, C}
-	order := make([]Unit, 0, len(colors)*8)
-	for _, persistent := range []bool{false, true} {
+	order := make([]Unit, 0, len(colors)*12)
+	for _, retention := range [...]Unit{{}, {UntilEndOfCombat: true}, {Persistent: true}} {
 		for _, fromCreature := range []bool{false, true} {
 			for _, snow := range []bool{false, true} {
 				for _, c := range colors {
-					order = append(order, Unit{Color: c, Snow: snow, FromCreature: fromCreature, Persistent: persistent})
+					unit := retention
+					unit.Color, unit.Snow, unit.FromCreature = c, snow, fromCreature
+					order = append(order, unit)
 				}
 			}
 		}

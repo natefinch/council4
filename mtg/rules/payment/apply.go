@@ -298,15 +298,14 @@ func spendUnitFromSnapshot(plan *paymentPlan, pool map[mana.Unit]int, unit mana.
 	}
 	// Creature-mana provenance (FromCreature) is accounting metadata, not a
 	// payment constraint: a unit's color and snowness decide whether it can pay
-	// a given symbol, while FromCreature only records how much of the spend came
-	// from creatures (Inga and Esika). Spend units matching the requested color
-	// and snowness regardless of provenance, preferring non-creature mana so
-	// creature provenance is preserved for counting when either would do, and
-	// record the actual provenance spent in poolSpend.
-	variants := [4]mana.Unit{
-		{Color: unit.Color, Snow: unit.Snow, FromCreature: false},
+	// a given symbol. Prefer earlier expiry, then non-creature mana, and record
+	// the exact unit spent in poolSpend.
+	variants := [...]mana.Unit{
+		{Color: unit.Color, Snow: unit.Snow},
 		{Color: unit.Color, Snow: unit.Snow, FromCreature: true},
-		{Color: unit.Color, Snow: unit.Snow, FromCreature: false, Persistent: true},
+		{Color: unit.Color, Snow: unit.Snow, UntilEndOfCombat: true},
+		{Color: unit.Color, Snow: unit.Snow, FromCreature: true, UntilEndOfCombat: true},
+		{Color: unit.Color, Snow: unit.Snow, Persistent: true},
 		{Color: unit.Color, Snow: unit.Snow, FromCreature: true, Persistent: true},
 	}
 	total := 0
@@ -352,11 +351,13 @@ func spendAnySnowUnitFromSnapshot(plan *paymentPlan, pool map[mana.Unit]int) boo
 
 var paymentUnits = func() []mana.Unit {
 	var units []mana.Unit
-	for _, persistent := range []bool{false, true} {
+	for _, retention := range [...]mana.Unit{{}, {UntilEndOfCombat: true}, {Persistent: true}} {
 		for _, fromCreature := range []bool{false, true} {
 			for _, snow := range []bool{false, true} {
 				for _, color := range paymentColors {
-					units = append(units, mana.Unit{Color: color, Snow: snow, FromCreature: fromCreature, Persistent: persistent})
+					unit := retention
+					unit.Color, unit.Snow, unit.FromCreature = color, snow, fromCreature
+					units = append(units, unit)
 				}
 			}
 		}
