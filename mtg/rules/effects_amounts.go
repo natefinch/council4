@@ -232,6 +232,8 @@ func dynamicAmountValueBeforeLayerWithGroupMember(g *game.Game, obj opt.V[*game.
 		if player, ok := resolveTurnEventPlayer(g, obj, controller, dynamic.Player, groupMember); ok {
 			amount = turnEventDynamicAmount(g, player, dynamic.Kind)
 		}
+	case game.DynamicAmountOpponentsDamageTakenThisTurn:
+		amount = opponentsDamageTakenThisTurn(g, controller)
 	case game.DynamicAmountCardsNamedSourceInGraveyards:
 		amount = countCardsNamedSourceInAllGraveyards(g, obj.Val)
 	case game.DynamicAmountCardsNamedSourceInControllerGraveyard:
@@ -508,6 +510,16 @@ func turnEventDynamicAmount(g *game.Game, controller game.PlayerID, kind game.Dy
 	default:
 		return spellsCastThisTurn(g, controller)
 	}
+}
+
+func opponentsDamageTakenThisTurn(g *game.Game, controller game.PlayerID) int {
+	return eventsThisTurnWindow(g).sumAmount(func(event game.Event) bool {
+		// Like fixed bloodthirst, check historical recipients, not whether
+		// those opponents are still in the game.
+		return event.Kind == game.EventDamageDealt &&
+			event.DamageRecipient == game.DamageRecipientPlayer &&
+			triggerPlayerMatches(g, controller, game.TriggerPlayerOpponent, event.Player)
+	})
 }
 
 // maxOfDynamicAmounts evaluates each operand of a DynamicAmountMaxOf combinator
