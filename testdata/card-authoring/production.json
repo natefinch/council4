@@ -2268,6 +2268,13 @@
     "oracle_text_sha256": "39804f5fe9c452e99b8fc007096a737b2445f27d524459efdf7b79072cfaef4a",
     "revision": "fb988572-1e1d-4b1d-8dc7-78bda966554e",
     "rulings_uri": "https://api.scryfall.com/cards/fb988572-1e1d-4b1d-8dc7-78bda966554e/rulings"
+   },
+   {
+    "name": "Flourishing Strike",
+    "oracle_id": "98c44298-7b6a-4f98-bcb7-1a63a4c29f87",
+    "oracle_text_sha256": "ce77a6f9250a0fd8136a3487626b7e2291b593ad9bde320550c76dc9ab2abb2f",
+    "revision": "9c4b23a5-d997-4f02-b136-44ee7be51c7b",
+    "rulings_uri": "https://api.scryfall.com/cards/9c4b23a5-d997-4f02-b136-44ee7be51c7b/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -10157,6 +10164,21 @@
     "game.Draw"
    ],
    "review": "Selection-only capability review: pinned identities and text checked for shared activation-cost and mana/draw operation fit. No rulings or Comprehensive Rules reviewed; author source/rules review remains required."
+  },
+  {
+   "id": "flourishing-strike-entwine-20261121",
+   "family": "entwine-damage-pump",
+   "oracle_ids": [
+    "98c44298-7b6a-4f98-bcb7-1a63a4c29f87"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.AbilityContent modes with EscalateCost for Entwine",
+    "game.Selection.Keyword for Flying",
+    "game.Damage",
+    "ApplyContinuous with LayerPowerToughness and end-of-turn duration"
+   ],
+   "review": "Capability-fit packet only; card source/rules review remains outstanding. Prior art: mtg/cards/authored/barbed_lightning.go, rain_of_rust.go, and mtg/rules/barbed_lightning_test.go, rain_of_rust_test.go."
   }
  ],
  "records": [
@@ -185007,8 +185029,10 @@
    "oracle_id": "98c44298-7b6a-4f98-bcb7-1a63a4c29f87",
    "revision": "9c4b23a5-d997-4f02-b136-44ee7be51c7b",
    "name": "Flourishing Strike",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "entwine-damage-pump",
+   "batch": "flourishing-strike-entwine-20261121",
+   "evidence": "mtg/rules/flourishing_strike_test.go: TestFlourishingStrikeEntwineDealsDamageAndPumps"
   },
   {
    "oracle_id": "98cc734d-16d5-4c3c-98ca-a45efad27127",

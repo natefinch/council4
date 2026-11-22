@@ -10,6 +10,7 @@ var Cards = verifiedEntries()
 
 func verifiedEntries() []cardset.Entry {
 	entries := []cardset.Entry{Terastodon, HiveMind, GiftsUngiven, GildedDrake, WorldgorgerDragon, NimDeathmantle, Abundance, BloodMoon, Muldrotha, Skullbriar, Mindslaver, GenerousGift, CoastalDiscovery, BoilingEarth, RoilSpout, RushOfIce, RisingMiasma, Pongify, RapidHybridization, Resculpt, Twincast, Reverberate, DualcasterMage, CacklingCounterpart, FatedInfatuation, Intuition, RealmsUncharted, ChainsOfMephistopheles, Humility, Opalescence, ForcedMarch, IncineratingBlast, Aethertow, Gigadrowse, LeapOfFlame, LoseFocus, ShatteringSpree, Pyromatics, SuperCombo, TrainOfThought, Vacuumelt, OneDozenEyes, BarbedLightning}
+	entries = append(entries, FlourishingStrike)
 	entries = append(entries, RosethornAcolyte, CrystalDragon, PollenShieldHare,
 		MurderousRider, GumdropPoisoner, QuestingDruid, QuirionDryad)
 	entries = append(entries, Bedevil, Terminate, Vindicate, Disenchant, Naturalize, GleefulSabotage, BurnTrail, MemorySluice, GhastlyDiscovery, BarkshellBlessing)
