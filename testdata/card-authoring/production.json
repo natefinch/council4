@@ -2366,6 +2366,20 @@
     "oracle_text_sha256": "6b7bc7c1d48799dbffce5d4d0ab264eca39e779c15ce4450e276594de17c61ce",
     "revision": "8b457672-902b-42c0-9d53-a3c21be2f500",
     "rulings_uri": "https://api.scryfall.com/cards/8b457672-902b-42c0-9d53-a3c21be2f500/rulings"
+   },
+   {
+    "name": "Charging Binox",
+    "oracle_id": "0f10f9d1-f9f9-4356-9208-0f21f44bfb97",
+    "oracle_text_sha256": "af6647e821b6a750893df3f741b4a6bb408f931e3616ae49a1b3a2690aea51e7",
+    "revision": "68222ab7-7b9c-43e5-b80e-db643d80a6d9",
+    "rulings_uri": "https://api.scryfall.com/cards/68222ab7-7b9c-43e5-b80e-db643d80a6d9/rulings"
+   },
+   {
+    "name": "Magma Hellion",
+    "oracle_id": "88f6575d-a6cb-4b2c-90dd-c6239f3c6e4d",
+    "oracle_text_sha256": "3c597b2a4ab690147210ca341025296dc2d71be9c23e1c3ce3bb218d68c492a7",
+    "revision": "ef9d02dc-4cb2-4ae1-84c3-e70aeb3c29ff",
+    "rulings_uri": "https://api.scryfall.com/cards/ef9d02dc-4cb2-4ae1-84c3-e70aeb3c29ff/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -10389,6 +10403,21 @@
     "game.CounterObject"
    ],
    "review": "Capability packet: mtg/cardprogram/README.md#capability-lookup (Assist); mtg/game/ability.go (AssistStaticBody); mtg/rules/payment/assist.go; mtg/rules/assist.go; mtg/rules/assist_test.go; mtg/rules/bring_down_assist_test.go. Card source and Comprehensive Rules review remain outstanding."
+  },
+  {
+   "id": "assist-creatures-20261122",
+   "family": "assist-creature-spells",
+   "oracle_ids": [
+    "0f10f9d1-f9f9-4356-9208-0f21f44bfb97",
+    "88f6575d-a6cb-4b2c-90dd-c6239f3c6e4d"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.AssistStaticBody",
+    "game.TrampleStaticBody",
+    "game.HasteStaticBody"
+   ],
+   "review": "Capability-fit only: mtg/cardprogram/README.md Assist entry; game.AssistStaticBody, TrampleStaticBody, HasteStaticBody; behavioral prior art in mtg/rules/assist_test.go and existing authored Assist card scenarios. Oracle/rules source review not performed."
   }
  ],
  "records": [
@@ -67739,8 +67768,10 @@
    "oracle_id": "0f10f9d1-f9f9-4356-9208-0f21f44bfb97",
    "revision": "68222ab7-7b9c-43e5-b80e-db643d80a6d9",
    "name": "Charging Binox",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "assist-creature-spells",
+   "batch": "assist-creatures-20261122",
+   "evidence": "mtg/rules/assist_creature_spells_test.go: TestChargingBinoxAssistAndTrample"
   },
   {
    "oracle_id": "0f12aec9-5898-4261-bebd-1b545e0aea68",
@@ -171888,8 +171919,10 @@
    "oracle_id": "88f6575d-a6cb-4b2c-90dd-c6239f3c6e4d",
    "revision": "ef9d02dc-4cb2-4ae1-84c3-e70aeb3c29ff",
    "name": "Magma Hellion",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "assist-creature-spells",
+   "batch": "assist-creatures-20261122",
+   "evidence": "mtg/rules/assist_creature_spells_test.go: TestMagmaHellionAssistTrampleAndHaste"
   },
   {
    "oracle_id": "88f8f683-738e-48f3-afff-c8f73f1033a2",
