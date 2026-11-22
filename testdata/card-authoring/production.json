@@ -2303,6 +2303,13 @@
     "oracle_text_sha256": "7c541a609def1a37cfa5a753d64761d6f95c7f73d4f5d3034a903835baa35e56",
     "revision": "e7cd99c2-6d4a-48e8-8848-6fdc0788525d",
     "rulings_uri": "https://api.scryfall.com/cards/e7cd99c2-6d4a-48e8-8848-6fdc0788525d/rulings"
+   },
+   {
+    "name": "Spirit en-Kor",
+    "oracle_id": "f066174a-a959-4365-920f-c04506d94a5a",
+    "oracle_text_sha256": "84f06ab6b42ebc9f4c64ef94bf667aaad84c7338865708be4d7b2b1a41db65f2",
+    "revision": "8c57ca87-75b0-4058-acd8-5394545d0846",
+    "rulings_uri": "https://api.scryfall.com/cards/8c57ca87-75b0-4058-acd8-5394545d0846/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -10255,6 +10262,18 @@
     "Expected the free ability to redirect exactly 1 damage from Lancers en-Kor to a target creature you control, regardless of damage source. Actual: the amount-limited redirect declaration is rejected; the available OneShot/All form does not limit the damage to 1."
    ],
    "review": "Card Lancers en-Kor, checked Engine result for #4084 on 4f02ec046212a69a8ce0593b0361c6e56b770c06: Fixed #4084: damage redirected by a fixed-amount shield now combines with simultaneous damage from the same source to the same final recipient before triggers are captured. Pyroclasm now gives Boros Reckoner one trigger for 3 damage with one target. Per-assignment totals remain intact. No cards were registered.\nVerified live main at 1ee8f9948: PreventDamage rejects redirection without OneShot and All.\nPASS: go test ./mtg/game ./mtg/rules ./mtg/cardprogram -count=1. New regressions cover Reckoner's resolved trigger and convergence across assignments without merging distinct sources or recipients.\nPASS: go test -overlay=\"$PWD/.cardwork/review-4084/overlay.json\" ./mtg/rules -run '^TestReviewFixedRedirectPyroclasmReckoner$' -count=1 -v. Before: damage events [2 1], two triggers. After: [3], one trigger.\nPASS: go test -overlay=\"$PWD/.cardwork/sources/en-kor/overlay.json\" ./mtg/rules -run '^TestEnKorFixedOneDamageRedirectDeclarationIsRepresentable$' -count=1 -v.\nConfirmed remaining defect: go test -overlay=\"$PWD/.cardwork/review-4084/overlay.json\" ./mtg/rules -run '^TestReviewStaticRedirectEarthquakeProtectorOfTheCrown$' -count=1 -v. Observed [2 2], expected [4].\nPASS: git diff --check."
+  },
+  {
+   "id": "resume-ed59ed79-8f31-4531-a642-064c05096769-28",
+   "family": "card-followup",
+   "oracle_ids": [
+    "f066174a-a959-4365-920f-c04506d94a5a"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected the free ability to redirect exactly 1 damage from Spirit en-Kor to a target creature you control, regardless of damage source. Actual: the amount-limited redirect declaration is rejected; the available OneShot/All form does not limit the damage to 1."
+   ],
+   "review": "Card Spirit en-Kor, checked Engine result for #4084 on 4f02ec046212a69a8ce0593b0361c6e56b770c06: Fixed #4084: damage redirected by a fixed-amount shield now combines with simultaneous damage from the same source to the same final recipient before triggers are captured. Pyroclasm now gives Boros Reckoner one trigger for 3 damage with one target. Per-assignment totals remain intact. No cards were registered.\nVerified live main at 1ee8f9948: PreventDamage rejects redirection without OneShot and All.\nPASS: go test ./mtg/game ./mtg/rules ./mtg/cardprogram -count=1. New regressions cover Reckoner's resolved trigger and convergence across assignments without merging distinct sources or recipients.\nPASS: go test -overlay=\"$PWD/.cardwork/review-4084/overlay.json\" ./mtg/rules -run '^TestReviewFixedRedirectPyroclasmReckoner$' -count=1 -v. Before: damage events [2 1], two triggers. After: [3], one trigger.\nPASS: go test -overlay=\"$PWD/.cardwork/sources/en-kor/overlay.json\" ./mtg/rules -run '^TestEnKorFixedOneDamageRedirectDeclarationIsRepresentable$' -count=1 -v.\nConfirmed remaining defect: go test -overlay=\"$PWD/.cardwork/review-4084/overlay.json\" ./mtg/rules -run '^TestReviewStaticRedirectEarthquakeProtectorOfTheCrown$' -count=1 -v. Observed [2 2], expected [4].\nPASS: git diff --check."
   }
  ],
  "records": [
@@ -259592,8 +259611,10 @@
    "oracle_id": "f066174a-a959-4365-920f-c04506d94a5a",
    "revision": "8c57ca87-75b0-4058-acd8-5394545d0846",
    "name": "Spirit en-Kor",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-ed59ed79-8f31-4531-a642-064c05096769-28",
+   "evidence": "mtg/rules/spirit_en_kor_test.go: TestSpiritEnKorFlyingAndRedirectsOneCombatDamage; printing 8c57ca87-75b0-4058-acd8-5394545d0846; Scryfall rulings URI https://api.scryfall.com/cards/8c57ca87-75b0-4058-acd8-5394545d0846/rulings; CR 2026-11-06 115.1c, 601.2c, 602.1a, 602.2a-b, 120.1, 120.3e, 614.1a, 614.5, 614.9, 616.1, 702.9b"
   },
   {
    "oracle_id": "f068a0f3-48bc-4d5d-be79-c23c0be11c27",
