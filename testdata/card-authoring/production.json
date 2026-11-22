@@ -2380,6 +2380,13 @@
     "oracle_text_sha256": "3c597b2a4ab690147210ca341025296dc2d71be9c23e1c3ce3bb218d68c492a7",
     "revision": "ef9d02dc-4cb2-4ae1-84c3-e70aeb3c29ff",
     "rulings_uri": "https://api.scryfall.com/cards/ef9d02dc-4cb2-4ae1-84c3-e70aeb3c29ff/rulings"
+   },
+   {
+    "name": "Loyal Fire Sage",
+    "oracle_id": "0c052420-2d8b-4bbf-8197-b8a36e7208c9",
+    "oracle_text_sha256": "ba4de70e2145d66cab2b23e75c54693ae8a6a4f1e9641a81cfc894036988a9c3",
+    "revision": "1126b572-1cac-44aa-8fec-e2c72a9fea47",
+    "rulings_uri": "https://api.scryfall.com/cards/1126b572-1cac-44aa-8fec-e2c72a9fea47/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -10418,6 +10425,18 @@
     "game.HasteStaticBody"
    ],
    "review": "Capability-fit only: mtg/cardprogram/README.md Assist entry; game.AssistStaticBody, TrampleStaticBody, HasteStaticBody; behavioral prior art in mtg/rules/assist_test.go and existing authored Assist card scenarios. Oracle/rules source review not performed."
+  },
+  {
+   "id": "resume-ed59ed79-8f31-4531-a642-064c05096769-37",
+   "family": "card-followup",
+   "oracle_ids": [
+    "0c052420-2d8b-4bbf-8197-b8a36e7208c9"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Firebending mana must survive combat step and phase boundaries, then empty at end of combat. The available persistent-mana operation retains it through that boundary until end-of-turn cleanup; nonpersistent mana empties too early."
+   ],
+   "review": "Card Loyal Fire Sage, checked Engine result for #4100 on 072086b4ccb5587a912ee4957a4a4d310888dffc: Implemented AddMana.PersistUntilEndOfCombat for #4100. Firebending mana remains spendable through end-of-combat priority and expires before postcombat main. Ordinary and turn-retained mana are unchanged. Loyal Fire Sage remains unregistered; the changes are uncommitted in the isolated worktree.\nOn main at 58db7b5b9351552de8a6f2d961dc38e88407a4d4, `go test -overlay .cardwork/loyal-fire-sage-overlay.json ./mtg/rules -run '^TestLoyalFireSageFirebendingManaExpiresAtEndOfCombat$' -count=1` reproduced 1 red mana at combat exit, expected 0.\n`go test ./mtg/game/mana ./mtg/rules -run 'TestPoolCombatRetentionSpendAndClone|TestCombatRetainedManaThroughCombatAndPayment' -count=1 -v` passed. Scenarios exercised live and simulator expiry, a {5} activation after damage, a red instant during end-of-combat priority, and no reappearance of spent mana.\n`go test ./mtg/game ./mtg/game/mana ./mtg/rules/payment ./mtg/rules ./mtg/cardprogram -count=1` and `git diff --check` passed.\nVerified Oracle, WotC rulings, and both official CR editions are recorded in mtg/rules/combat_mana_test.go. No spell-cost or stack-object state was added; spell copy and alternate casting routes carry no new state."
   }
  ],
  "records": [
@@ -65248,8 +65267,10 @@
    "oracle_id": "0c052420-2d8b-4bbf-8197-b8a36e7208c9",
    "revision": "1126b572-1cac-44aa-8fec-e2c72a9fea47",
    "name": "Loyal Fire Sage",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-ed59ed79-8f31-4531-a642-064c05096769-37",
+   "evidence": "mtg/rules/loyal_fire_sage_test.go: TestLoyalFireSageAttackSpendsFirebendingManaForAlly"
   },
   {
    "oracle_id": "0c061a1b-206a-4fcc-92e5-30c8ed9d65c1",
