@@ -25,6 +25,7 @@ func verifiedEntries() []cardset.Entry {
 	entries = append(entries, DeathDenied, WildestDreams, RatsFeast, ShatteredCrypt, ReturnToTheRanks, ChampionOfStraySouls)
 	entries = append(entries, RestlessDreams, TurbulentDreams, NostalgicDreams)
 	entries = append(entries, WarpWorld, PanglacialWurm)
+	entries = append(entries, PetrifiedWoodKin)
 	entries = append(entries, GhostVacuum, NecromanticSelection, ToothCollector, MarchesaDealerOfDeath)
 	entries = append(entries, MyrCustodian)
 	entries = append(entries, MoggSalvage, RefreshingRain, Submerge, Massacre)
