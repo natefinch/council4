@@ -2352,6 +2352,20 @@
     "oracle_text_sha256": "ea4120c65b2817f9585924d3bb7875032a46eee2acd4bc567dbafe0d084c3182",
     "revision": "8750abff-ae70-4abe-a51a-b93f71b48ef1",
     "rulings_uri": "https://api.scryfall.com/cards/8750abff-ae70-4abe-a51a-b93f71b48ef1/rulings"
+   },
+   {
+    "name": "Spellweaver Duo",
+    "oracle_id": "1fd4204f-f627-4919-9d48-79b172f4560e",
+    "oracle_text_sha256": "8f349f68227eddc7950977aa9bb36a30f04425d99025093ee6feddf79034a0cd",
+    "revision": "87ba22f6-5299-46c3-bd01-9140634e60ea",
+    "rulings_uri": "https://api.scryfall.com/cards/87ba22f6-5299-46c3-bd01-9140634e60ea/rulings"
+   },
+   {
+    "name": "Out of Bounds",
+    "oracle_id": "431b2e52-1290-47b1-920d-2c1817553d96",
+    "oracle_text_sha256": "6b7bc7c1d48799dbffce5d4d0ab264eca39e779c15ce4450e276594de17c61ce",
+    "revision": "8b457672-902b-42c0-9d53-a3c21be2f500",
+    "rulings_uri": "https://api.scryfall.com/cards/8b457672-902b-42c0-9d53-a3c21be2f500/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -10360,6 +10374,21 @@
     "game.GainLife"
    ],
    "review": "Capability-fit only: mtg/cardprogram/README.md#capability-lookup (Assist); mtg/rules/assist_test.go; mtg/rules/bring_down_assist_test.go; mtg/cards/t/tithe_drinker.go. No Oracle, rulings, or Comprehensive Rules review performed; author must verify sources."
+  },
+  {
+   "id": "assist-fixed-spells-20261121",
+   "family": "assist-fixed-cost-spells",
+   "oracle_ids": [
+    "1fd4204f-f627-4919-9d48-79b172f4560e",
+    "431b2e52-1290-47b1-920d-2c1817553d96"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.AssistStaticBody",
+    "game.MovePermanent",
+    "game.CounterObject"
+   ],
+   "review": "Capability packet: mtg/cardprogram/README.md#capability-lookup (Assist); mtg/game/ability.go (AssistStaticBody); mtg/rules/payment/assist.go; mtg/rules/assist.go; mtg/rules/assist_test.go; mtg/rules/bring_down_assist_test.go. Card source and Comprehensive Rules review remain outstanding."
   }
  ],
  "records": [
@@ -82517,8 +82546,10 @@
    "oracle_id": "1fd4204f-f627-4919-9d48-79b172f4560e",
    "revision": "87ba22f6-5299-46c3-bd01-9140634e60ea",
    "name": "Spellweaver Duo",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "assist-fixed-cost-spells",
+   "batch": "assist-fixed-spells-20261121",
+   "evidence": "mtg/rules/spellweaver_duo_test.go: TestSpellweaverDuoAssistAndEntersTrigger; CR 2026-09-25 601.2c/f-h, 603.2-3, 608.2b-d, 108.3, 400.7, 702.132a"
   },
   {
    "oracle_id": "1fd5e5e7-f23d-4891-86c4-268195ea09fc",
@@ -112105,8 +112136,10 @@
    "oracle_id": "431b2e52-1290-47b1-920d-2c1817553d96",
    "revision": "8b457672-902b-42c0-9d53-a3c21be2f500",
    "name": "Out of Bounds",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "assist-fixed-cost-spells",
+   "batch": "assist-fixed-spells-20261121",
+   "evidence": "mtg/rules/out_of_bounds_test.go: TestOutOfBoundsAssistCountersTargetSpell; CR 2026-09-25 601.2a-i, 608.2b-c, 701.6a-b, 702.132a"
   },
   {
    "oracle_id": "431c5b04-7387-4724-adfa-d1eb7874e79e",
