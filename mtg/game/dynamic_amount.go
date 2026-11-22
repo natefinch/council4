@@ -369,6 +369,10 @@ const (
 	// it yields zero. DynamicAmountTimesKicked instead reads the resolving
 	// object's own cast or entry state.
 	DynamicAmountEventSpellTimesKicked
+	// DynamicAmountOpponentsDamageTakenThisTurn is the total damage dealt to the
+	// context controller's opponents this turn, regardless of source or whether
+	// the damage caused life loss (CR 702.54b). It does not require a spell.
+	DynamicAmountOpponentsDamageTakenThisTurn
 )
 
 // DynamicAmount describes an effect amount determined as the effect resolves

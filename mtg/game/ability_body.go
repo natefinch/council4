@@ -500,6 +500,16 @@ func BloodthirstReplacement(text string, n int) ReplacementAbility {
 	})
 }
 
+// BloodthirstXReplacement creates the Bloodthirst X enters-with-counters
+// replacement (CR 702.54b). X is the damage dealt to the entering permanent's
+// controller's opponents this turn, not a value announced when casting.
+func BloodthirstXReplacement(text string) ReplacementAbility {
+	return EntersWithCountersReplacement(text, CounterPlacement{
+		Kind:    counter.PlusOnePlusOne,
+		Dynamic: opt.Val(&DynamicAmount{Kind: DynamicAmountOpponentsDamageTakenThisTurn}),
+	})
+}
+
 // MaxSpeedActivationCondition creates the activation condition for the "Max
 // speed" ability word (CR 702.179, the Start your engines! speed subsystem): the
 // ability can be activated only while its controller has maximum speed (a speed
