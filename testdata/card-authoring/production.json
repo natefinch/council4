@@ -2345,6 +2345,13 @@
     "oracle_text_sha256": "0d6f29349d317fe7c974498814e9df21c2e339edfcbe60bf5715d2887b4f864a",
     "revision": "5082e0a1-5c3e-4b8c-ba88-290151564133",
     "rulings_uri": "https://api.scryfall.com/cards/5082e0a1-5c3e-4b8c-ba88-290151564133/rulings"
+   },
+   {
+    "name": "Bloodborn Scoundrels",
+    "oracle_id": "37c1de8d-30d6-4b08-9368-279cf66d3e85",
+    "oracle_text_sha256": "ea4120c65b2817f9585924d3bb7875032a46eee2acd4bc567dbafe0d084c3182",
+    "revision": "8750abff-ae70-4abe-a51a-b93f71b48ef1",
+    "rulings_uri": "https://api.scryfall.com/cards/8750abff-ae70-4abe-a51a-b93f71b48ef1/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -10339,6 +10346,20 @@
     "game.MenaceStaticBody"
    ],
    "review": "Capability-fit references: mtg/cardprogram/README.md (Surge); mtg/cards/authored/jwar_isle_avenger.go and mtg/rules/jwar_isle_avenger_surge_test.go (Surge); mtg/cards/authored/mayhem_patrol.go and mtg/rules/combat_blockers_test.go (Menace). Complete pinned source and official rules review during authoring."
+  },
+  {
+   "id": "bloodborn-scoundrels-20261121-2330",
+   "family": "assist-and-life-effects",
+   "oracle_ids": [
+    "37c1de8d-30d6-4b08-9368-279cf66d3e85"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.AssistStaticBody",
+    "game.LoseLife",
+    "game.GainLife"
+   ],
+   "review": "Capability-fit only: mtg/cardprogram/README.md#capability-lookup (Assist); mtg/rules/assist_test.go; mtg/rules/bring_down_assist_test.go; mtg/cards/t/tithe_drinker.go. No Oracle, rulings, or Comprehensive Rules review performed; author must verify sources."
   }
  ],
  "records": [
@@ -102122,8 +102143,10 @@
    "oracle_id": "37c1de8d-30d6-4b08-9368-279cf66d3e85",
    "revision": "8750abff-ae70-4abe-a51a-b93f71b48ef1",
    "name": "Bloodborn Scoundrels",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "assist-and-life-effects",
+   "batch": "bloodborn-scoundrels-20261121-2330",
+   "evidence": "mtg/rules/bloodborn_scoundrels_test.go: TestBloodbornScoundrelsAssistAndEnterLifeTrigger"
   },
   {
    "oracle_id": "37c3cd4d-8e9a-46d4-a9c2-55f70a321eb6",

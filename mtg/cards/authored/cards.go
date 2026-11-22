@@ -15,7 +15,7 @@ func verifiedEntries() []cardset.Entry {
 	entries = append(entries, RosethornAcolyte, CrystalDragon, PollenShieldHare,
 		MurderousRider, GumdropPoisoner, QuestingDruid, QuirionDryad)
 	entries = append(entries, Bedevil, Terminate, Vindicate, Disenchant, Naturalize, GleefulSabotage, BurnTrail, MemorySluice, GhastlyDiscovery, BarkshellBlessing)
-	entries = append(entries, BringDown)
+	entries = append(entries, BringDown, BloodbornScoundrels)
 	entries = append(entries, RallyTheGaladhrim)
 	entries = append(entries, WildRide, MammothBellow, ChanneledDragonfire, UrenisRebuff, UnendingWhisper, RoamersRoutine)
 	entries = append(entries, AnOfferYouCantRefuse, Counterspell, Negate, EssenceScatter, Disallow)
