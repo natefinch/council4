@@ -2310,6 +2310,34 @@
     "oracle_text_sha256": "84f06ab6b42ebc9f4c64ef94bf667aaad84c7338865708be4d7b2b1a41db65f2",
     "revision": "8c57ca87-75b0-4058-acd8-5394545d0846",
     "rulings_uri": "https://api.scryfall.com/cards/8c57ca87-75b0-4058-acd8-5394545d0846/rulings"
+   },
+   {
+    "name": "Fiery Confluence",
+    "oracle_id": "3c22e031-4804-4c31-bd3c-c3f29d456b34",
+    "oracle_text_sha256": "7569248951d5632757d221d47d58579224936ad069e8f59cec1c2271fb89c02d",
+    "revision": "85d431c2-e4fa-426d-83cb-ecb782e7e87d",
+    "rulings_uri": "https://api.scryfall.com/cards/85d431c2-e4fa-426d-83cb-ecb782e7e87d/rulings"
+   },
+   {
+    "name": "Mystic Confluence",
+    "oracle_id": "cd11c27b-9368-4622-bc5a-2e0b993cc42b",
+    "oracle_text_sha256": "55c0b1fc64267680979d984484800baa2c69957c127443230ee8f4093853bd4a",
+    "revision": "62e5d409-c0b6-4123-802d-eb32f223bd1a",
+    "rulings_uri": "https://api.scryfall.com/cards/62e5d409-c0b6-4123-802d-eb32f223bd1a/rulings"
+   },
+   {
+    "name": "Righteous Confluence",
+    "oracle_id": "ee28937b-7ead-45ad-8448-35c51a09fb32",
+    "oracle_text_sha256": "7571be4d18a365f95900062591f9e63225b274fb5c8c05dc99d7b5e0ccb516d6",
+    "revision": "89c2faf6-e65b-4962-82d4-0294912c2ddb",
+    "rulings_uri": "https://api.scryfall.com/cards/89c2faf6-e65b-4962-82d4-0294912c2ddb/rulings"
+   },
+   {
+    "name": "Wretched Confluence",
+    "oracle_id": "fb430640-81b6-4720-84d6-b8ec3af6a2c3",
+    "oracle_text_sha256": "d8fdfed821a9c77eb3979d95e012abc1f3a0aae88b92a4a1e4d24464a3a71291",
+    "revision": "20203edb-1363-4ed3-8c5b-b1d96ff2b7c0",
+    "rulings_uri": "https://api.scryfall.com/cards/20203edb-1363-4ed3-8c5b-b1d96ff2b7c0/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -10274,6 +10302,23 @@
     "Expected the free ability to redirect exactly 1 damage from Spirit en-Kor to a target creature you control, regardless of damage source. Actual: the amount-limited redirect declaration is rejected; the available OneShot/All form does not limit the damage to 1."
    ],
    "review": "Card Spirit en-Kor, checked Engine result for #4084 on 4f02ec046212a69a8ce0593b0361c6e56b770c06: Fixed #4084: damage redirected by a fixed-amount shield now combines with simultaneous damage from the same source to the same final recipient before triggers are captured. Pyroclasm now gives Boros Reckoner one trigger for 3 damage with one target. Per-assignment totals remain intact. No cards were registered.\nVerified live main at 1ee8f9948: PreventDamage rejects redirection without OneShot and All.\nPASS: go test ./mtg/game ./mtg/rules ./mtg/cardprogram -count=1. New regressions cover Reckoner's resolved trigger and convergence across assignments without merging distinct sources or recipients.\nPASS: go test -overlay=\"$PWD/.cardwork/review-4084/overlay.json\" ./mtg/rules -run '^TestReviewFixedRedirectPyroclasmReckoner$' -count=1 -v. Before: damage events [2 1], two triggers. After: [3], one trigger.\nPASS: go test -overlay=\"$PWD/.cardwork/sources/en-kor/overlay.json\" ./mtg/rules -run '^TestEnKorFixedOneDamageRedirectDeclarationIsRepresentable$' -count=1 -v.\nConfirmed remaining defect: go test -overlay=\"$PWD/.cardwork/review-4084/overlay.json\" ./mtg/rules -run '^TestReviewStaticRedirectEarthquakeProtectorOfTheCrown$' -count=1 -v. Observed [2 2], expected [4].\nPASS: git diff --check."
+  },
+  {
+   "id": "confluence-repeat-modes-ed59ed79-30",
+   "family": "confluence-repeat-modes",
+   "oracle_ids": [
+    "3c22e031-4804-4c31-bd3c-c3f29d456b34",
+    "cd11c27b-9368-4622-bc5a-2e0b993cc42b",
+    "ee28937b-7ead-45ad-8448-35c51a09fb32",
+    "fb430640-81b6-4720-84d6-b8ec3af6a2c3"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "game.AbilityContent.Modes/MinModes/MaxModes/AllowDuplicateModes",
+    "rules.modeChoicesForContentRange",
+    "rules.modesValidForContentRange"
+   ],
+   "review": "Capability-only check at origin/main 2056cc4286e441d55145b59e93619622bf125b24: mtg/cardprogram/README.md; mtg/game/ability_body.go; mtg/rules/targets_validation.go; mtg/rules/targets_modal_player_test.go (TestModeChoiceRangeWithDuplicateModes). Oracle/rulings and Comprehensive Rules review not performed."
   }
  ],
  "records": [
@@ -105972,8 +106017,10 @@
    "oracle_id": "3c22e031-4804-4c31-bd3c-c3f29d456b34",
    "revision": "85d431c2-e4fa-426d-83cb-ecb782e7e87d",
    "name": "Fiery Confluence",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "confluence-repeat-modes",
+   "batch": "confluence-repeat-modes-ed59ed79-30",
+   "evidence": "mtg/rules/authored_confluences_test.go: TestFieryConfluenceRepeatsOpponentDamageAndDestroysArtifact"
   },
   {
    "oracle_id": "3c2445ee-84d5-47de-8b09-dbdc89ca2db7",
@@ -229039,8 +229086,10 @@
    "oracle_id": "cd11c27b-9368-4622-bc5a-2e0b993cc42b",
    "revision": "62e5d409-c0b6-4123-802d-eb32f223bd1a",
    "name": "Mystic Confluence",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "confluence-repeat-modes",
+   "batch": "confluence-repeat-modes-ed59ed79-30",
+   "evidence": "mtg/rules/authored_confluences_test.go: TestMysticConfluencePaysForCounterAndDrawsTwice"
   },
   {
    "oracle_id": "cd133d30-51ff-4114-a7d7-029345f0f0d7",
@@ -257541,8 +257590,10 @@
    "oracle_id": "ee28937b-7ead-45ad-8448-35c51a09fb32",
    "revision": "89c2faf6-e65b-4962-82d4-0294912c2ddb",
    "name": "Righteous Confluence",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "confluence-repeat-modes",
+   "batch": "confluence-repeat-modes-ed59ed79-30",
+   "evidence": "mtg/rules/authored_confluences_test.go: TestRighteousConfluenceCreatesTwoVigilantKnightsAndExilesEnchantment"
   },
   {
    "oracle_id": "ee2ab1ab-be1e-4e56-99f2-7784f7350b41",
@@ -268744,8 +268795,10 @@
    "oracle_id": "fb430640-81b6-4720-84d6-b8ec3af6a2c3",
    "revision": "20203edb-1363-4ed3-8c5b-b1d96ff2b7c0",
    "name": "Wretched Confluence",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "confluence-repeat-modes",
+   "batch": "confluence-repeat-modes-ed59ed79-30",
+   "evidence": "mtg/rules/authored_confluences_test.go: TestWretchedConfluenceRepeatsPlayerModeAndReturnsCreatureCard"
   },
   {
    "oracle_id": "fb431500-152c-4524-b76b-de62922ff57f",
