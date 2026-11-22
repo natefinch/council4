@@ -2387,6 +2387,13 @@
     "oracle_text_sha256": "ba4de70e2145d66cab2b23e75c54693ae8a6a4f1e9641a81cfc894036988a9c3",
     "revision": "1126b572-1cac-44aa-8fec-e2c72a9fea47",
     "rulings_uri": "https://api.scryfall.com/cards/1126b572-1cac-44aa-8fec-e2c72a9fea47/rulings"
+   },
+   {
+    "name": "Petrified Wood-Kin",
+    "oracle_id": "3bc9649c-4350-4c6a-8441-dc76a5f833af",
+    "oracle_text_sha256": "3c77c3d13ecf1bf5539025289e4955456591e00709f8258ba1c875e6576d20f1",
+    "revision": "a56fbf32-f08f-4882-b8d4-41ccb60cba63",
+    "rulings_uri": "https://api.scryfall.com/cards/a56fbf32-f08f-4882-b8d4-41ccb60cba63/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -10437,6 +10444,18 @@
     "Firebending mana must survive combat step and phase boundaries, then empty at end of combat. The available persistent-mana operation retains it through that boundary until end-of-turn cleanup; nonpersistent mana empties too early."
    ],
    "review": "Card Loyal Fire Sage, checked Engine result for #4100 on 072086b4ccb5587a912ee4957a4a4d310888dffc: Implemented AddMana.PersistUntilEndOfCombat for #4100. Firebending mana remains spendable through end-of-combat priority and expires before postcombat main. Ordinary and turn-retained mana are unchanged. Loyal Fire Sage remains unregistered; the changes are uncommitted in the isolated worktree.\nOn main at 58db7b5b9351552de8a6f2d961dc38e88407a4d4, `go test -overlay .cardwork/loyal-fire-sage-overlay.json ./mtg/rules -run '^TestLoyalFireSageFirebendingManaExpiresAtEndOfCombat$' -count=1` reproduced 1 red mana at combat exit, expected 0.\n`go test ./mtg/game/mana ./mtg/rules -run 'TestPoolCombatRetentionSpendAndClone|TestCombatRetainedManaThroughCombatAndPayment' -count=1 -v` passed. Scenarios exercised live and simulator expiry, a {5} activation after damage, a red instant during end-of-combat priority, and no reappearance of spent mana.\n`go test ./mtg/game ./mtg/game/mana ./mtg/rules/payment ./mtg/rules ./mtg/cardprogram -count=1` and `git diff --check` passed.\nVerified Oracle, WotC rulings, and both official CR editions are recorded in mtg/rules/combat_mana_test.go. No spell-cost or stack-object state was added; spell copy and alternate casting routes carry no new state."
+  },
+  {
+   "id": "resume-ed59ed79-8f31-4531-a642-064c05096769-40",
+   "family": "card-followup",
+   "oracle_ids": [
+    "3bc9649c-4350-4c6a-8441-dc76a5f833af"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "After opponents were dealt 2 and 3 damage this turn, Bloodthirst X requires 5 +1/+1 counters; the available fixed-N replacement produced 1."
+   ],
+   "review": "Card Petrified Wood-Kin, checked Engine result for #4103 on 6aa4eb96c6910c4a5e23a92e78869b726e699406: Added game.BloodthirstXReplacement. It counts actual damage dealt to the entering permanent’s controller’s opponents this turn, including infect damage, and places that many +1/+1 counters. Petrified Wood-Kin remains unregistered.\nMain 7130e3efc: go test -overlay .cardwork/bloodthirst-baseline-overlay.json -tags cardworkprobe ./mtg/rules -run '^TestPetrifiedWoodKinBloodthirstXProbe$' -count=1 -v reproduced 1 counter instead of 5.\ngo test -overlay .cardwork/bloodthirst-fixed-overlay.json -tags cardworkprobe ./mtg/rules -run '^TestPetrifiedWoodKinBloodthirstXProbe$' -count=1 -v passed with 5 counters.\ngo test ./mtg/rules -run 'Test(Bloodthirst|PermanentEntersWithXCounters|ConditionAnyOpponent.*Damage|Entry.*Recomputes|InfectPlayer)' -count=1 -v passed. The new scenarios cover multiple opponents, prevention, infect, damage after casting, noncast entry, and turn rollover.\ngo test ./mtg/game ./mtg/cardprogram and git diff --check passed. No spell, cost, or stack-object state changed. The Oracle, rulings, and rules source record is in mtg/rules/bloodthirst_x_test.go."
   }
  ],
  "records": [
@@ -105806,8 +105825,10 @@
    "oracle_id": "3bc9649c-4350-4c6a-8441-dc76a5f833af",
    "revision": "a56fbf32-f08f-4882-b8d4-41ccb60cba63",
    "name": "Petrified Wood-Kin",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-ed59ed79-8f31-4531-a642-064c05096769-40",
+   "evidence": "mtg/rules/petrified_wood_kin_test.go: TestPetrifiedWoodKinCastsUncounterablyWithBloodthirstAndProtectionFromInstants"
   },
   {
    "oracle_id": "3bcb5ad4-818e-4f10-aaff-188d713b160b",
