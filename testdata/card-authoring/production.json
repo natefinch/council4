@@ -2289,6 +2289,13 @@
     "oracle_text_sha256": "2609581f7b2bc30cce7352a6313f1d0fe4104be1772c05593dbd4469b699bd40",
     "revision": "de9b2506-ead4-49ff-a733-66f3f13dbe17",
     "rulings_uri": "https://api.scryfall.com/cards/de9b2506-ead4-49ff-a733-66f3f13dbe17/rulings"
+   },
+   {
+    "name": "Nomads en-Kor",
+    "oracle_id": "b8d395a3-0bfe-45c3-bb3a-820d4f235b88",
+    "oracle_text_sha256": "acbd95562d6c8cd26bf11d1a4fc030d6c9df0441bc26e618112f40ca7a436efd",
+    "revision": "48ed076a-909f-4ef0-b85e-a1935b1c2827",
+    "rulings_uri": "https://api.scryfall.com/cards/48ed076a-909f-4ef0-b85e-a1935b1c2827/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -10217,6 +10224,18 @@
     "Expected the free ability to redirect exactly 1 damage from Outrider en-Kor to a target creature you control, regardless of damage source. Actual: the amount-limited redirect declaration is rejected; the available OneShot/All form does not limit the damage to 1."
    ],
    "review": "Card Outrider en-Kor, checked Engine result for #4084 on 4f02ec046212a69a8ce0593b0361c6e56b770c06: Fixed #4084: damage redirected by a fixed-amount shield now combines with simultaneous damage from the same source to the same final recipient before triggers are captured. Pyroclasm now gives Boros Reckoner one trigger for 3 damage with one target. Per-assignment totals remain intact. No cards were registered.\nVerified live main at 1ee8f9948: PreventDamage rejects redirection without OneShot and All.\nPASS: go test ./mtg/game ./mtg/rules ./mtg/cardprogram -count=1. New regressions cover Reckoner's resolved trigger and convergence across assignments without merging distinct sources or recipients.\nPASS: go test -overlay=\"$PWD/.cardwork/review-4084/overlay.json\" ./mtg/rules -run '^TestReviewFixedRedirectPyroclasmReckoner$' -count=1 -v. Before: damage events [2 1], two triggers. After: [3], one trigger.\nPASS: go test -overlay=\"$PWD/.cardwork/sources/en-kor/overlay.json\" ./mtg/rules -run '^TestEnKorFixedOneDamageRedirectDeclarationIsRepresentable$' -count=1 -v.\nConfirmed remaining defect: go test -overlay=\"$PWD/.cardwork/review-4084/overlay.json\" ./mtg/rules -run '^TestReviewStaticRedirectEarthquakeProtectorOfTheCrown$' -count=1 -v. Observed [2 2], expected [4].\nPASS: git diff --check."
+  },
+  {
+   "id": "resume-ed59ed79-8f31-4531-a642-064c05096769-26",
+   "family": "card-followup",
+   "oracle_ids": [
+    "b8d395a3-0bfe-45c3-bb3a-820d4f235b88"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "Expected the free ability to redirect exactly 1 damage from Nomads en-Kor to a target creature you control, regardless of damage source. Actual: the amount-limited redirect declaration is rejected; the available OneShot/All form does not limit the damage to 1."
+   ],
+   "review": "Card Nomads en-Kor, checked Engine result for #4084 on 4f02ec046212a69a8ce0593b0361c6e56b770c06: Fixed #4084: damage redirected by a fixed-amount shield now combines with simultaneous damage from the same source to the same final recipient before triggers are captured. Pyroclasm now gives Boros Reckoner one trigger for 3 damage with one target. Per-assignment totals remain intact. No cards were registered.\nVerified live main at 1ee8f9948: PreventDamage rejects redirection without OneShot and All.\nPASS: go test ./mtg/game ./mtg/rules ./mtg/cardprogram -count=1. New regressions cover Reckoner's resolved trigger and convergence across assignments without merging distinct sources or recipients.\nPASS: go test -overlay=\"$PWD/.cardwork/review-4084/overlay.json\" ./mtg/rules -run '^TestReviewFixedRedirectPyroclasmReckoner$' -count=1 -v. Before: damage events [2 1], two triggers. After: [3], one trigger.\nPASS: go test -overlay=\"$PWD/.cardwork/sources/en-kor/overlay.json\" ./mtg/rules -run '^TestEnKorFixedOneDamageRedirectDeclarationIsRepresentable$' -count=1 -v.\nConfirmed remaining defect: go test -overlay=\"$PWD/.cardwork/review-4084/overlay.json\" ./mtg/rules -run '^TestReviewStaticRedirectEarthquakeProtectorOfTheCrown$' -count=1 -v. Observed [2 2], expected [4].\nPASS: git diff --check."
   }
  ],
  "records": [
@@ -211978,8 +211997,10 @@
    "oracle_id": "b8d395a3-0bfe-45c3-bb3a-820d4f235b88",
    "revision": "48ed076a-909f-4ef0-b85e-a1935b1c2827",
    "name": "Nomads en-Kor",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "card-followup",
+   "batch": "resume-ed59ed79-8f31-4531-a642-064c05096769-26",
+   "evidence": "mtg/rules/nomads_en_kor_test.go: TestNomadsEnKorRedirectsOneDamageToTargetCreature; printing 48ed076a-909f-4ef0-b85e-a1935b1c2827; Scryfall rulings URI https://api.scryfall.com/cards/48ed076a-909f-4ef0-b85e-a1935b1c2827/rulings; CR 2026-11-06 115.1c, 601.2c, 602.1a, 602.2a-b, 120.1, 614.1a, 614.5, 614.9, 616.1"
   },
   {
    "oracle_id": "b8d563e4-e2bc-4e8b-8841-6655beff9138",
