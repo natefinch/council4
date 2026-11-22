@@ -2394,6 +2394,13 @@
     "oracle_text_sha256": "3c77c3d13ecf1bf5539025289e4955456591e00709f8258ba1c875e6576d20f1",
     "revision": "a56fbf32-f08f-4882-b8d4-41ccb60cba63",
     "rulings_uri": "https://api.scryfall.com/cards/a56fbf32-f08f-4882-b8d4-41ccb60cba63/rulings"
+   },
+   {
+    "name": "Fire Sages",
+    "oracle_id": "08d1940a-ddc6-4b6d-b6c9-9d2aa470b906",
+    "oracle_text_sha256": "b98e1714b9ef145ad705ecc29564507b3469dc6f49bbaea41cb0e97114ccb3d9",
+    "revision": "71a9fa44-306f-417a-a9d9-991aff95025c",
+    "rulings_uri": "https://api.scryfall.com/cards/71a9fa44-306f-417a-a9d9-991aff95025c/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -10456,6 +10463,19 @@
     "After opponents were dealt 2 and 3 damage this turn, Bloodthirst X requires 5 +1/+1 counters; the available fixed-N replacement produced 1."
    ],
    "review": "Card Petrified Wood-Kin, checked Engine result for #4103 on 6aa4eb96c6910c4a5e23a92e78869b726e699406: Added game.BloodthirstXReplacement. It counts actual damage dealt to the entering permanent’s controller’s opponents this turn, including infect damage, and places that many +1/+1 counters. Petrified Wood-Kin remains unregistered.\nMain 7130e3efc: go test -overlay .cardwork/bloodthirst-baseline-overlay.json -tags cardworkprobe ./mtg/rules -run '^TestPetrifiedWoodKinBloodthirstXProbe$' -count=1 -v reproduced 1 counter instead of 5.\ngo test -overlay .cardwork/bloodthirst-fixed-overlay.json -tags cardworkprobe ./mtg/rules -run '^TestPetrifiedWoodKinBloodthirstXProbe$' -count=1 -v passed with 5 counters.\ngo test ./mtg/rules -run 'Test(Bloodthirst|PermanentEntersWithXCounters|ConditionAnyOpponent.*Damage|Entry.*Recomputes|InfectPlayer)' -count=1 -v passed. The new scenarios cover multiple opponents, prevention, infect, damage after casting, noncast entry, and turn rollover.\ngo test ./mtg/game ./mtg/cardprogram and git diff --check passed. No spell, cost, or stack-object state changed. The Oracle, rulings, and rules source record is in mtg/rules/bloodthirst_x_test.go."
+  },
+  {
+   "id": "fire-sages-investigation-20261122",
+   "family": "none",
+   "oracle_ids": [
+    "08d1940a-ddc6-4b6d-b6c9-9d2aa470b906"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "EventAttackerDeclared + AddMana(PersistUntilEndOfCombat)",
+    "AddCounter"
+   ],
+   "review": "Capability-fit only: pinned corpus record and mtg/cardprogram/README.md Firebending capability row; no Oracle, rulings, or Comprehensive Rules source review claimed."
   }
  ],
  "records": [
@@ -62564,8 +62584,10 @@
    "oracle_id": "08d1940a-ddc6-4b6d-b6c9-9d2aa470b906",
    "revision": "71a9fa44-306f-417a-a9d9-991aff95025c",
    "name": "Fire Sages",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "none",
+   "batch": "fire-sages-investigation-20261122",
+   "evidence": "mtg/rules/fire_sages_test.go: TestFireSagesAttackSpendsFirebendingManaForCounter"
   },
   {
    "oracle_id": "08d1a5d1-141d-48e3-ac22-c2529191cb13",

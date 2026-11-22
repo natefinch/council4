@@ -9,7 +9,7 @@ import "github.com/natefinch/council4/mtg/cards/cardset"
 var Cards = verifiedEntries()
 
 func verifiedEntries() []cardset.Entry {
-	entries := []cardset.Entry{Terastodon, HiveMind, GiftsUngiven, GildedDrake, WorldgorgerDragon, NimDeathmantle, Abundance, BloodMoon, Muldrotha, Skullbriar, Mindslaver, GenerousGift, CoastalDiscovery, BoilingEarth, RoilSpout, RushOfIce, RisingMiasma, Pongify, RapidHybridization, Resculpt, Twincast, Reverberate, DualcasterMage, CacklingCounterpart, FatedInfatuation, Intuition, RealmsUncharted, ChainsOfMephistopheles, Humility, Opalescence, ForcedMarch, IncineratingBlast, Aethertow, Gigadrowse, LeapOfFlame, LoseFocus, ShatteringSpree, Pyromatics, SuperCombo, TrainOfThought, Vacuumelt, OneDozenEyes, BarbedLightning, LoyalFireSage}
+	entries := []cardset.Entry{Terastodon, HiveMind, GiftsUngiven, GildedDrake, WorldgorgerDragon, NimDeathmantle, Abundance, BloodMoon, Muldrotha, Skullbriar, Mindslaver, GenerousGift, CoastalDiscovery, BoilingEarth, RoilSpout, RushOfIce, RisingMiasma, Pongify, RapidHybridization, Resculpt, Twincast, Reverberate, DualcasterMage, CacklingCounterpart, FatedInfatuation, Intuition, RealmsUncharted, ChainsOfMephistopheles, Humility, Opalescence, ForcedMarch, IncineratingBlast, Aethertow, Gigadrowse, LeapOfFlame, LoseFocus, ShatteringSpree, Pyromatics, SuperCombo, TrainOfThought, Vacuumelt, OneDozenEyes, BarbedLightning, LoyalFireSage, FireSages}
 	entries = append(entries, FlourishingStrike)
 	entries = append(entries, FieryConfluence, MysticConfluence, RighteousConfluence, WretchedConfluence)
 	entries = append(entries, RosethornAcolyte, CrystalDragon, PollenShieldHare,
