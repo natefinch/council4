@@ -2408,6 +2408,34 @@
     "oracle_text_sha256": "21cae441808518aff3f8114002f7c5722afbf5537998112541aac3e8590d750c",
     "revision": "10d01449-3e4e-44ef-90aa-9489c86c57df",
     "rulings_uri": "https://api.scryfall.com/cards/10d01449-3e4e-44ef-90aa-9489c86c57df/rulings"
+   },
+   {
+    "name": "Greenbelt Guardian",
+    "oracle_id": "2d8aa053-289d-40d9-baa7-9bd1c5b8e957",
+    "oracle_text_sha256": "3b5031ccc5ffec0dad222257785599d1879d8d39473a993b72d283144eaf9b47",
+    "revision": "2f6b0000-5fd3-483b-bac5-f9b888d8755b",
+    "rulings_uri": "https://api.scryfall.com/cards/2f6b0000-5fd3-483b-bac5-f9b888d8755b/rulings"
+   },
+   {
+    "name": "Skystreak Engineer",
+    "oracle_id": "2f920bf2-6a49-47c2-be3c-9787c377673b",
+    "oracle_text_sha256": "35a8208cc313e3e6b9d43790946d390d3c7ba1573ef24e51ad91f911effc1de1",
+    "revision": "5bc9c501-098d-4560-9826-329b05689e0f",
+    "rulings_uri": "https://api.scryfall.com/cards/5bc9c501-098d-4560-9826-329b05689e0f/rulings"
+   },
+   {
+    "name": "Prowcatcher Specialist",
+    "oracle_id": "594132ac-32a7-41d5-b7f0-3692bbed7f6f",
+    "oracle_text_sha256": "3321377830207243581a79fa071fa5ed78619564a0ade34e4d1b42fd685d8474",
+    "revision": "affbc8db-4ff7-4a86-954a-910493e5a2ef",
+    "rulings_uri": "https://api.scryfall.com/cards/affbc8db-4ff7-4a86-954a-910493e5a2ef/rulings"
+   },
+   {
+    "name": "Hazard of the Dunes",
+    "oracle_id": "799664fc-279c-40c1-8e40-44a68c38801b",
+    "oracle_text_sha256": "2cd748be4182fd5924ba03aea3f77241cf914624c59febc825aff65bdd01044a",
+    "revision": "c3fbee7a-7e73-43cf-bc39-ccb1c63bf837",
+    "rulings_uri": "https://api.scryfall.com/cards/c3fbee7a-7e73-43cf-bc39-ccb1c63bf837/rulings"
    }
   ],
   "comprehensive_rules": [
@@ -10497,6 +10525,23 @@
     "Context.Destroy"
    ],
    "review": "Capability-fit references: mtg/cardprogram/README.md (Assist); mtg/game/ability.go (PowerAtMostX); existing Destroy operation. Source/rules review remains for the author."
+  },
+  {
+   "id": "exhaust-counters-20261122",
+   "family": "exhaust-plus-one-counters",
+   "oracle_ids": [
+    "2d8aa053-289d-40d9-baa7-9bd1c5b8e957",
+    "2f920bf2-6a49-47c2-be3c-9787c377673b",
+    "594132ac-32a7-41d5-b7f0-3692bbed7f6f",
+    "799664fc-279c-40c1-8e40-44a68c38801b"
+   ],
+   "prerequisites": [],
+   "operations": [
+    "ActivatedAbility.ActivateOnlyOnce",
+    "game.AddCounter",
+    "ordinary activated-ability mana costs and payment"
+   ],
+   "review": "Capability fit only (not source review): mtg/game/ability_body.go defines ActivatedAbility.ActivateOnlyOnce; mtg/rules/actions_activation.go records the per-object use; mtg/game/primitive.go defines game.AddCounter. The author must complete the required per-card Oracle/rulings and verified Comprehensive Rules review."
   }
  ],
  "records": [
@@ -93426,8 +93471,10 @@
    "oracle_id": "2d8aa053-289d-40d9-baa7-9bd1c5b8e957",
    "revision": "2f6b0000-5fd3-483b-bac5-f9b888d8755b",
    "name": "Greenbelt Guardian",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "exhaust-plus-one-counters",
+   "batch": "exhaust-counters-20261122",
+   "evidence": "mtg/rules/exhaust_counter_cards_test.go: TestGreenbeltGuardianScenario"
   },
   {
    "oracle_id": "2d8e1054-654f-42e8-8c29-12c3cf13a3eb",
@@ -95183,8 +95230,10 @@
    "oracle_id": "2f920bf2-6a49-47c2-be3c-9787c377673b",
    "revision": "5bc9c501-098d-4560-9826-329b05689e0f",
    "name": "Skystreak Engineer",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "exhaust-plus-one-counters",
+   "batch": "exhaust-counters-20261122",
+   "evidence": "mtg/rules/exhaust_counter_cards_test.go: TestSkystreakEngineerScenario"
   },
   {
    "oracle_id": "2f921740-de98-4276-8196-47a38a1e4591",
@@ -130821,8 +130870,10 @@
    "oracle_id": "594132ac-32a7-41d5-b7f0-3692bbed7f6f",
    "revision": "affbc8db-4ff7-4a86-954a-910493e5a2ef",
    "name": "Prowcatcher Specialist",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "exhaust-plus-one-counters",
+   "batch": "exhaust-counters-20261122",
+   "evidence": "mtg/rules/exhaust_counter_cards_test.go: TestProwcatcherSpecialistScenario"
   },
   {
    "oracle_id": "5941374b-eeb8-4d0e-9367-f7f0f8b79739",
@@ -158921,8 +158972,10 @@
    "oracle_id": "799664fc-279c-40c1-8e40-44a68c38801b",
    "revision": "c3fbee7a-7e73-43cf-bc39-ccb1c63bf837",
    "name": "Hazard of the Dunes",
-   "status": "unclaimed",
-   "family": "unreviewed/normal"
+   "status": "implemented-verified",
+   "family": "exhaust-plus-one-counters",
+   "batch": "exhaust-counters-20261122",
+   "evidence": "mtg/rules/exhaust_counter_cards_test.go: TestHazardOfTheDunesScenario"
   },
   {
    "oracle_id": "7996904a-1d7c-4d95-8fd8-431272c7c7e0",
