@@ -2934,14 +2934,13 @@ type CreateReplacement struct {
 // PreventedDamageRiderControllerExilesLibraryTop excludes it. Riders require
 // OneShot and no Redirect.
 //
-// Redirect turns a one-shot shield into a redirection replacement (CR 614.9)
-// rather than prevention: the chosen source's in-scope damage is dealt by the
-// same source to Redirect's destination instead, keeping its combat-ness and
-// its source's deathtouch, lifelink and infect. RedirectObject names the
-// destination permanent of DamageRedirectToObject, fixed as the shield is
-// created ("this creature", "target creature you control"). Redirect requires
-// OneShot and All and excludes PreventHalfRoundedDown, PreventedRiders and
-// BySource.
+// Redirect makes the shield a replacement rather than prevention (CR 614.9).
+// With OneShot and All it redirects the chosen source's in-scope damage.
+// With a positive fixed Amount, Object and DamageRedirectToObject (no OneShot,
+// All or damage filters) it redirects the next Amount damage to Object from
+// any source. RedirectObject is the destination permanent, fixed as the
+// shield is created. Redirected damage keeps its original source and combat
+// status. Redirect excludes PreventHalfRoundedDown, PreventedRiders and BySource.
 type PreventDamage struct {
 	Amount                     Quantity
 	Object                     ObjectReference
@@ -2988,8 +2987,8 @@ const (
 	PreventedDamageRiderControllerDraws
 )
 
-// DamageRedirect is the outcome of a one-shot chosen-source shield that
-// replaces damage instead of preventing it.
+// DamageRedirect is the outcome of a shield that replaces damage instead of
+// preventing it.
 type DamageRedirect uint8
 
 // DamageRedirect values name where the replaced damage is dealt.

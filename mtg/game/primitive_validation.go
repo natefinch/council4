@@ -3902,11 +3902,14 @@ func (p PreventDamage) validateRedirect(targets []TargetSpec, checkTargets bool)
 	default:
 		return fmt.Errorf("unknown damage redirect %d", p.Redirect)
 	}
-	if !p.OneShot {
-		return errors.New("damage redirection requires OneShot and All")
-	}
 	if p.PreventHalfRoundedDown || len(p.PreventedRiders) > 0 || p.BySource {
 		return errors.New("damage redirection must not set PreventHalfRoundedDown, PreventedRiders or BySource")
+	}
+	if !p.OneShot {
+		if p.All || p.Amount.Value() <= 0 || p.Redirect != DamageRedirectToObject ||
+			p.Object.Kind() == ObjectReferenceNone || p.CombatOnly || len(p.SourceColors) != 0 {
+			return errors.New("damage redirection requires OneShot and All, or a positive fixed Amount from one permanent to another without a damage-source filter")
+		}
 	}
 	return nil
 }

@@ -858,14 +858,11 @@ func (s effectDamageSource) deal(g *game.Game, event damageEvent) int {
 	event.sourceID = s.sourceID
 	event.sourceObjectID = s.sourceObjectID
 	event.controller = s.controller
+	event.deathtouch = s.deathtouch
 	event.cantBePrevented = s.cantBePrevented
 	event.creatureLocked = s.creatureLocked
 	event.preventionScope = s.preventionScope
-	result := resolveDamageBatch(g, []damageEvent{event}, 0, false, nil)[0]
-	if result.event.permanent != nil {
-		applyDamageSourceDeathtouch(s, result.event.permanent, result.amount)
-	}
-	return result.amount
+	return resolveDamageBatch(g, []damageEvent{event}, 0, false, nil)[0].amount
 }
 
 // effectDamageAssignment is one recipient's share of a noncombat damage
@@ -896,6 +893,7 @@ func (s effectDamageSource) dealSimultaneously(g *game.Game, assignments []effec
 			sourceObjectID:  s.sourceObjectID,
 			controller:      s.controller,
 			amount:          assignment.amount,
+			deathtouch:      s.deathtouch,
 			cantBePrevented: s.cantBePrevented,
 			creatureLocked:  s.creatureLocked,
 			preventionScope: s.preventionScope,
@@ -923,20 +921,8 @@ func (s effectDamageSource) dealSimultaneously(g *game.Game, assignments []effec
 	}
 	for position, result := range resolveDamageBatch(g, events, simultaneousID, false, nil) {
 		dealt[indexes[position]] = result.amount
-		if result.event.permanent != nil {
-			applyDamageSourceDeathtouch(s, result.event.permanent, result.amount)
-		}
 	}
 	return dealt
-}
-
-func applyDamageSourceDeathtouch(source effectDamageSource, damaged *game.Permanent, damage int) {
-	if damage <= 0 {
-		return
-	}
-	if source.deathtouch {
-		damaged.MarkedDeathtouchDamage = true
-	}
 }
 
 func applyDamageSourceLifelink(g *game.Game, source effectDamageSource, damage int) {

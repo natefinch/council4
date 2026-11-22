@@ -44,6 +44,7 @@ type damageEvent struct {
 	permanent      *game.Permanent
 	amount         int
 	combatDamage   bool
+	deathtouch     bool // captured by a resolving effect, including from last known information
 	simultaneousID id.ID
 	// cantBePrevented records that the instruction dealing this damage made
 	// it unpreventable (CR 615.12). It travels with the event through
@@ -2609,7 +2610,8 @@ func damageRedirectDestinationAvailable(g *game.Game, shield game.PreventionShie
 		return isPlayerAlive(g, event.controller)
 	case game.DamageRedirectToObject:
 		permanent, ok := permanentByObjectID(g, shield.RedirectPermanentID)
-		return ok && activeBattlefieldPermanent(permanent) && damageRedirectPermanentType(g, permanent)
+		return ok && activeBattlefieldPermanent(permanent) && damageRedirectPermanentType(g, permanent) &&
+			(shield.All || (event.permanent != nil && activeBattlefieldPermanent(event.permanent) && damageRedirectPermanentType(g, event.permanent)))
 	default:
 		return true
 	}

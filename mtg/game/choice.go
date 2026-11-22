@@ -89,7 +89,7 @@ const (
 	// distributed but no color is guaranteed a share.
 	ChoiceManaCombination
 	// ChoicePreventionAllocation selects a source for one-shot prevention or
-	// assigns one point of finite prevention (CR 615.7-8).
+	// assigns one point of finite prevention or redirection.
 	ChoicePreventionAllocation
 	// ChoiceNumber returns one exact integer, not an index into Options.
 	ChoiceNumber
