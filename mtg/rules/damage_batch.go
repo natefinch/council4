@@ -14,12 +14,12 @@ import (
 )
 
 type pendingDamage struct {
-	event              damageEvent
-	origin             int // input assignment index; -1 for new damage dealt by a replacement
-	applied            map[id.ID]bool
-	shields            map[int]bool
-	redirected         bool
-	redirectedByAmount bool
+	event            damageEvent
+	origin           int // input assignment index; -1 for new damage dealt by a replacement
+	applied          map[id.ID]bool
+	shields          map[int]bool
+	redirected       bool
+	coalesceRedirect bool
 }
 
 type damagePreventionConsequence struct {
@@ -257,6 +257,7 @@ func (batch *damageBatch) apply(modifier damageModifier) {
 				other.event.permanent = permanent
 				other.event.player = 0
 				other.redirected = true
+				other.coalesceRedirect = true
 			}
 		}
 	case damageReplacement:
@@ -427,7 +428,7 @@ func (batch *damageBatch) applyFiniteRedirectShield(modifier damageModifier) {
 		if amount == member.event.amount {
 			member.event.permanent = destination
 			member.redirected = true
-			member.redirectedByAmount = true
+			member.coalesceRedirect = true
 			continue
 		}
 		batch.ensureSimultaneousID()
@@ -437,7 +438,7 @@ func (batch *damageBatch) applyFiniteRedirectShield(modifier damageModifier) {
 		redirected.event.permanent = destination
 		redirected.event.amount = amount
 		redirected.redirected = true
-		redirected.redirectedByAmount = true
+		redirected.coalesceRedirect = true
 		redirected.applied = maps.Clone(member.applied)
 		redirected.shields = maps.Clone(member.shields)
 		member.event.amount -= amount
@@ -657,15 +658,14 @@ func damageOccurrence(event damageEvent) damageOccurrenceKey {
 	return key
 }
 
-// coalesceAmountRedirects combines final damage from the same source to the
-// same recipient in this batch if an amount shield redirected any of it.
-// Replacement history must stay separate until all modifications are done.
-// Capture triggers only after joining the portions, even across assignments
-// (CR 120.4b, 603.2c).
-func (batch *damageBatch) coalesceAmountRedirects() {
+// coalesceRedirects combines final damage from the same source to the same
+// recipient when a static redirect or amount-limited shield moved any of it.
+// Keep replacement history and assignment totals separate until all
+// modifications are done, then join before capturing triggers (CR 120.4b, 603.2c).
+func (batch *damageBatch) coalesceRedirects() {
 	var occurrences map[damageOccurrenceKey]int
 	for _, member := range batch.members {
-		if member.redirectedByAmount && member.event.amount > 0 {
+		if member.coalesceRedirect && member.event.amount > 0 {
 			if occurrences == nil {
 				occurrences = make(map[damageOccurrenceKey]int)
 			}
@@ -711,7 +711,7 @@ func resolveDamageBatch(g *game.Game, events []damageEvent, simultaneousID id.ID
 			actual[member.origin].redirected = true
 		}
 	}
-	batch.coalesceAmountRedirects()
+	batch.coalesceRedirects()
 	simultaneousID = batch.simultaneousID
 	results := make([]preparedDamageResult, len(batch.members))
 	type lifelinkGain struct {
