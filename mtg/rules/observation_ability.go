@@ -121,7 +121,6 @@ func (o PlayerObservation) RepeatedFreeActivation(act action.Action) bool {
 	if !ok || len(game.BodyAdditionalCosts(activated)) != 0 {
 		return false
 	}
-	sourceCard, _ := o.g.GetCardInstance(permanent.CardInstanceID)
-	manaCost := manaCostPtr(effectiveActivatedAbilityCost(o.g, o.Player, sourceCard, activated))
+	manaCost := manaCostPtr(effectiveActivatedAbilityCost(o.g, o.Player, permanent, activated))
 	return manaCost == nil || manaCost.ManaValue() == 0
 }

@@ -121,6 +121,11 @@ type ActivatedAbility struct {
 	// It is supported for abilities that function on the battlefield; activations
 	// from other zones with this restriction are not legal.
 	ActivateOnlyOnce bool
+	// ReduceBySourceManaCostIfEnteredThisTurn gives a battlefield activation
+	// the source permanent's own mana cost as a reduction on its entry turn.
+	// Use with ActivateOnlyOnce for Power-up (CR 702.193). This supports
+	// generic and ordinary single-color symbols in the source mana cost.
+	ReduceBySourceManaCostIfEnteredThisTurn bool
 	// CountsResolutionsThisTurn opts into actual resolution accounting, including
 	// resolving copies, for SourceAbilityResolutionOrdinalThisTurn body gates.
 	CountsResolutionsThisTurn bool

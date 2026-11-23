@@ -1,4 +1,4 @@
-package rules
+package payment
 
 import (
 	"math/rand/v2"
@@ -40,7 +40,7 @@ func TestRegCostModifiersStackIncreasesAndReductions(t *testing.T) {
 		{GenericReduction: 1},
 	}
 
-	result := applyAbilityCostModifiers(&base, modifiers)
+	result := EffectiveAbilityManaCost(&base, modifiers)
 
 	// 3 + 2 + 1 - 1 = 5 generic; the two {G} symbols are preserved.
 	if got := genericCostAmount(result); got != 5 {
@@ -58,7 +58,7 @@ func TestRegCostReductionNeverGoesBelowZeroGeneric(t *testing.T) {
 	base := cost.Mana{cost.O(2), cost.R}
 	modifiers := []game.CostModifier{{GenericReduction: 5}}
 
-	result := applyAbilityCostModifiers(&base, modifiers)
+	result := EffectiveAbilityManaCost(&base, modifiers)
 
 	if got := genericCostAmount(result); got != 0 {
 		t.Fatalf("floored generic cost = %d, want 0", got)
@@ -78,7 +78,7 @@ func TestRegCostMinimumGenericFloorApplies(t *testing.T) {
 		{MinimumGeneric: 2},
 	}
 
-	result := applyAbilityCostModifiers(&base, modifiers)
+	result := EffectiveAbilityManaCost(&base, modifiers)
 
 	// 4 - 3 = 1, raised to the minimum of 2.
 	if got := genericCostAmount(result); got != 2 {
@@ -97,7 +97,7 @@ func TestRegCostSetGenericOverridesIncrements(t *testing.T) {
 		{GenericReduction: 4},
 	}
 
-	result := applyAbilityCostModifiers(&base, modifiers)
+	result := EffectiveAbilityManaCost(&base, modifiers)
 
 	// The set value (1) overrides the +3/-4 increments entirely.
 	if got := genericCostAmount(result); got != 1 {
@@ -145,7 +145,7 @@ func TestRegCostModifierStackingProperty(t *testing.T) {
 		want = max(want, minimum)
 		want = max(want, 0)
 
-		result := applyAbilityCostModifiers(&base, modifiers)
+		result := EffectiveAbilityManaCost(&base, modifiers)
 		got := genericCostAmount(result)
 		if got != want {
 			t.Fatalf("iteration %d: generic = %d, want %d (base %d +%d -%d min %d)",

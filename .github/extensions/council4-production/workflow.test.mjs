@@ -4,7 +4,7 @@ import { readFile, mkdtemp, writeFile, mkdir, rm, chmod, rename } from "node:fs/
 import os from "node:os";
 import path from "node:path";
 import { closeLandedIssue, deferredRemainder, sharedRunsDirectory, reviewBar, splitPrompt, preexistingRule, tryClaim, claimFailure, defaultCorpusPath, executeUnit, carryGaps, retainedUnit, prepareResume, checkArgs, checkPolicy, checkSelection, selectionProblem, assertCardBoundary, cardBoundaryOutcome, admissions, runProduction } from "./workflow.mjs";
-import { git, changes, unresolvedConflicts, land, checkProtection, checkCoordinator, seedFromRetained } from "./git.mjs";
+import { git, changes, stageReviewedTree, unresolvedConflicts, land, checkProtection, checkCoordinator, seedFromRetained } from "./git.mjs";
 import { assessChecks, classifyInfrastructure, pullRequestAPI } from "./pull-request.mjs";
 import { prepareCardBatch, verifyCardBatch, normalizeBatchPlan } from "./queue.mjs";
 import { rankTriage, chunk } from "./triage.mjs";
@@ -1217,15 +1217,26 @@ test("Review fingerprints do not change when new, renamed, binary and executable
   assert.notEqual((await changes(f.work.path)).digest, before.digest);
 });
 
-test("A prepared new-file tree lands without losing its review fingerprint", async t => {
+test("A prepared tree with a staged rename and new file lands without losing its review fingerprint", async t => {
   const f = await repositoryFixture(t);
+  await git(f.work.path, ["mv", "card.txt", "renamed.txt"]);
   await writeFile(path.join(f.work.path, "new-card.txt"), "real new card\n");
   const expected = await changes(f.work.path);
-  await git(f.work.path, ["add", "--", ...expected.files]);
-  expected.tree = await git(f.work.path, ["write-tree"]);
+  expected.tree = await stageReviewedTree(f.work.path, expected.files);
+  assert.deepEqual(await changes(f.work.path), { files: expected.files, digest: expected.digest });
+  assert.deepEqual((await git(f.work.path, ["diff", "--cached", "--no-renames", "--name-status"])).split("\n"),
+    ["D\tcard.txt", "A\tnew-card.txt", "A\trenamed.txt"]);
   const services = landingServices(f);
-  const result = await land(f.repo, f.work, { title: "new card" }, expected, "session", undefined, services);
+  const result = await land(f.repo, f.work, { title: "rename and add" }, expected, "session", undefined, services);
   assert.equal(result.published, true);
+  assert.equal(await git(f.repo, ["rev-parse", `${result.commit}^{tree}`]), expected.tree);
+});
+
+test("Preparing a reviewed tree rejects unrelated staged changes", async t => {
+  const f = await repositoryFixture(t);
+  await writeFile(path.join(f.work.path, "unreviewed.txt"), "not part of the review\n");
+  await git(f.work.path, ["add", "unreviewed.txt"]);
+  await assert.rejects(stageReviewedTree(f.work.path, f.expected.files), /outside the reviewed paths/);
 });
 
 test("New main is merged locally and changed integration is reviewed and validated before PR", async t => {

@@ -191,7 +191,18 @@ func (v *cardDefValidator) validateFace(faceName, path string, face *CardFace) {
 		v.validateAbilityBody(faceName, appendPath(path, "Overload.SpellAbility"), &face.Overload.Val.SpellAbility, nil)
 	}
 	for i := range face.ActivatedAbilities {
-		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("ActivatedAbilities[%d]", i)), &face.ActivatedAbilities[i], nil)
+		body := &face.ActivatedAbilities[i]
+		bodyPath := appendPath(path, fmt.Sprintf("ActivatedAbilities[%d]", i))
+		if body.ReduceBySourceManaCostIfEnteredThisTurn {
+			for _, symbol := range face.ManaCost.Val {
+				if symbol.Kind != cost.GenericSymbol && symbol.Kind != cost.ColoredSymbol {
+					v.add(faceName, appendPath(bodyPath, "ReduceBySourceManaCostIfEnteredThisTurn"), CardDefIssueInvalidAbilityBody,
+						"source mana cost reduction supports only generic and ordinary colored symbols")
+					break
+				}
+			}
+		}
+		v.validateAbilityBody(faceName, bodyPath, body, nil)
 	}
 	for i := range face.ManaAbilities {
 		v.validateAbilityBody(faceName, appendPath(path, fmt.Sprintf("ManaAbilities[%d]", i)), &face.ManaAbilities[i], nil)
@@ -562,6 +573,9 @@ func (v *cardDefValidator) validateAbilityBody(faceName, path string, body Abili
 	case *AbilityContent:
 		v.validateAbilityContent(faceName, path, *abilityBody, targets)
 	case *ActivatedAbility:
+		if abilityBody.ReduceBySourceManaCostIfEnteredThisTurn && abilityBody.ZoneOfFunction != zone.None && abilityBody.ZoneOfFunction != zone.Battlefield {
+			v.add(faceName, appendPath(path, "ReduceBySourceManaCostIfEnteredThisTurn"), CardDefIssueInvalidAbilityBody, "source mana cost reduction requires a battlefield activation")
+		}
 		if abilityBody.ActivationCondition.Exists {
 			v.validateCondition(faceName, appendPath(path, "ActivationCondition"), &abilityBody.ActivationCondition.Val, targets)
 		}

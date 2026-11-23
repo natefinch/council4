@@ -635,8 +635,7 @@ func (e *Engine) legalActivateAbilityActions(g *game.Game, playerID game.PlayerI
 				continue
 			}
 			if body, ok := ability.(*game.ActivatedAbility); ok {
-				sourceCard, _ := g.GetCardInstance(permanent.CardInstanceID)
-				effectiveCost := effectiveActivatedAbilityCost(g, playerID, sourceCard, body)
+				effectiveCost := effectiveActivatedAbilityCost(g, playerID, permanent, body)
 				for _, xValue := range costedAbilityXValues(body, manaCostPtr(effectiveCost)) {
 					for _, modes := range modeChoicesForBody(body) {
 						targetResult := targetChoicesForBodyFromSourceObjectWithModes(g, playerID, card, permanent.ObjectID, game.Event{}, body, modes, xValue)

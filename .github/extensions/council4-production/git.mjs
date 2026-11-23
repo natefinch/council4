@@ -88,6 +88,22 @@ export async function changes(cwd, signal) {
   return { files, digest: hash.digest("hex") };
 }
 
+export async function stageReviewedTree(cwd, files, signal) {
+  const reviewed = new Set(files);
+  const staged = await git(cwd, ["diff", "--cached", "--no-renames", "--name-only", "HEAD"], signal);
+  if (staged.split("\n").some(file => file && !reviewed.has(file))) {
+    throw new Error("Index contains changes outside the reviewed paths");
+  }
+  // An already-staged deletion still appears in the review fingerprint, but
+  // its old path no longer exists in either the index or the working tree.
+  const unstaged = await git(cwd, ["diff", "--no-renames", "--name-only"], signal);
+  const untracked = await git(cwd, ["ls-files", "--others", "--exclude-standard"], signal);
+  const pending = new Set([...unstaged.split("\n"), ...untracked.split("\n")]);
+  const paths = files.filter(file => pending.has(file));
+  if (paths.length) await git(cwd, ["add", "--", ...paths], signal);
+  return git(cwd, ["write-tree"], signal);
+}
+
 export async function workspace(root, directory, runId, index, signal) {
   const branch = `council4-production/${runId}/${index}`;
   const target = path.join(directory, "work", String(index));
@@ -148,7 +164,7 @@ export async function unresolvedConflicts(cwd, files, signal) {
 
 export async function land(root, work, task, expected, sessionId, signal, options = {}) {
   return landPullRequest({
-    root, work, task, expected, sessionId, signal, git, changes,
+    root, work, task, expected, sessionId, signal, git, changes, stageReviewedTree,
     protection: mainProtection,
     api: pullRequestAPI(command, signal),
     ...options,

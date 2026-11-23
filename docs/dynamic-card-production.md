@@ -466,7 +466,9 @@ is required.
 Reviewed file fingerprints use framed paths, executable state and actual file
 bytes (or deletion), independent of staging and rename detection. Staging a
 new source/test file must not masquerade as a post-review content change.
-The final Git tree is checked separately before commit. Policy 1.2.0 includes
+Only pending edits to reviewed paths are staged; already-staged deletions
+(including the old path of a rename) stay in the reviewed tree without being
+staged again. The final Git tree is checked separately before commit. Policy 1.2.0 includes
 regressions for this failure and deterministic claim/admission handoffs after
 the first production run exposed both.
 

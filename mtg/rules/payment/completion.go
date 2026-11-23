@@ -337,12 +337,7 @@ func (p Planner) completeSinglePayer(request Request, partial Partial) (Plan, co
 		}
 		player, cardID, sourceZone, x, prefs = req.PlayerID, req.SourceCardID, req.SourceZone, req.XValue, req.Prefs
 		cardID, sourceZone = abilityCostSource(req)
-		base := manaCostPtr(req.ManaCost)
-		for _, modifier := range req.CostModifiers {
-			if modifier.SetManaCost.Exists {
-				base = &modifier.SetManaCost.Val
-			}
-		}
+		base := abilityBaseManaCost(manaCostPtr(req.ManaCost), req.CostModifiers)
 		if !request.locked && x != 0 && !costHasVariableMana(base) && !additionalCostsUseX(req.AdditionalCosts) {
 			return plan, result, false
 		}

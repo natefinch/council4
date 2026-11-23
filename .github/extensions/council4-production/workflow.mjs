@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import os from "node:os";
-import { git, command, changes, workspace, seedFromRetained, unresolvedConflicts, land, mainProtection, checkCoordinator } from "./git.mjs";
+import { git, command, changes, stageReviewedTree, workspace, seedFromRetained, unresolvedConflicts, land, mainProtection, checkCoordinator } from "./git.mjs";
 import { observeUsage, readReceipts, summarize, writeReport, writeJSON } from "./telemetry.mjs";
 import { prepareCardBatch, verifyCardBatch, normalizeBatchPlan } from "./queue.mjs";
 import { knownGaps, chooseWork, gapTask, batchTask, followupTask, engineIssue, issueNumber, needsSplitLabel, needsEvidenceLabel } from "./selection.mjs";
@@ -910,8 +910,7 @@ Return approve when no finding blocks; otherwise changes_needed with actionable 
               if (task.taskType === "card" && !delivered.newlySupported.length) {
                 throw new Error("Card production completed without any newly verified admission; do not count migrations or drafts as new support");
               }
-              await git(work.path, ["add", "--", ...snapshot.files], ctx.signal);
-              return { ...snapshot, tree: await git(work.path, ["write-tree"], ctx.signal), delivered };
+              return { ...snapshot, tree: await stageReviewedTree(work.path, snapshot.files, ctx.signal), delivered };
             });
           },
         }));
