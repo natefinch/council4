@@ -177,12 +177,7 @@ func buildAbilityCostPlan(s State, req AbilityRequest) (abilityCostPlan, bool) {
 	if req.XValue != 0 && !costHasVariableMana(manaCostPtr(req.ManaCost)) && !additionalCostsUseX(req.AdditionalCosts) {
 		return plan, false
 	}
-	baseCost := manaCostPtr(req.ManaCost)
-	for index := range req.CostModifiers {
-		if req.CostModifiers[index].SetManaCost.Exists {
-			baseCost = &req.CostModifiers[index].SetManaCost.Val
-		}
-	}
+	baseCost := abilityBaseManaCost(manaCostPtr(req.ManaCost), req.CostModifiers)
 	resolved, ok := resolveManaCostX(baseCost, req.XValue)
 	if !ok {
 		return plan, false

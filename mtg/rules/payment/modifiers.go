@@ -91,8 +91,23 @@ func appendLifeCostModifiers(additionalCosts []cost.Additional, modifiers []game
 	return append(additionalCosts, cost.Additional{Kind: cost.AdditionalPayLife, Amount: life})
 }
 
-// applyManaCostModifiers determines the mana component of a spell's total cost
-// (CR 601.2f): the chosen mana or alternative cost plus every increase, minus
+// EffectiveAbilityManaCost previews the normal activation's mana cost with
+// modifiers applied, leaving any X symbol intact for announcement.
+func EffectiveAbilityManaCost(manaCost *cost.Mana, modifiers []game.CostModifier) *cost.Mana {
+	return applyManaCostModifiers(abilityBaseManaCost(manaCost, modifiers), modifiers)
+}
+
+func abilityBaseManaCost(manaCost *cost.Mana, modifiers []game.CostModifier) *cost.Mana {
+	for i := range modifiers {
+		if modifiers[i].SetManaCost.Exists {
+			manaCost = &modifiers[i].SetManaCost.Val
+		}
+	}
+	return manaCost
+}
+
+// applyManaCostModifiers determines the mana component of a spell or ability's
+// total cost (CR 601.2f, 602.2b): the chosen base cost plus every increase, minus
 // every reduction. A generic reduction lowers only the generic component (CR
 // 118.7a). A colored reduction removes a symbol of its color from the cost
 // including any colored increase, or, when no such symbol remains, lowers the

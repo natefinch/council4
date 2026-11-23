@@ -15,15 +15,45 @@ import (
 	"github.com/natefinch/council4/opt"
 )
 
-func effectiveActivatedAbilityCost(g *game.Game, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) opt.V[cost.Mana] {
+func effectiveActivatedAbilityCost(g *game.Game, playerID game.PlayerID, source *game.Permanent, body *game.ActivatedAbility) opt.V[cost.Mana] {
 	if body == nil {
 		return opt.V[cost.Mana]{}
 	}
-	effective := applyAbilityCostModifiers(manaCostPtr(body.ManaCost), activatedAbilityCostModifiers(g, playerID, card, body))
+	effective := payment.EffectiveAbilityManaCost(manaCostPtr(body.ManaCost), battlefieldAbilityCostModifiers(g, playerID, source, body))
 	if effective == nil {
 		return opt.V[cost.Mana]{}
 	}
 	return opt.Val(*effective)
+}
+
+func battlefieldAbilityCostModifiers(g *game.Game, playerID game.PlayerID, source *game.Permanent, body *game.ActivatedAbility) []game.CostModifier {
+	var card *game.CardInstance
+	if source != nil {
+		card, _ = g.GetCardInstance(source.CardInstanceID)
+	}
+	modifiers := activatedAbilityCostModifiers(g, playerID, card, body)
+	if !body.ReduceBySourceManaCostIfEnteredThisTurn || source == nil || !permanentEnteredThisTurn(g, source.ObjectID) {
+		return modifiers
+	}
+	// The current permanent's mana cost is a characteristic, not its mana
+	// value, the amount paid to cast it, or the physical card's front cost.
+	def, ok := permanentCopyDef(g, source)
+	if !ok || !def.ManaCost.Exists {
+		return modifiers
+	}
+	reduction := game.CostModifier{Kind: game.CostModifierAbility}
+	for _, symbol := range def.ManaCost.Val {
+		switch symbol.Kind {
+		case cost.GenericSymbol:
+			reduction.GenericReduction += symbol.Generic
+		case cost.ColoredSymbol:
+			reduction.ColoredReduction = append(reduction.ColoredReduction, symbol.Color)
+		default:
+			// Do not apply a partial reduction for unsupported symbols.
+			return modifiers
+		}
+	}
+	return append(modifiers, reduction)
 }
 
 func activatedAbilityCostModifiers(g *game.Game, playerID game.PlayerID, card *game.CardInstance, body *game.ActivatedAbility) []game.CostModifier {
@@ -87,71 +117,6 @@ func costModifierAppliesToAbility(g *game.Game, modifier game.CostModifier, play
 
 func playerCycledThisTurn(g *game.Game, playerID game.PlayerID) bool {
 	return eventsThisTurnWindow(g).any(eventKindPlayer(game.EventCycled, playerID))
-}
-
-func applyAbilityCostModifiers(manaCost *cost.Mana, modifiers []game.CostModifier) *cost.Mana {
-	if len(modifiers) == 0 {
-		return manaCost
-	}
-	baseCost := manaCost
-	for i := range modifiers {
-		if modifiers[i].SetManaCost.Exists {
-			value := append(cost.Mana(nil), modifiers[i].SetManaCost.Val...)
-			baseCost = &value
-		}
-	}
-	generic := genericCostAmount(baseCost)
-	minimum := 0
-	setGeneric := (*int)(nil)
-	for i := range modifiers {
-		modifier := modifiers[i]
-		if modifier.SetGeneric.Exists {
-			setGeneric = &modifier.SetGeneric.Val
-		}
-		generic += modifier.GenericIncrease
-		generic -= modifier.GenericReduction
-		if modifier.MinimumGeneric > minimum {
-			minimum = modifier.MinimumGeneric
-		}
-	}
-	if setGeneric != nil {
-		generic = *setGeneric
-	}
-	if generic < minimum {
-		generic = minimum
-	}
-	if generic < 0 {
-		generic = 0
-	}
-	return costWithGenericAmount(baseCost, generic)
-}
-
-func genericCostAmount(manaCost *cost.Mana) int {
-	if manaCost == nil {
-		return 0
-	}
-	total := 0
-	for _, symbol := range *manaCost {
-		if symbol.Kind == cost.GenericSymbol {
-			total += symbol.Generic
-		}
-	}
-	return total
-}
-
-func costWithGenericAmount(manaCost *cost.Mana, generic int) *cost.Mana {
-	var modified cost.Mana
-	if generic > 0 {
-		modified = append(modified, cost.O(generic))
-	}
-	if manaCost != nil {
-		for _, symbol := range *manaCost {
-			if symbol.Kind != cost.GenericSymbol {
-				modified = append(modified, symbol)
-			}
-		}
-	}
-	return &modified
 }
 
 func abilityHasReturnUnblockedAttackerCost(costs []cost.Additional) bool {
@@ -638,10 +603,9 @@ func equipActivation(g *game.Game, playerID game.PlayerID, permanent *game.Perma
 	if !ok || effectiveController(g, target) != playerID || !canAttachPermanent(g, permanent, target) {
 		return activationCost{}
 	}
-	sourceCard, _ := g.GetCardInstance(permanent.CardInstanceID)
 	return abilityRequestCost(payment.AbilityRequest{
 		PlayerID: playerID, Source: permanent, ManaCost: body.ManaCost,
-		CostModifiers:    activatedAbilityCostModifiers(g, playerID, sourceCard, body),
+		CostModifiers:    battlefieldAbilityCostModifiers(g, playerID, permanent, body),
 		AdditionalCosts:  abilityAdditionalCosts(body.AdditionalCosts),
 		AlternativeCosts: body.AlternativeCosts,
 	}, permanentSource(permanent.ObjectID))
@@ -676,12 +640,11 @@ func generalActivation(g *game.Game, playerID game.PlayerID, permanent *game.Per
 		!bodyTargetsSatisfyXBounds(g, playerID, card, permanent.ObjectID, body, chosenModes, targets, xValue) {
 		return activationCost{}
 	}
-	sourceCard, _ := g.GetCardInstance(permanent.CardInstanceID)
 	return abilityRequestCost(payment.AbilityRequest{
 		PlayerID:         playerID,
 		Source:           permanent,
 		ManaCost:         body.ManaCost,
-		CostModifiers:    activatedAbilityCostModifiers(g, playerID, sourceCard, body),
+		CostModifiers:    battlefieldAbilityCostModifiers(g, playerID, permanent, body),
 		AdditionalCosts:  abilityAdditionalCosts(body.AdditionalCosts),
 		AlternativeCosts: append([]cost.Alternative(nil), body.AlternativeCosts...),
 		XValue:           xValue,
