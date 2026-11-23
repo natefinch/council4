@@ -182,7 +182,7 @@ export function pullRequestAPI(command, signal, wait = ms => delay(ms, undefined
 }
 
 export async function landPullRequest({
-  root, work, task, expected, sessionId, signal, git, changes, protection, api,
+  root, work, task, expected, sessionId, signal, git, changes, stageReviewedTree, protection, api,
   validate, reviewIntegration, fixCI, ciFixRounds = 1, ciInfrastructureReruns = 2, checkpoint,
   watchCI = watch => watch(), wait = ms => delay(ms, undefined, { signal }), now = () => performance.now(),
 }) {
@@ -247,8 +247,7 @@ export async function landPullRequest({
     if (currentHead === work.base) {
       const current = await changes(work.path, signal);
       if (current.digest !== expected.digest || !current.files.length) throw new Error("Reviewed content changed or is empty");
-      await git(work.path, ["add", "--", ...current.files], signal);
-      if (await git(work.path, ["write-tree"], signal) !== expected.tree) throw new Error("Prepared tree changed");
+      if (await stageReviewedTree(work.path, current.files, signal) !== expected.tree) throw new Error("Prepared tree changed");
       await git(work.path, ["commit", "-m", `${task.title}\n\nCo-authored-by: Copilot App <223556219+Copilot@users.noreply.github.com>\nCopilot-Session: ${sessionId}`], signal);
     } else {
       if (await git(work.path, ["rev-parse", "HEAD^"], signal) !== work.base ||
@@ -381,9 +380,8 @@ export async function landPullRequest({
       if (await head() !== before) throw new Error("CI fixer committed outside landing");
       const fixed = await changes(work.path, signal);
       if (!fixed.files.length) throw new Error("CI fixer produced no changes; no empty success");
-      await git(work.path, ["add", "--", ...fixed.files], signal);
       state.pending = { kind: "ci_commit", parent: before,
-        tree: await git(work.path, ["write-tree"], signal),
+        tree: await stageReviewedTree(work.path, fixed.files, signal),
         message: `Fix CI: ${task.title}\n\nCo-authored-by: Copilot App <223556219+Copilot@users.noreply.github.com>\nCopilot-Session: ${sessionId}` };
       save();
       await finishPending();
