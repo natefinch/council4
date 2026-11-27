@@ -212,6 +212,17 @@ func (c *programContext) Permanents(group game.GroupReference) ([]game.ObjectSna
 	return snapshots, nil
 }
 
+func (c *programContext) Amount(amount game.DynamicAmount) (int, error) {
+	if err := c.valid(); err != nil {
+		return 0, err
+	}
+	if err := game.ValidateDynamicAmount(amount, c.specs); err != nil {
+		return 0, fmt.Errorf("invalid authored amount: %w", err)
+	}
+	resolver := newEffectResolver(c.engine, c.game, c.obj, c.agents, c.log)
+	return resolver.quantity(game.Dynamic(amount)), nil
+}
+
 func (c *programContext) Execute(primitive game.Primitive) (cardprogram.Outcome, error) {
 	if err := c.valid(); err != nil {
 		return cardprogram.Outcome{}, err
