@@ -280,7 +280,7 @@ func blockOracle(p *blockDeclarationProblem) [][]game.BlockDeclaration {
 }
 
 func TestStagedBlockDeclarationsExhaustiveGlobalRequirements(t *testing.T) {
-	for _, scenario := range []string{"unit", "lure-menace", "lure-max-one", "multiple-capacity-alone", "must-block"} {
+	for _, scenario := range []string{"unit", "lure-menace", "lure-max-one", "multiple-capacity-alone", "must-block", "lure-three-or-more", "three-or-more"} {
 		t.Run(scenario, func(t *testing.T) {
 			g := game.NewGame([game.NumPlayers]game.PlayerConfig{})
 			g.Turn.ActivePlayer = game.Player1
@@ -298,11 +298,17 @@ func TestStagedBlockDeclarationsExhaustiveGlobalRequirements(t *testing.T) {
 					Attacker: attacker.ObjectID, Target: game.AttackTarget{Player: game.Player2},
 				})
 				addRuleEffectSource(g, game.Player1, game.RuleEffectMustBeBlocked, attacker.ObjectID)
-				if index == 0 && scenario != "unit" {
+				if index == 0 && scenario != "unit" && scenario != "three-or-more" {
 					addRuleEffectSource(g, game.Player1, game.RuleEffectMustBeBlockedByAllAble, attacker.ObjectID)
 				}
 				if index == 0 && scenario == "lure-max-one" {
 					addRuleEffectSource(g, game.Player1, game.RuleEffectCantBeBlockedByMoreThanOne, attacker.ObjectID)
+				}
+				if index == 0 && (scenario == "lure-three-or-more" || scenario == "three-or-more") {
+					g.RuleEffects = append(g.RuleEffects, game.RuleEffect{
+						ID: g.IDGen.Next(), Kind: game.RuleEffectCantBeBlockedExceptByNOrMore,
+						AffectedObjectID: attacker.ObjectID, Duration: game.DurationThisTurn, MinimumBlockers: 3,
+					})
 				}
 				var static []game.StaticAbility
 				if index == 0 && scenario == "multiple-capacity-alone" {

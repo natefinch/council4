@@ -356,7 +356,7 @@ func (combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action
 				Blocking: attacker.Attacker,
 			}
 			allBlockers = append(allBlockers, block)
-			if !attackerRequiresMultipleBlockers(g, attackingPermanent) {
+			if attackerMinimumBlockers(g, attackingPermanent) == 1 {
 				declaration := []game.BlockDeclaration{block}
 				if problem.score(declaration) == maximum && problem.restricted(declaration) {
 					actions = append(actions, actionBuild.declareBlockers(declaration))
@@ -397,9 +397,9 @@ func (combatEngine) legalBlockers(g *game.Game, playerID game.PlayerID) []action
 // creature that can block more than one attacker ("can block an additional
 // creature", blockerBlockLimit > 1) blocks a subset of the attackers it can
 // legally block. Sampling is bounded independently of exact legality and staged
-// choices. Menace attackers (which need at
-// least two blockers) are excluded because a lone blocker can't satisfy them, and
-// every declaration is validated against the same must-block, lure, and alone
+// choices. Attackers needing at least two blockers (menace, "can't be blocked
+// except by N or more creatures") are excluded because a lone blocker can't
+// satisfy them, and every declaration is validated against the same must-block, lure, and alone
 // restrictions as the single-attacker declarations.
 func multiAttackerBlockActions(g *game.Game, attackers []game.AttackDeclaration, blockers []*game.Permanent, problem *blockDeclarationProblem, maximum int) []action.Action {
 	var actions []action.Action
@@ -413,7 +413,7 @@ func multiAttackerBlockActions(g *game.Game, attackers []game.AttackDeclaration,
 		var blockable []game.AttackDeclaration
 		for _, attacker := range attackers {
 			attackingPermanent, ok := permanentByObjectID(g, attacker.Attacker)
-			if !ok || attackerRequiresMultipleBlockers(g, attackingPermanent) {
+			if !ok || attackerMinimumBlockers(g, attackingPermanent) > 1 {
 				continue
 			}
 			if canBlockAttacker(g, blocker, attackingPermanent) {
@@ -470,9 +470,9 @@ func attackerSubsets(items []game.AttackDeclaration, minSize, maxSize int) iter.
 // trueLureAttackers returns the set of attacker object IDs whose true-lure
 // requirement is active and satisfiable (every creature able to block them must
 // do so, CR 509.1c). A lure whose block-count constraints make the
-// every-able-blocker requirement impossible — a menaced lure with fewer than two
-// legal blockers, or a lure that can be blocked by at most one creature while
-// more than one is able — is excluded so it fails open as an ordinary attacker
+// every-able-blocker requirement impossible — a lure with fewer legal blockers
+// than its minimum (menace, "N or more"), or a lure that can be blocked by at
+// most one creature while more than one is able — is excluded so it fails open as an ordinary attacker
 // rather than forcing blocks or invalidating other attackers' legal blocks.
 func trueLureAttackers(g *game.Game, attackers []game.AttackDeclaration, blockers []*game.Permanent) map[id.ID]bool {
 	var lures map[id.ID]bool
@@ -494,8 +494,9 @@ func trueLureAttackers(g *game.Game, attackers []game.AttackDeclaration, blocker
 
 // lureRequirementSatisfiable reports whether every creature able to block the
 // lure attacker can legally do so simultaneously, given the attacker's
-// block-count constraints. It mirrors satisfiableMustBlockAttackers' menace
-// guard and additionally rejects the limit-to-one conflict.
+// block-count constraints. It requires enough able blockers to meet the
+// attacker's minimum (menace or "N or more") and rejects the limit-to-one
+// conflict.
 func lureRequirementSatisfiable(g *game.Game, attacker *game.Permanent, blockers []*game.Permanent) bool {
 	legalBlockerCount := 0
 	for _, blocker := range blockers {
@@ -506,7 +507,7 @@ func lureRequirementSatisfiable(g *game.Game, attacker *game.Permanent, blockers
 	if legalBlockerCount == 0 {
 		return false
 	}
-	if attackerRequiresMultipleBlockers(g, attacker) && legalBlockerCount < 2 {
+	if legalBlockerCount < attackerMinimumBlockers(g, attacker) {
 		return false
 	}
 	if ruleEffectLimitsBlockersToOne(g, attacker) && legalBlockerCount > 1 {
@@ -566,8 +567,8 @@ func blockDeclarationsSatisfyLures(g *game.Game, lures map[id.ID]bool, blockers 
 
 // mustBlockRequirements returns each attacker's minimum legal blocker count for
 // satisfying its "must be blocked if able" requirement. An internally
-// contradictory requirement (menace plus at-most-one) is omitted because no
-// legal declaration can satisfy it.
+// contradictory requirement (a minimum above one plus at-most-one) is omitted
+// because no legal declaration can satisfy it.
 func mustBlockRequirements(g *game.Game, attackers []game.AttackDeclaration) map[id.ID]int {
 	required := make(map[id.ID]int)
 	for _, attack := range attackers {
@@ -575,10 +576,7 @@ func mustBlockRequirements(g *game.Game, attackers []game.AttackDeclaration) map
 		if !ok || !ruleEffectRequiresBeingBlocked(g, attacker) {
 			continue
 		}
-		minimum := 1
-		if attackerRequiresMultipleBlockers(g, attacker) {
-			minimum = 2
-		}
+		minimum := attackerMinimumBlockers(g, attacker)
 		if minimum > 1 && ruleEffectLimitsBlockersToOne(g, attacker) {
 			continue
 		}
@@ -789,7 +787,7 @@ func (combatEngine) blockersLegal(g *game.Game, playerID game.PlayerID, declare 
 		if !ok || count == 0 {
 			continue
 		}
-		if count < 2 && attackerRequiresMultipleBlockers(g, attacker) {
+		if count < attackerMinimumBlockers(g, attacker) {
 			return false
 		}
 		if count > 1 && ruleEffectLimitsBlockersToOne(g, attacker) {

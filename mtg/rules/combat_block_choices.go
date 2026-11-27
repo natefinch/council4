@@ -39,9 +39,9 @@ func newBlockDeclarationProblem(g *game.Game, player game.PlayerID) *blockDeclar
 			continue
 		}
 		p.attackers = append(p.attackers, attacker)
-		minimum, weight := 1, 0
-		if attackerRequiresMultipleBlockers(g, attacker) {
-			minimum, p.unit = 2, false
+		minimum, weight := attackerMinimumBlockers(g, attacker), 0
+		if minimum > 1 {
+			p.unit = false
 		}
 		for index := range effects {
 			if effects[index].Kind == game.RuleEffectMustBeBlocked && ruleEffectMatchesPermanent(g, &effects[index], attacker) {
